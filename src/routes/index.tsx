@@ -7,6 +7,7 @@ import { CotizadorForm } from "@/components/public/CotizadorForm";
 import { Button } from "@/components/ui/button";
 import { formatCLP } from "@/lib/format";
 import logoSquare from "@/assets/fermaval-logo.png.asset.json";
+import logoFull from "@/assets/fermaval-logo-full.jpg.asset.json";
 import productos from "@/assets/fermaval-productos.png.asset.json";
 import { MapPin, Clock, ExternalLink } from "lucide-react";
 
