@@ -47,13 +47,12 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (ceErr) throw new Error("No se pudo registrar el cliente");
 
     // generate quote number via sequence
-    const { data: seqData, error: seqErr } = await supabaseAdmin.rpc("nextval_quote" as never).maybeSingle();
+    const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
     let numero: string;
-    if (seqErr || !seqData) {
-      // fallback: timestamp
+    if (seqErr || seqVal == null) {
       numero = "FV-" + Date.now().toString().slice(-7);
     } else {
-      numero = "FV-" + String((seqData as { nextval: number }).nextval).padStart(5, "0");
+      numero = "FV-" + String(seqVal as unknown as number).padStart(5, "0");
     }
 
     const { data: cot, error: cotErr } = await supabaseAdmin
