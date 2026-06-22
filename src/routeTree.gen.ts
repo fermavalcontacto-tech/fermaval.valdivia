@@ -9,38 +9,226 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CotizacionNumeroRouteImport } from './routes/cotizacion.$numero'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
+import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
+import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
+import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
+import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
+import { Route as AuthenticatedAdminConfiguracionRouteImport } from './routes/_authenticated.admin.configuracion'
+import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authenticated.admin.colores'
+import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CotizacionNumeroRoute = CotizacionNumeroRouteImport.update({
+  id: '/cotizacion/$numero',
+  path: '/cotizacion/$numero',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminReportesRoute =
+  AuthenticatedAdminReportesRouteImport.update({
+    id: '/admin/reportes',
+    path: '/admin/reportes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminPedidosRoute =
+  AuthenticatedAdminPedidosRouteImport.update({
+    id: '/admin/pedidos',
+    path: '/admin/pedidos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminFinanzasRoute =
+  AuthenticatedAdminFinanzasRouteImport.update({
+    id: '/admin/finanzas',
+    path: '/admin/finanzas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminEgresosRoute =
+  AuthenticatedAdminEgresosRouteImport.update({
+    id: '/admin/egresos',
+    path: '/admin/egresos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminCotizacionesRoute =
+  AuthenticatedAdminCotizacionesRouteImport.update({
+    id: '/admin/cotizaciones',
+    path: '/admin/cotizaciones',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminConfiguracionRoute =
+  AuthenticatedAdminConfiguracionRouteImport.update({
+    id: '/admin/configuracion',
+    path: '/admin/configuracion',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminColoresRoute =
+  AuthenticatedAdminColoresRouteImport.update({
+    id: '/admin/colores',
+    path: '/admin/colores',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminBoletasRoute =
+  AuthenticatedAdminBoletasRouteImport.update({
+    id: '/admin/boletas',
+    path: '/admin/boletas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/colores': typeof AuthenticatedAdminColoresRoute
+  '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
+  '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
+  '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
+  '/admin/reportes': typeof AuthenticatedAdminReportesRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/colores': typeof AuthenticatedAdminColoresRoute
+  '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
+  '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
+  '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
+  '/admin/reportes': typeof AuthenticatedAdminReportesRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/_authenticated/admin/colores': typeof AuthenticatedAdminColoresRoute
+  '/_authenticated/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
+  '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
+  '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/_authenticated/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
+  '/_authenticated/admin/reportes': typeof AuthenticatedAdminReportesRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/cotizacion/$numero'
+    | '/admin/boletas'
+    | '/admin/colores'
+    | '/admin/configuracion'
+    | '/admin/cotizaciones'
+    | '/admin/egresos'
+    | '/admin/finanzas'
+    | '/admin/pedidos'
+    | '/admin/reportes'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/cotizacion/$numero'
+    | '/admin/boletas'
+    | '/admin/colores'
+    | '/admin/configuracion'
+    | '/admin/cotizaciones'
+    | '/admin/egresos'
+    | '/admin/finanzas'
+    | '/admin/pedidos'
+    | '/admin/reportes'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/sitemap.xml'
+    | '/cotizacion/$numero'
+    | '/_authenticated/admin/boletas'
+    | '/_authenticated/admin/colores'
+    | '/_authenticated/admin/configuracion'
+    | '/_authenticated/admin/cotizaciones'
+    | '/_authenticated/admin/egresos'
+    | '/_authenticated/admin/finanzas'
+    | '/_authenticated/admin/pedidos'
+    | '/_authenticated/admin/reportes'
+    | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  CotizacionNumeroRoute: typeof CotizacionNumeroRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +236,113 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cotizacion/$numero': {
+      id: '/cotizacion/$numero'
+      path: '/cotizacion/$numero'
+      fullPath: '/cotizacion/$numero'
+      preLoaderRoute: typeof CotizacionNumeroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/reportes': {
+      id: '/_authenticated/admin/reportes'
+      path: '/admin/reportes'
+      fullPath: '/admin/reportes'
+      preLoaderRoute: typeof AuthenticatedAdminReportesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/pedidos': {
+      id: '/_authenticated/admin/pedidos'
+      path: '/admin/pedidos'
+      fullPath: '/admin/pedidos'
+      preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/finanzas': {
+      id: '/_authenticated/admin/finanzas'
+      path: '/admin/finanzas'
+      fullPath: '/admin/finanzas'
+      preLoaderRoute: typeof AuthenticatedAdminFinanzasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/egresos': {
+      id: '/_authenticated/admin/egresos'
+      path: '/admin/egresos'
+      fullPath: '/admin/egresos'
+      preLoaderRoute: typeof AuthenticatedAdminEgresosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/cotizaciones': {
+      id: '/_authenticated/admin/cotizaciones'
+      path: '/admin/cotizaciones'
+      fullPath: '/admin/cotizaciones'
+      preLoaderRoute: typeof AuthenticatedAdminCotizacionesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/configuracion': {
+      id: '/_authenticated/admin/configuracion'
+      path: '/admin/configuracion'
+      fullPath: '/admin/configuracion'
+      preLoaderRoute: typeof AuthenticatedAdminConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/colores': {
+      id: '/_authenticated/admin/colores'
+      path: '/admin/colores'
+      fullPath: '/admin/colores'
+      preLoaderRoute: typeof AuthenticatedAdminColoresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/boletas': {
+      id: '/_authenticated/admin/boletas'
+      path: '/admin/boletas'
+      fullPath: '/admin/boletas'
+      preLoaderRoute: typeof AuthenticatedAdminBoletasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
+  AuthenticatedAdminColoresRoute: typeof AuthenticatedAdminColoresRoute
+  AuthenticatedAdminConfiguracionRoute: typeof AuthenticatedAdminConfiguracionRoute
+  AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
+  AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
+  AuthenticatedAdminFinanzasRoute: typeof AuthenticatedAdminFinanzasRoute
+  AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
+  AuthenticatedAdminReportesRoute: typeof AuthenticatedAdminReportesRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
+  AuthenticatedAdminColoresRoute: AuthenticatedAdminColoresRoute,
+  AuthenticatedAdminConfiguracionRoute: AuthenticatedAdminConfiguracionRoute,
+  AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
+  AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
+  AuthenticatedAdminFinanzasRoute: AuthenticatedAdminFinanzasRoute,
+  AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
+  AuthenticatedAdminReportesRoute: AuthenticatedAdminReportesRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthRoute: AuthRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  CotizacionNumeroRoute: CotizacionNumeroRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
