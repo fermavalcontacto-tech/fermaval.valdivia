@@ -14,16 +14,364 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      boletas: {
+        Row: {
+          archivo_nombre: string | null
+          archivo_path: string
+          created_at: string
+          descripcion: string | null
+          fecha: string
+          id: string
+          monto: number
+          solicitud_id: string | null
+          subido_por: string
+          tipo_gasto: Database["public"]["Enums"]["expense_type"]
+        }
+        Insert: {
+          archivo_nombre?: string | null
+          archivo_path: string
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          monto: number
+          solicitud_id?: string | null
+          subido_por: string
+          tipo_gasto: Database["public"]["Enums"]["expense_type"]
+        }
+        Update: {
+          archivo_nombre?: string | null
+          archivo_path?: string
+          created_at?: string
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          monto?: number
+          solicitud_id?: string | null
+          subido_por?: string
+          tipo_gasto?: Database["public"]["Enums"]["expense_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "boletas_solicitud_id_fkey"
+            columns: ["solicitud_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_egreso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clientes: {
+        Row: {
+          correo: string
+          created_at: string
+          direccion: string
+          id: string
+          nombre: string
+          telefono: string
+        }
+        Insert: {
+          correo: string
+          created_at?: string
+          direccion: string
+          id?: string
+          nombre: string
+          telefono: string
+        }
+        Update: {
+          correo?: string
+          created_at?: string
+          direccion?: string
+          id?: string
+          nombre?: string
+          telefono?: string
+        }
+        Relationships: []
+      }
+      colores: {
+        Row: {
+          activo: boolean
+          created_at: string
+          hex: string
+          id: string
+          imagen_url: string | null
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          hex?: string
+          id?: string
+          imagen_url?: string | null
+          nombre: string
+          orden?: number
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          hex?: string
+          id?: string
+          imagen_url?: string | null
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
+      }
+      configuracion_web: {
+        Row: {
+          direccion: string
+          hero_subtitulo: string
+          hero_titulo: string
+          hero_url: string | null
+          id: number
+          info_comercial: string
+          instagram: string
+          linktree_url: string
+          logo_url: string | null
+          mapa_embed: string
+          mapa_url: string
+          precio_m2: number
+          telefono: string
+          updated_at: string
+        }
+        Insert: {
+          direccion?: string
+          hero_subtitulo?: string
+          hero_titulo?: string
+          hero_url?: string | null
+          id?: number
+          info_comercial?: string
+          instagram?: string
+          linktree_url?: string
+          logo_url?: string | null
+          mapa_embed?: string
+          mapa_url?: string
+          precio_m2?: number
+          telefono?: string
+          updated_at?: string
+        }
+        Update: {
+          direccion?: string
+          hero_subtitulo?: string
+          hero_titulo?: string
+          hero_url?: string | null
+          id?: number
+          info_comercial?: string
+          instagram?: string
+          linktree_url?: string
+          logo_url?: string | null
+          mapa_embed?: string
+          mapa_url?: string
+          precio_m2?: number
+          telefono?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cotizaciones: {
+        Row: {
+          ancho_m: number
+          cliente_id: string
+          color_id: string | null
+          color_nombre: string | null
+          created_at: string
+          created_by: string | null
+          estado: Database["public"]["Enums"]["quote_status"]
+          id: string
+          largo_m: number
+          metros2: number
+          numero: string
+          pago_recibido: number
+          plazo_horas: number
+          precio_m2: number
+          saldo: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          ancho_m: number
+          cliente_id: string
+          color_id?: string | null
+          color_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          estado?: Database["public"]["Enums"]["quote_status"]
+          id?: string
+          largo_m: number
+          metros2: number
+          numero: string
+          pago_recibido?: number
+          plazo_horas?: number
+          precio_m2: number
+          saldo?: number
+          total: number
+          updated_at?: string
+        }
+        Update: {
+          ancho_m?: number
+          cliente_id?: string
+          color_id?: string | null
+          color_nombre?: string | null
+          created_at?: string
+          created_by?: string | null
+          estado?: Database["public"]["Enums"]["quote_status"]
+          id?: string
+          largo_m?: number
+          metros2?: number
+          numero?: string
+          pago_recibido?: number
+          plazo_horas?: number
+          precio_m2?: number
+          saldo?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos: {
+        Row: {
+          cotizacion_id: string
+          created_at: string
+          estado: string
+          id: string
+          metodo: string
+          monto: number
+          porcentaje: number | null
+        }
+        Insert: {
+          cotizacion_id: string
+          created_at?: string
+          estado?: string
+          id?: string
+          metodo?: string
+          monto: number
+          porcentaje?: number | null
+        }
+        Update: {
+          cotizacion_id?: string
+          created_at?: string
+          estado?: string
+          id?: string
+          metodo?: string
+          monto?: number
+          porcentaje?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      solicitudes_egreso: {
+        Row: {
+          created_at: string
+          decidido_at: string | null
+          decidido_por: string | null
+          descripcion: string
+          estado: Database["public"]["Enums"]["expense_status"]
+          fecha: string
+          id: string
+          monto: number
+          solicitante_id: string
+          tipo: Database["public"]["Enums"]["expense_type"]
+        }
+        Insert: {
+          created_at?: string
+          decidido_at?: string | null
+          decidido_por?: string | null
+          descripcion: string
+          estado?: Database["public"]["Enums"]["expense_status"]
+          fecha?: string
+          id?: string
+          monto: number
+          solicitante_id: string
+          tipo: Database["public"]["Enums"]["expense_type"]
+        }
+        Update: {
+          created_at?: string
+          decidido_at?: string | null
+          decidido_por?: string | null
+          descripcion?: string
+          estado?: Database["public"]["Enums"]["expense_status"]
+          fecha?: string
+          id?: string
+          monto?: number
+          solicitante_id?: string
+          tipo?: Database["public"]["Enums"]["expense_type"]
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_staff: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operator"
+      expense_status: "pendiente" | "aprobado" | "rechazado"
+      expense_type:
+        | "materiales"
+        | "transporte"
+        | "herramientas"
+        | "servicios"
+        | "otros"
+      quote_status:
+        | "cotizacion_creada"
+        | "esperando_pago"
+        | "pago_parcial"
+        | "pedido_confirmado"
+        | "pedido_terminado"
+        | "rechazada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +498,24 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operator"],
+      expense_status: ["pendiente", "aprobado", "rechazado"],
+      expense_type: [
+        "materiales",
+        "transporte",
+        "herramientas",
+        "servicios",
+        "otros",
+      ],
+      quote_status: [
+        "cotizacion_creada",
+        "esperando_pago",
+        "pago_parcial",
+        "pedido_confirmado",
+        "pedido_terminado",
+        "rechazada",
+      ],
+    },
   },
 } as const
