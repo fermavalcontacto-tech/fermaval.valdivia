@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CotizacionNumeroRouteImport } from './routes/cotizacion.$numero'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
 import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
 import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
@@ -49,6 +50,12 @@ const AuthenticatedAdminPedidosRoute =
     path: '/admin/pedidos',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminFinanzasRoute =
+  AuthenticatedAdminFinanzasRouteImport.update({
+    id: '/admin/finanzas',
+    path: '/admin/finanzas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminEgresosRoute =
   AuthenticatedAdminEgresosRouteImport.update({
     id: '/admin/egresos',
@@ -75,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -85,6 +93,7 @@ export interface FileRoutesByTo {
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
@@ -97,6 +106,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
+  '/_authenticated/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/admin/boletas'
     | '/admin/cotizaciones'
     | '/admin/egresos'
+    | '/admin/finanzas'
     | '/admin/pedidos'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/admin/boletas'
     | '/admin/cotizaciones'
     | '/admin/egresos'
+    | '/admin/finanzas'
     | '/admin/pedidos'
     | '/admin'
   id:
@@ -130,6 +142,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/boletas'
     | '/_authenticated/admin/cotizaciones'
     | '/_authenticated/admin/egresos'
+    | '/_authenticated/admin/finanzas'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/finanzas': {
+      id: '/_authenticated/admin/finanzas'
+      path: '/admin/finanzas'
+      fullPath: '/admin/finanzas'
+      preLoaderRoute: typeof AuthenticatedAdminFinanzasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/egresos': {
       id: '/_authenticated/admin/egresos'
       path: '/admin/egresos'
@@ -213,6 +233,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
   AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
+  AuthenticatedAdminFinanzasRoute: typeof AuthenticatedAdminFinanzasRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
@@ -221,6 +242,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
   AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
+  AuthenticatedAdminFinanzasRoute: AuthenticatedAdminFinanzasRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
