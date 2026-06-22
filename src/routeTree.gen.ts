@@ -17,6 +17,7 @@ import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
 import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
+import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -60,11 +61,18 @@ const AuthenticatedAdminCotizacionesRoute =
     path: '/admin/cotizaciones',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminBoletasRoute =
+  AuthenticatedAdminBoletasRouteImport.update({
+    id: '/admin/boletas',
+    path: '/admin/boletas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
@@ -85,6 +94,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/cotizacion/$numero'
+    | '/admin/boletas'
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/pedidos'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/cotizacion/$numero'
+    | '/admin/boletas'
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/pedidos'
@@ -115,6 +127,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/cotizacion/$numero'
+    | '/_authenticated/admin/boletas'
     | '/_authenticated/admin/cotizaciones'
     | '/_authenticated/admin/egresos'
     | '/_authenticated/admin/pedidos'
@@ -186,10 +199,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCotizacionesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/boletas': {
+      id: '/_authenticated/admin/boletas'
+      path: '/admin/boletas'
+      fullPath: '/admin/boletas'
+      preLoaderRoute: typeof AuthenticatedAdminBoletasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
   AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
@@ -197,6 +218,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
   AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
