@@ -155,6 +155,21 @@ function Home() {
         </div>
       </section>
 
+      {/* MARCA */}
+      <section className="border-t border-border bg-muted/30 py-16">
+        <div className="container mx-auto flex flex-col items-center px-4 text-center">
+          <img
+            src={logoFull.url}
+            alt="FERMAVAL — Cubiertas y Revestimientos"
+            className="h-56 w-auto md:h-72"
+            loading="lazy"
+          />
+          <p className="mt-6 max-w-xl text-sm text-muted-foreground">
+            Fabricación local en Valdivia. Calidad industrial, precios justos y entrega rápida.
+          </p>
+        </div>
+      </section>
+
       <PublicFooter telefono={cfg.telefono} direccion={cfg.direccion} instagram={cfg.instagram} />
       <a href="#" aria-hidden className="sr-only"><img src={logoSquare.url} alt="" /></a>
     </div>
