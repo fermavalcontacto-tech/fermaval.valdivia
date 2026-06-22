@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import logoHorizontal from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
+import logoHorizontal from "@/assets/fermaval-logo-full.jpg.asset.json";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
