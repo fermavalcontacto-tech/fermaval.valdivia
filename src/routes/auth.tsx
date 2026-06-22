@@ -41,8 +41,8 @@ function AuthPage() {
   return (
     <div className="industrial-stripes flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md border-2 border-border p-8">
-        <Link to="/" className="mb-6 block">
-          <img src={logoHorizontal.url} alt="FERMAVAL" className="h-10" />
+        <Link to="/" className="mb-6 flex justify-center">
+          <img src={logoHorizontal.url} alt="FERMAVAL" className="h-32 w-auto" />
         </Link>
         <h1 className="font-display text-3xl text-primary">ACCESO STAFF</h1>
         <p className="mt-1 text-sm text-muted-foreground">Ingresa con tu correo y contraseña.</p>
