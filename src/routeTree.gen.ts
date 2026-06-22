@@ -20,6 +20,7 @@ import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
 import { Route as AuthenticatedAdminConfiguracionRouteImport } from './routes/_authenticated.admin.configuracion'
+import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authenticated.admin.colores'
 import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
 
 const AuthRoute = AuthRouteImport.update({
@@ -82,6 +83,12 @@ const AuthenticatedAdminConfiguracionRoute =
     path: '/admin/configuracion',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminColoresRoute =
+  AuthenticatedAdminColoresRouteImport.update({
+    id: '/admin/colores',
+    path: '/admin/colores',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminBoletasRoute =
   AuthenticatedAdminBoletasRouteImport.update({
     id: '/admin/boletas',
@@ -94,6 +101,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
@@ -107,6 +115,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
@@ -122,6 +131,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/_authenticated/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/_authenticated/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
@@ -137,6 +147,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cotizacion/$numero'
     | '/admin/boletas'
+    | '/admin/colores'
     | '/admin/configuracion'
     | '/admin/cotizaciones'
     | '/admin/egresos'
@@ -150,6 +161,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cotizacion/$numero'
     | '/admin/boletas'
+    | '/admin/colores'
     | '/admin/configuracion'
     | '/admin/cotizaciones'
     | '/admin/egresos'
@@ -164,6 +176,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/cotizacion/$numero'
     | '/_authenticated/admin/boletas'
+    | '/_authenticated/admin/colores'
     | '/_authenticated/admin/configuracion'
     | '/_authenticated/admin/cotizaciones'
     | '/_authenticated/admin/egresos'
@@ -259,6 +272,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminConfiguracionRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/colores': {
+      id: '/_authenticated/admin/colores'
+      path: '/admin/colores'
+      fullPath: '/admin/colores'
+      preLoaderRoute: typeof AuthenticatedAdminColoresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/boletas': {
       id: '/_authenticated/admin/boletas'
       path: '/admin/boletas'
@@ -271,6 +291,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
+  AuthenticatedAdminColoresRoute: typeof AuthenticatedAdminColoresRoute
   AuthenticatedAdminConfiguracionRoute: typeof AuthenticatedAdminConfiguracionRoute
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
   AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
@@ -282,6 +303,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
+  AuthenticatedAdminColoresRoute: AuthenticatedAdminColoresRoute,
   AuthenticatedAdminConfiguracionRoute: AuthenticatedAdminConfiguracionRoute,
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
   AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
