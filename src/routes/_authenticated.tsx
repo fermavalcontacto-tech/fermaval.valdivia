@@ -22,7 +22,7 @@ export const Route = createFileRoute("/_authenticated")({
   component: AuthedLayout,
 });
 
-const navAll = [
+const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/cotizaciones", label: "Cotizaciones", icon: FileText },
   { to: "/admin/pedidos", label: "Pedidos", icon: PackageCheck },
@@ -30,11 +30,11 @@ const navAll = [
   { to: "/admin/boletas", label: "Boletas", icon: FileImage },
   { to: "/admin/finanzas", label: "Finanzas", icon: TrendingUp },
   { to: "/admin/reportes", label: "Reportes", icon: FileDown },
-] as const;
-const navAdmin = [
+];
+const navAdmin: Array<{ to: string; label: string; icon: typeof Settings }> = [
   { to: "/admin/configuracion", label: "Configuración", icon: Settings },
   { to: "/admin/colores", label: "Colores", icon: Palette },
-] as const;
+];
 
 function AuthedLayout() {
   const { auth } = Route.useRouteContext();
