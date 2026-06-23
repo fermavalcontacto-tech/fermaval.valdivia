@@ -76,6 +76,9 @@ export const listEgresos = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+export const PERSONAS_INTERNAS = ["Freddy", "Bayron", "Oscar"] as const;
+const personaSchema = z.enum(PERSONAS_INTERNAS);
+
 export const createEgreso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
@@ -83,15 +86,39 @@ export const createEgreso = createServerFn({ method: "POST" })
     descripcion: z.string().trim().min(2).max(500),
     monto: z.number().positive(),
     fecha: z.string(),
+    solicitado_por: personaSchema,
+    boleta_subida_por: personaSchema.nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("solicitudes_egreso").insert({
       tipo: data.tipo, descripcion: data.descripcion, monto: data.monto, fecha: data.fecha,
       solicitante_id: context.userId, estado: "pendiente",
+      solicitado_por: data.solicitado_por,
+      boleta_subida_por: data.boleta_subida_por ?? null,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+export const deleteEgreso = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase
+      .from("solicitudes_egreso").select("tipo, monto, descripcion").eq("id", data.id).single();
+    const { error } = await context.supabase.from("solicitudes_egreso").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "solicitudes_egreso", accion: "delete",
+      cambio: `Solicitud de egreso eliminada (${prev?.tipo ?? "?"})`,
+      valor_antes: prev ? `${prev.tipo} ${prev.monto} ${prev.descripcion ?? ""}` : null,
+      valor_despues: null,
+    });
+    return { ok: true };
+  });
+
 
 export const decideEgreso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -335,7 +362,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, created_at, cliente:clientes(nombre)")
       .gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
     const { data: gastos } = await context.supabase
-      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado")
+      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
     const XLSX = await import("xlsx");
@@ -354,7 +381,10 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
 
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
+      "Solicitado Por": g.solicitado_por ?? "",
+      "Boleta Subida Por": g.boleta_subida_por ?? "",
     }));
+
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gastosRows), "Gastos");
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
