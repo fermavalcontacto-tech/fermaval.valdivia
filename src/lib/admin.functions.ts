@@ -172,9 +172,10 @@ export const createBoleta = createServerFn({ method: "POST" })
     archivo_nombre: z.string().optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const fecha = enforceFecha(context.claims?.email, data.fecha);
     const { error } = await context.supabase.from("boletas").insert({
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
-      monto: data.monto, fecha: data.fecha,
+      monto: data.monto, fecha,
       archivo_path: data.archivo_path, archivo_nombre: data.archivo_nombre ?? null,
       subido_por: context.userId,
     });
