@@ -2,6 +2,15 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+export const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
+
+function assertSuperadmin(email: string | undefined) {
+  if ((email ?? "").toLowerCase() !== SUPERADMIN_EMAIL) {
+    throw new Error("No tienes permisos para modificar la configuración del sitio.");
+  }
+}
+
+
 export const listCotizaciones = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
