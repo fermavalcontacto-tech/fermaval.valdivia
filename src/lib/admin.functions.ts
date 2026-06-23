@@ -375,8 +375,8 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     const start = new Date(data.year, data.month - 1, 1);
     const end = new Date(data.year, data.month, 1);
     const { data: cots } = await context.supabase
-      .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, created_at, cliente:clientes(nombre)")
-      .gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
+      .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, fecha_solicitud, created_at, cliente:clientes(nombre)")
+      .gte("fecha_solicitud", start.toISOString().slice(0,10)).lt("fecha_solicitud", end.toISOString().slice(0,10));
     const { data: gastos } = await context.supabase
       .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
@@ -391,7 +391,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       Pagado: Number(c.pago_recibido),
       Saldo: Number(c.saldo),
       Estado: c.estado,
-      Fecha: new Date(c.created_at as string).toLocaleDateString("es-CL"),
+      Fecha: (c.fecha_solicitud as string) ?? new Date(c.created_at as string).toLocaleDateString("es-CL"),
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ventasRows), "Ventas");
 
