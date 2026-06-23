@@ -531,3 +531,163 @@ export const limpiarDatosPrueba = createServerFn({ method: "POST" })
     return out;
   });
 
+// ============= Buscar Cotizaciones (seguimiento de pagos y pedidos) =============
+
+export const searchCotizaciones = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    q: z.string().trim().max(120).optional().default(""),
+    pago: z.enum(["all","sin_pago","pago_20","pago_50","pago_total"]).default("all"),
+    pedido: z.enum(["all","en_preparacion","en_produccion","pedido_entregado","finalizado"]).default("all"),
+    desde: z.string().optional().nullable(),
+    hasta: z.string().optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    let query = context.supabase
+      .from("cotizaciones")
+      .select("*, cliente:clientes(nombre, correo, telefono, direccion)")
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    if (data.pedido !== "all") query = query.eq("estado_pedido", data.pedido);
+    if (data.desde) query = query.gte("created_at", new Date(data.desde).toISOString());
+    if (data.hasta) {
+      const h = new Date(data.hasta); h.setHours(23,59,59,999);
+      query = query.lte("created_at", h.toISOString());
+    }
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+
+    let list = rows ?? [];
+    const q = data.q.trim().toLowerCase();
+    if (q) {
+      list = list.filter((r) => {
+        const c = r.cliente as { nombre?: string; correo?: string; telefono?: string } | null;
+        return (
+          r.numero?.toLowerCase().includes(q) ||
+          (c?.nombre ?? "").toLowerCase().includes(q) ||
+          (c?.correo ?? "").toLowerCase().includes(q) ||
+          (c?.telefono ?? "").toLowerCase().includes(q)
+        );
+      });
+    }
+    if (data.pago !== "all") {
+      list = list.filter((r) => {
+        const total = Number(r.total) || 0;
+        const pago = Number(r.pago_recibido) || 0;
+        const pct = total > 0 ? pago / total : 0;
+        if (data.pago === "sin_pago") return pago === 0;
+        if (data.pago === "pago_20") return pct >= 0.15 && pct < 0.40;
+        if (data.pago === "pago_50") return pct >= 0.40 && pct < 0.95;
+        if (data.pago === "pago_total") return pct >= 0.95;
+        return true;
+      });
+    }
+    return list;
+  });
+
+export const setPagoCotizacion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    tier: z.enum(["sin_pago","pago_20","pago_50","pago_total"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase
+      .from("cotizaciones").select("numero, total, pago_recibido, estado")
+      .eq("id", data.id).single();
+    if (!prev) throw new Error("Cotización no encontrada");
+    const total = Number(prev.total) || 0;
+    const factor = data.tier === "sin_pago" ? 0
+      : data.tier === "pago_20" ? 0.20
+      : data.tier === "pago_50" ? 0.50 : 1;
+    const pago = Math.round(total * factor);
+    const saldo = Math.max(0, total - pago);
+    const nuevoEstado =
+      pago === 0 ? "esperando_pago" :
+      pago >= total ? "pedido_confirmado" : "pago_parcial";
+    const { error } = await context.supabase.from("cotizaciones").update({
+      pago_recibido: pago, saldo, estado: nuevoEstado,
+    }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "pago",
+      cambio: `Pago de ${prev.numero} establecido en ${data.tier}`,
+      valor_antes: `pagado=${prev.pago_recibido}`,
+      valor_despues: `pagado=${pago} saldo=${saldo}`,
+    });
+    return { ok: true };
+  });
+
+export const setEstadoPedido = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    estado_pedido: z.enum(["en_preparacion","en_produccion","pedido_entregado","finalizado"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase
+      .from("cotizaciones").select("numero, total, pago_recibido, estado_pedido")
+      .eq("id", data.id).single();
+    if (!prev) throw new Error("Cotización no encontrada");
+
+    // Si marca FINALIZADO requiere entregado + pago total
+    if (data.estado_pedido === "finalizado") {
+      const total = Number(prev.total) || 0;
+      const pagado = Number(prev.pago_recibido) || 0;
+      if (pagado < total) {
+        throw new Error("No se puede finalizar: el pago total aún no se ha recibido.");
+      }
+    }
+
+    const patch: Record<string, unknown> = { estado_pedido: data.estado_pedido };
+    if (data.estado_pedido === "finalizado") patch.estado = "pedido_terminado";
+
+    const { error } = await context.supabase.from("cotizaciones").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "estado_pedido",
+      cambio: `${prev.numero}: estado pedido ${prev.estado_pedido} → ${data.estado_pedido}`,
+      valor_antes: String(prev.estado_pedido), valor_despues: data.estado_pedido,
+    });
+    return { ok: true };
+  });
+
+export const getResumenSeguimiento = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("cotizaciones").select("total, pago_recibido, estado_pedido");
+    if (error) throw new Error(error.message);
+    const rows = data ?? [];
+    let sin_pago = 0, p20 = 0, p50 = 0, total_pagos = 0, entregados = 0;
+    for (const r of rows) {
+      const t = Number(r.total) || 0;
+      const p = Number(r.pago_recibido) || 0;
+      const pct = t > 0 ? p / t : 0;
+      if (p === 0) sin_pago++;
+      else if (pct >= 0.95) total_pagos++;
+      else if (pct >= 0.40) p50++;
+      else if (pct >= 0.15) p20++;
+      if (r.estado_pedido === "pedido_entregado" || r.estado_pedido === "finalizado") entregados++;
+    }
+    return { sin_pago, p20, p50, total_pagos, entregados, totalCot: rows.length };
+  });
+
+export const getCotizacionAudit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ numero: z.string() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("config_audit_log").select("*")
+      .eq("entidad", "cotizaciones")
+      .ilike("cambio", `%${data.numero}%`)
+      .order("created_at", { ascending: false }).limit(30);
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
