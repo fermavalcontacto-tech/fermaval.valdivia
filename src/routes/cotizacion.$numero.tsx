@@ -11,19 +11,40 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
 
+function maskCorreo(c: string | null | undefined): string {
+  if (!c) return "—";
+  const [u, d] = c.split("@");
+  if (!d) return "—";
+  const head = u.slice(0, 1);
+  const tail = u.length > 2 ? u.slice(-1) : "";
+  return `${head}${"•".repeat(Math.max(1, u.length - (tail ? 2 : 1)))}${tail}@${d}`;
+}
+
 const getQuote = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ numero: z.string().max(40) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
-      .select("*, cliente:clientes(*)")
+      .select(
+        "numero, created_at, estado, largo_m, ancho_m, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+      )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
+    // Strip PII before sending to the browser: only first name + masked email.
+    let safeCot: unknown = cot;
+    if (cot) {
+      const c = cot.cliente as { nombre?: string; correo?: string } | null;
+      const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
+      safeCot = {
+        ...cot,
+        cliente: { nombre: firstName, correo: maskCorreo(c?.correo) },
+      };
+    }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot, cfg };
+    return { cot: safeCot as typeof cot, cfg };
   });
 
 export const Route = createFileRoute("/cotizacion/$numero")({
@@ -42,9 +63,10 @@ function QuotePage() {
     queryFn: () => getQuote({ data: { numero } }),
   }));
   const [showPay, setShowPay] = useState(false);
+  const [correo, setCorreo] = useState("");
 
   const accept = useMutation({
-    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje } }),
+    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo } }),
     onSuccess: (r) => {
       toast.success(`Pago del ${formatCLP(r.monto)} registrado. Saldo: ${formatCLP(r.saldo)}`);
       setShowPay(false);
@@ -67,7 +89,7 @@ function QuotePage() {
   }
 
   const cot = data.cot;
-  const cliente = cot.cliente as { nombre: string; correo: string; telefono: string; direccion: string };
+  const cliente = cot.cliente as { nombre: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
   return (
@@ -93,10 +115,11 @@ function QuotePage() {
           <div className="grid gap-6 p-6 md:grid-cols-2">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Cliente</h3>
-              <p className="mt-2 font-medium">{cliente?.nombre}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.correo}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.telefono}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.direccion}</p>
+              <p className="mt-2 font-medium">{cliente?.nombre ?? "—"}</p>
+              <p className="text-sm text-muted-foreground">{cliente?.correo ?? "—"}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Datos parciales por seguridad. Los datos completos están en tu confirmación por correo.
+              </p>
             </div>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
@@ -143,13 +166,30 @@ function QuotePage() {
                 </Button>
               ) : (
                 <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium" htmlFor="confirm-correo">
+                      Confirma tu correo para aceptar
+                    </label>
+                    <input
+                      id="confirm-correo"
+                      type="email"
+                      autoComplete="email"
+                      value={correo}
+                      onChange={(e) => setCorreo(e.target.value)}
+                      placeholder="tu@correo.cl"
+                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Debe coincidir con el correo registrado en esta cotización.
+                    </p>
+                  </div>
                   <p className="text-sm text-muted-foreground">Elige el porcentaje a abonar:</p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Button onClick={() => accept.mutate(20)} disabled={accept.isPending} variant="outline" size="lg" className="h-auto flex-col py-4">
+                    <Button onClick={() => accept.mutate(20)} disabled={accept.isPending || !correo} variant="outline" size="lg" className="h-auto flex-col py-4">
                       <span className="font-display text-3xl text-primary">20%</span>
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.20))}</span>
                     </Button>
-                    <Button onClick={() => accept.mutate(50)} disabled={accept.isPending} variant="hero" size="lg" className="h-auto flex-col py-4">
+                    <Button onClick={() => accept.mutate(50)} disabled={accept.isPending || !correo} variant="hero" size="lg" className="h-auto flex-col py-4">
                       <span className="font-display text-3xl">50%</span>
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.50))}</span>
                     </Button>

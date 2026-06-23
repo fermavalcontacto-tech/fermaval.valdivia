@@ -16,6 +16,7 @@ const CreateQuoteSchema = z.object({
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
   porcentaje: z.union([z.literal(20), z.literal(50)]),
+  correo: z.string().trim().email().max(160),
 });
 
 export const createPublicQuote = createServerFn({ method: "POST" })
@@ -91,6 +92,22 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
     if (cot.estado === "pedido_terminado" || cot.estado === "rechazada") {
       throw new Error("Esta cotización ya no puede ser aceptada");
     }
+    // Authorization: only the customer (whose email is on file) may accept.
+    const clienteCorreo = (cot.cliente as { correo?: string } | null)?.correo ?? "";
+    if (clienteCorreo.trim().toLowerCase() !== data.correo.trim().toLowerCase()) {
+      throw new Error("El correo no coincide con el registrado en esta cotización.");
+    }
+    // Idempotency: prevent stacking payment rows for the same quote+percentage.
+    const { data: existingPago } = await supabaseAdmin
+      .from("pagos")
+      .select("id")
+      .eq("cotizacion_id", cot.id)
+      .eq("porcentaje", data.porcentaje)
+      .maybeSingle();
+    if (existingPago) {
+      throw new Error("Esta cotización ya tiene un pago registrado con ese porcentaje.");
+    }
+
     const total = Number(cot.total);
     const monto = Math.round((total * data.porcentaje) / 100);
     const nuevoPagado = Number(cot.pago_recibido) + monto;
