@@ -115,10 +115,11 @@ function QuotePage() {
           <div className="grid gap-6 p-6 md:grid-cols-2">
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Cliente</h3>
-              <p className="mt-2 font-medium">{cliente?.nombre}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.correo}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.telefono}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.direccion}</p>
+              <p className="mt-2 font-medium">{cliente?.nombre ?? "—"}</p>
+              <p className="text-sm text-muted-foreground">{cliente?.correo ?? "—"}</p>
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                Datos parciales por seguridad. Los datos completos están en tu confirmación por correo.
+              </p>
             </div>
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
