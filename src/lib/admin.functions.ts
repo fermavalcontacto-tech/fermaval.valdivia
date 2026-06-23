@@ -362,7 +362,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, created_at, cliente:clientes(nombre)")
       .gte("created_at", start.toISOString()).lt("created_at", end.toISOString());
     const { data: gastos } = await context.supabase
-      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado")
+      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
     const XLSX = await import("xlsx");
@@ -381,7 +381,10 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
 
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
+      "Solicitado Por": g.solicitado_por ?? "",
+      "Boleta Subida Por": g.boleta_subida_por ?? "",
     }));
+
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gastosRows), "Gastos");
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
