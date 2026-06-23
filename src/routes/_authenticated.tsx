@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import logoHorizontal from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
+import logoMark from "@/assets/fermaval-logo-transparent.png.asset.json";
 import {
   LayoutDashboard, FileText, PackageCheck, Receipt, FileImage,
   TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X,
