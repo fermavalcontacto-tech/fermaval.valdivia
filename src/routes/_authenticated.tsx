@@ -6,8 +6,9 @@ import logoHorizontal from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 import logoMark from "@/assets/fermaval-logo-transparent.png.asset.json";
 import {
   LayoutDashboard, FileText, PackageCheck, Receipt, FileImage,
-  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X,
+  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X, Search,
 } from "lucide-react";
+
 
 const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
 

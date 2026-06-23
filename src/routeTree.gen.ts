@@ -22,6 +22,7 @@ import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
 import { Route as AuthenticatedAdminConfiguracionRouteImport } from './routes/_authenticated.admin.configuracion'
 import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authenticated.admin.colores'
+import { Route as AuthenticatedAdminBuscarRouteImport } from './routes/_authenticated.admin.buscar'
 import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -95,6 +96,12 @@ const AuthenticatedAdminColoresRoute =
     path: '/admin/colores',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminBuscarRoute =
+  AuthenticatedAdminBuscarRouteImport.update({
+    id: '/admin/buscar',
+    path: '/admin/buscar',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedAdminBoletasRoute =
   AuthenticatedAdminBoletasRouteImport.update({
     id: '/admin/boletas',
@@ -108,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/buscar': typeof AuthenticatedAdminBuscarRoute
   '/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
@@ -123,6 +131,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/admin/buscar': typeof AuthenticatedAdminBuscarRoute
   '/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
@@ -140,6 +149,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
+  '/_authenticated/admin/buscar': typeof AuthenticatedAdminBuscarRoute
   '/_authenticated/admin/colores': typeof AuthenticatedAdminColoresRoute
   '/_authenticated/admin/configuracion': typeof AuthenticatedAdminConfiguracionRoute
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/admin/boletas'
+    | '/admin/buscar'
     | '/admin/colores'
     | '/admin/configuracion'
     | '/admin/cotizaciones'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/admin/boletas'
+    | '/admin/buscar'
     | '/admin/colores'
     | '/admin/configuracion'
     | '/admin/cotizaciones'
@@ -188,6 +200,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/_authenticated/admin/boletas'
+    | '/_authenticated/admin/buscar'
     | '/_authenticated/admin/colores'
     | '/_authenticated/admin/configuracion'
     | '/_authenticated/admin/cotizaciones'
@@ -299,6 +312,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminColoresRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/buscar': {
+      id: '/_authenticated/admin/buscar'
+      path: '/admin/buscar'
+      fullPath: '/admin/buscar'
+      preLoaderRoute: typeof AuthenticatedAdminBuscarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/admin/boletas': {
       id: '/_authenticated/admin/boletas'
       path: '/admin/boletas'
@@ -311,6 +331,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
+  AuthenticatedAdminBuscarRoute: typeof AuthenticatedAdminBuscarRoute
   AuthenticatedAdminColoresRoute: typeof AuthenticatedAdminColoresRoute
   AuthenticatedAdminConfiguracionRoute: typeof AuthenticatedAdminConfiguracionRoute
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
@@ -323,6 +344,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
+  AuthenticatedAdminBuscarRoute: AuthenticatedAdminBuscarRoute,
   AuthenticatedAdminColoresRoute: AuthenticatedAdminColoresRoute,
   AuthenticatedAdminConfiguracionRoute: AuthenticatedAdminConfiguracionRoute,
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
