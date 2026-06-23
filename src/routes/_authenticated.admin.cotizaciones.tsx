@@ -226,13 +226,17 @@ function EditarCotizacionDialog({
 }
 
 function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
+  const { auth } = Route.useRouteContext();
+  const isSuper = auth.isSuperadmin;
+  const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", ancho_m: "", color: "", precio_m2: "7990" });
+  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", ancho_m: "", color: "", precio_m2: "7990", fecha_solicitud: today });
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
       largo_m: Number(form.largo_m), ancho_m: Number(form.ancho_m),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
+      fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
     onSuccess: (r) => { toast.success(`Creada ${r.numero}`); onCreated(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
@@ -251,6 +255,17 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
           <div><Label>Ancho (m)</Label><Input type="number" step="0.01" value={form.ancho_m} onChange={(e)=>setForm({...form, ancho_m: e.target.value})} /></div>
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
+          <div className="sm:col-span-2">
+            <Label>Fecha de la solicitud {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+            <Input
+              type="date"
+              value={form.fecha_solicitud}
+              max={isSuper ? undefined : today}
+              disabled={!isSuper}
+              onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})}
+            />
+            {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
