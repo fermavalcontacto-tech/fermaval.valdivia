@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2 } from "lucide-react";
+import { Plus, Check, X, Trash2, Download } from "lucide-react";
+import { downloadComprobantePDF } from "@/lib/comprobante-pdf";
 
 export const Route = createFileRoute("/_authenticated/admin/egresos")({
   component: EgresosPage,
@@ -30,7 +31,23 @@ function EgresosPage() {
 
   const decide = useMutation({
     mutationFn: (v: { id: string; estado: "aprobado" | "rechazado" }) => decideEgreso({ data: v }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["egresos"] }); toast.success("Actualizado"); },
+    onSuccess: (_r, vars) => {
+      qc.invalidateQueries({ queryKey: ["egresos"] });
+      toast.success("Actualizado");
+      if (vars.estado === "aprobado") {
+        const s = (data ?? []).find((x) => x.id === vars.id);
+        if (s) {
+          downloadComprobantePDF({
+            id: s.id, tipo: s.tipo, descripcion: s.descripcion, monto: Number(s.monto),
+            fecha: s.fecha, solicitado_por: s.solicitado_por, boleta_subida_por: s.boleta_subida_por,
+            estado: "aprobado",
+            decidido_at: new Date().toISOString(),
+            aprobador_nombre: "Administrador General",
+            aprobador_email: auth.email,
+          });
+        }
+      }
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const del = useMutation({
@@ -83,6 +100,23 @@ function EgresosPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
+                      {s.estado === "aprobado" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Descargar Comprobante"
+                          onClick={() => downloadComprobantePDF({
+                            id: s.id, tipo: s.tipo, descripcion: s.descripcion, monto: Number(s.monto),
+                            fecha: s.fecha, solicitado_por: s.solicitado_por, boleta_subida_por: s.boleta_subida_por,
+                            estado: "aprobado",
+                            decidido_at: s.decidido_at ?? null,
+                            aprobador_nombre: "Administrador General",
+                            aprobador_email: "fermaval.contacto@gmail.com",
+                          })}
+                        >
+                          <Download className="h-4 w-4 mr-1" /> Comprobante
+                        </Button>
+                      )}
                       {isSuper && s.estado === "pendiente" && (
                         <>
                           <Button size="sm" variant="outline" title="Aprobar" onClick={() => decide.mutate({ id: s.id, estado: "aprobado" })}><Check className="h-4 w-4 text-green-600" /></Button>
