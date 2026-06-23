@@ -33,18 +33,18 @@ const getQuote = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     // Strip PII before sending to the browser: only first name + masked email.
-    let safeCot: typeof cot = cot;
+    let safeCot: unknown = cot;
     if (cot) {
       const c = cot.cliente as { nombre?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
       safeCot = {
         ...cot,
-        cliente: c ? { nombre: firstName, correo: maskCorreo(c.correo) } : null,
+        cliente: { nombre: firstName, correo: maskCorreo(c?.correo) },
       };
     }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot: safeCot, cfg };
+    return { cot: safeCot as typeof cot, cfg };
   });
 
 export const Route = createFileRoute("/cotizacion/$numero")({
