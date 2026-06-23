@@ -168,7 +168,6 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
     monto: "",
     fecha: today,
     solicitado_por: "Freddy" as Persona,
-    boleta_subida_por: "ninguno" as Persona | "ninguno",
   });
   const mut = useMutation({
     mutationFn: () => createEgreso({ data: {
@@ -177,7 +176,7 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
       monto: Number(form.monto),
       fecha: isSuper ? form.fecha : today,
       solicitado_por: form.solicitado_por,
-      boleta_subida_por: form.boleta_subida_por === "ninguno" ? null : form.boleta_subida_por,
+      boleta_subida_por: null,
     } }),
     onSuccess: () => { toast.success("Solicitud creada"); onCreated(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
