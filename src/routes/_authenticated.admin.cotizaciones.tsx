@@ -150,6 +150,11 @@ function CotizacionesPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
+                      {(c.estado === "pedido_confirmado" || c.estado === "pedido_terminado") && (
+                        <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c)}>
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
                       {auth.isSuperadmin && (
                         <>
                           <Button variant="ghost" size="sm" title="Editar" onClick={() => setEditing(c)}>
