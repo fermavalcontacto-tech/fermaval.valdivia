@@ -138,7 +138,7 @@ function CotizacionesPage() {
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
                   <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
                   <td className="p-3">
-                    <Select value={c.estado} onValueChange={(v) => mut.mutate({ id: c.id, estado: v as Estado })}>
+                    <Select value={c.estado} onValueChange={(v) => mut.mutate({ id: c.id, estado: v as Estado, cot: c })}>
                       <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
                     </Select>
