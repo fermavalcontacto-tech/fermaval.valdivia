@@ -11,19 +11,40 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft } from "lucide-react";
 
+function maskCorreo(c: string | null | undefined): string {
+  if (!c) return "—";
+  const [u, d] = c.split("@");
+  if (!d) return "—";
+  const head = u.slice(0, 1);
+  const tail = u.length > 2 ? u.slice(-1) : "";
+  return `${head}${"•".repeat(Math.max(1, u.length - (tail ? 2 : 1)))}${tail}@${d}`;
+}
+
 const getQuote = createServerFn({ method: "GET" })
   .inputValidator((d) => z.object({ numero: z.string().max(40) }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
-      .select("*, cliente:clientes(*)")
+      .select(
+        "numero, created_at, estado, largo_m, ancho_m, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+      )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
+    // Strip PII before sending to the browser: only first name + masked email.
+    let safeCot: typeof cot = cot;
+    if (cot) {
+      const c = cot.cliente as { nombre?: string; correo?: string } | null;
+      const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
+      safeCot = {
+        ...cot,
+        cliente: c ? { nombre: firstName, correo: maskCorreo(c.correo) } : null,
+      };
+    }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot, cfg };
+    return { cot: safeCot, cfg };
   });
 
 export const Route = createFileRoute("/cotizacion/$numero")({
