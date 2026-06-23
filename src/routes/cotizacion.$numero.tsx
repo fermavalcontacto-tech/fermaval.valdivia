@@ -166,13 +166,30 @@ function QuotePage() {
                 </Button>
               ) : (
                 <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium" htmlFor="confirm-correo">
+                      Confirma tu correo para aceptar
+                    </label>
+                    <input
+                      id="confirm-correo"
+                      type="email"
+                      autoComplete="email"
+                      value={correo}
+                      onChange={(e) => setCorreo(e.target.value)}
+                      placeholder="tu@correo.cl"
+                      className="mt-1 block w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Debe coincidir con el correo registrado en esta cotización.
+                    </p>
+                  </div>
                   <p className="text-sm text-muted-foreground">Elige el porcentaje a abonar:</p>
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <Button onClick={() => accept.mutate(20)} disabled={accept.isPending} variant="outline" size="lg" className="h-auto flex-col py-4">
+                    <Button onClick={() => accept.mutate(20)} disabled={accept.isPending || !correo} variant="outline" size="lg" className="h-auto flex-col py-4">
                       <span className="font-display text-3xl text-primary">20%</span>
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.20))}</span>
                     </Button>
-                    <Button onClick={() => accept.mutate(50)} disabled={accept.isPending} variant="hero" size="lg" className="h-auto flex-col py-4">
+                    <Button onClick={() => accept.mutate(50)} disabled={accept.isPending || !correo} variant="hero" size="lg" className="h-auto flex-col py-4">
                       <span className="font-display text-3xl">50%</span>
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.50))}</span>
                     </Button>
