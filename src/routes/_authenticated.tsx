@@ -92,8 +92,19 @@ function AuthedLayout() {
           <button onClick={() => setOpen(true)}><Menu className="h-5 w-5" /></button>
           <img src={logoHorizontal.url} alt="FERMAVAL" className="h-7" />
         </header>
-        <main className="flex-1 p-4 md:p-8">
-          <Outlet />
+        <main
+          className="relative flex-1 p-4 md:p-8"
+          style={{
+            backgroundImage: `url(${logoMark.url})`,
+            backgroundRepeat: "repeat",
+            backgroundSize: "420px auto",
+            backgroundPosition: "center",
+          }}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-background/92" aria-hidden="true" />
+          <div className="relative">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
