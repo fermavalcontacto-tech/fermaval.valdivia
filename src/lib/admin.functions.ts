@@ -211,16 +211,30 @@ export const upsertColor = createServerFn({ method: "POST" })
     orden: z.number().int().min(0).max(999),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
     if (data.id) {
+      const { data: prev } = await context.supabase.from("colores").select("*").eq("id", data.id).single();
       const { error } = await context.supabase.from("colores").update({
         nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null, activo: data.activo, orden: data.orden,
       }).eq("id", data.id);
       if (error) throw new Error(error.message);
+      await context.supabase.from("config_audit_log").insert({
+        user_id: context.userId, user_email: email, entidad: "colores", accion: "update",
+        cambio: `Color "${data.nombre}" actualizado`,
+        valor_antes: prev ? `${prev.nombre} ${prev.hex} activo=${prev.activo}` : null,
+        valor_despues: `${data.nombre} ${data.hex} activo=${data.activo}`,
+      });
     } else {
       const { error } = await context.supabase.from("colores").insert({
         nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null, activo: data.activo, orden: data.orden,
       });
       if (error) throw new Error(error.message);
+      await context.supabase.from("config_audit_log").insert({
+        user_id: context.userId, user_email: email, entidad: "colores", accion: "create",
+        cambio: `Color "${data.nombre}" creado`, valor_antes: null,
+        valor_despues: `${data.nombre} ${data.hex}`,
+      });
     }
     return { ok: true };
   });
@@ -229,8 +243,16 @@ export const deleteColor = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("colores").select("nombre, hex").eq("id", data.id).single();
     const { error } = await context.supabase.from("colores").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "colores", accion: "delete",
+      cambio: `Color "${prev?.nombre ?? data.id}" eliminado`,
+      valor_antes: prev ? `${prev.nombre} ${prev.hex}` : null, valor_despues: null,
+    });
     return { ok: true };
   });
 
@@ -259,6 +281,9 @@ export const updateConfig = createServerFn({ method: "POST" })
     hero_url: z.string().url().nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("configuracion_web").select("*").eq("id", 1).single();
     const { error } = await context.supabase.from("configuracion_web").update({
       ...data,
       logo_url: data.logo_url ?? null,
@@ -266,8 +291,39 @@ export const updateConfig = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     }).eq("id", 1);
     if (error) throw new Error(error.message);
+    // log per-field diffs
+    const fields: Array<keyof typeof data> = [
+      "precio_m2","hero_titulo","hero_subtitulo","info_comercial","linktree_url",
+      "mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url",
+    ];
+    const rows: Array<{ user_id: string; user_email: string; entidad: string; accion: string; cambio: string; valor_antes: string | null; valor_despues: string | null }> = [];
+    for (const k of fields) {
+      const before = prev ? (prev as Record<string, unknown>)[k] : null;
+      const after = (data as Record<string, unknown>)[k] ?? null;
+      if (String(before ?? "") !== String(after ?? "")) {
+        rows.push({
+          user_id: context.userId, user_email: email, entidad: "configuracion_web", accion: "update",
+          cambio: `${k} actualizado`,
+          valor_antes: before == null ? null : String(before),
+          valor_despues: after == null ? null : String(after),
+        });
+      }
+    }
+    if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
     return { ok: true };
   });
+
+export const listConfigAudit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data, error } = await context.supabase
+      .from("config_audit_log").select("*").order("created_at", { ascending: false }).limit(100);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
 
 export const generateMonthlyExcel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
