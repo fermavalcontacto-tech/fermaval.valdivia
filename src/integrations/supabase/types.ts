@@ -213,6 +213,7 @@ export type Database = {
           color_nombre: string | null
           created_at: string
           created_by: string | null
+          descuento: number
           estado: Database["public"]["Enums"]["quote_status"]
           id: string
           largo_m: number
@@ -232,6 +233,7 @@ export type Database = {
           color_nombre?: string | null
           created_at?: string
           created_by?: string | null
+          descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
           id?: string
           largo_m: number
@@ -251,6 +253,7 @@ export type Database = {
           color_nombre?: string | null
           created_at?: string
           created_by?: string | null
+          descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
           id?: string
           largo_m?: number
