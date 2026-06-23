@@ -104,8 +104,9 @@ export const createEgreso = createServerFn({ method: "POST" })
     boleta_subida_por: personaSchema.nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const fecha = enforceFecha(context.claims?.email, data.fecha);
     const { error } = await context.supabase.from("solicitudes_egreso").insert({
-      tipo: data.tipo, descripcion: data.descripcion, monto: data.monto, fecha: data.fecha,
+      tipo: data.tipo, descripcion: data.descripcion, monto: data.monto, fecha,
       solicitante_id: context.userId, estado: "pendiente",
       solicitado_por: data.solicitado_por,
       boleta_subida_por: data.boleta_subida_por ?? null,
