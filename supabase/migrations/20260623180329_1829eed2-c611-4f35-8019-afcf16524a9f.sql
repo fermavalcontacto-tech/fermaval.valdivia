@@ -1,0 +1,2 @@
+ALTER TABLE public.cotizaciones ADD COLUMN IF NOT EXISTS fecha_solicitud date NOT NULL DEFAULT CURRENT_DATE;
+CREATE INDEX IF NOT EXISTS idx_cotizaciones_fecha_solicitud ON public.cotizaciones(fecha_solicitud);

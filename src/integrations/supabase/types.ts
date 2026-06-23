@@ -216,6 +216,7 @@ export type Database = {
           descuento: number
           estado: Database["public"]["Enums"]["quote_status"]
           estado_pedido: Database["public"]["Enums"]["estado_pedido"]
+          fecha_solicitud: string
           id: string
           largo_m: number
           metros2: number
@@ -237,6 +238,7 @@ export type Database = {
           descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
           estado_pedido?: Database["public"]["Enums"]["estado_pedido"]
+          fecha_solicitud?: string
           id?: string
           largo_m: number
           metros2: number
@@ -258,6 +260,7 @@ export type Database = {
           descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
           estado_pedido?: Database["public"]["Enums"]["estado_pedido"]
+          fecha_solicitud?: string
           id?: string
           largo_m?: number
           metros2?: number
