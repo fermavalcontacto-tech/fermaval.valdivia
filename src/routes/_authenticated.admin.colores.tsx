@@ -13,10 +13,11 @@ import { Plus, Trash2, Edit } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/colores")({
   beforeLoad: ({ context }) => {
-    if (!context.auth.isAdmin) throw redirect({ to: "/admin" });
+    if (!context.auth.isSuperadmin) throw redirect({ to: "/admin" });
   },
   component: ColoresPage,
 });
+
 
 type Color = { id: string; nombre: string; hex: string; imagen_url: string | null; activo: boolean; orden: number };
 
