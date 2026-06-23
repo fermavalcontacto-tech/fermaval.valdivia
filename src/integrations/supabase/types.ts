@@ -326,6 +326,7 @@ export type Database = {
       }
       solicitudes_egreso: {
         Row: {
+          boleta_subida_por: string | null
           created_at: string
           decidido_at: string | null
           decidido_por: string | null
@@ -334,10 +335,12 @@ export type Database = {
           fecha: string
           id: string
           monto: number
+          solicitado_por: string
           solicitante_id: string
           tipo: Database["public"]["Enums"]["expense_type"]
         }
         Insert: {
+          boleta_subida_por?: string | null
           created_at?: string
           decidido_at?: string | null
           decidido_por?: string | null
@@ -346,10 +349,12 @@ export type Database = {
           fecha?: string
           id?: string
           monto: number
+          solicitado_por: string
           solicitante_id: string
           tipo: Database["public"]["Enums"]["expense_type"]
         }
         Update: {
+          boleta_subida_por?: string | null
           created_at?: string
           decidido_at?: string | null
           decidido_por?: string | null
@@ -358,6 +363,7 @@ export type Database = {
           fecha?: string
           id?: string
           monto?: number
+          solicitado_por?: string
           solicitante_id?: string
           tipo?: Database["public"]["Enums"]["expense_type"]
         }
