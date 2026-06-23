@@ -89,7 +89,7 @@ function QuotePage() {
   }
 
   const cot = data.cot;
-  const cliente = cot.cliente as { nombre: string; correo: string; telefono: string; direccion: string };
+  const cliente = cot.cliente as { nombre: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
   return (
