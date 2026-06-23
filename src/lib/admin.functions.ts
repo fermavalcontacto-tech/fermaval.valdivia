@@ -10,6 +10,17 @@ function assertSuperadmin(email: string | undefined) {
   }
 }
 
+function isSuperadminEmail(email: string | undefined) {
+  return (email ?? "").toLowerCase() === SUPERADMIN_EMAIL;
+}
+
+/** Forces today's date for non-superadmin users. Superadmin may backdate. */
+function enforceFecha(email: string | undefined, fecha: string | undefined): string {
+  const today = new Date().toISOString().slice(0, 10);
+  if (!isSuperadminEmail(email)) return today;
+  return fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : today;
+}
+
 
 export const listCotizaciones = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
