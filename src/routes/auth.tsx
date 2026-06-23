@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import logoHorizontal from "@/assets/fermaval-logo-full.jpg.asset.json";
+import logoHorizontal from "@/assets/fermaval-logo-transparent.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -39,8 +39,16 @@ function AuthPage() {
   }
 
   return (
-    <div className="industrial-stripes flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-2 border-border p-8">
+    <div
+      className="industrial-stripes relative flex min-h-screen items-center justify-center bg-background px-4"
+      style={{
+        backgroundImage: `url(${logoHorizontal.url})`,
+        backgroundRepeat: "repeat",
+        backgroundSize: "360px auto",
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 bg-background/90" aria-hidden="true" />
+      <Card className="relative w-full max-w-md border-2 border-border p-8">
         <Link to="/" className="mb-6 flex justify-center">
           <img src={logoHorizontal.url} alt="FERMAVAL" className="h-32 w-auto" />
         </Link>
