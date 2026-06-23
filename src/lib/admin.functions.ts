@@ -374,3 +374,160 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     const buf = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
     return { filename: `fermaval-${data.year}-${String(data.month).padStart(2,"0")}.xlsx`, base64: buf };
   });
+
+// ============= Superadmin-only edit/delete: cotizaciones & boletas =============
+
+export const updateCotizacionFull = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    cliente: z.object({
+      id: z.string().uuid(),
+      nombre: z.string().trim().min(2),
+      telefono: z.string().trim().min(3),
+      correo: z.string().trim().email(),
+      direccion: z.string().trim().min(3),
+    }),
+    largo_m: z.number().positive(),
+    ancho_m: z.number().positive(),
+    color_nombre: z.string().nullable().optional(),
+    precio_m2: z.number().positive(),
+    descuento: z.number().min(0).default(0),
+    pago_recibido: z.number().min(0),
+    estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const metros2 = Number((data.largo_m * data.ancho_m).toFixed(2));
+    const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
+    const saldo = Math.max(0, total - data.pago_recibido);
+    const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
+    const { error: cErr } = await context.supabase.from("clientes").update({
+      nombre: data.cliente.nombre, telefono: data.cliente.telefono,
+      correo: data.cliente.correo, direccion: data.cliente.direccion,
+    }).eq("id", data.cliente.id);
+    if (cErr) throw new Error(cErr.message);
+    const { error } = await context.supabase.from("cotizaciones").update({
+      largo_m: data.largo_m, ancho_m: data.ancho_m, metros2,
+      precio_m2: data.precio_m2, descuento: data.descuento,
+      total, pago_recibido: data.pago_recibido, saldo,
+      color_nombre: data.color_nombre ?? null, estado: data.estado,
+    }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "update",
+      cambio: `Cotización ${prev?.numero ?? data.id} editada`,
+      valor_antes: prev ? `total=${prev.total} estado=${prev.estado}` : null,
+      valor_despues: `total=${total} estado=${data.estado}`,
+    });
+    return { ok: true };
+  });
+
+export const deleteCotizacion = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total").eq("id", data.id).single();
+    const { error } = await context.supabase.from("cotizaciones").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "delete",
+      cambio: `Cotización ${prev?.numero ?? data.id} eliminada`,
+      valor_antes: prev ? `total=${prev.total}` : null, valor_despues: null,
+    });
+    return { ok: true };
+  });
+
+export const updateBoleta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    tipo_gasto: z.enum(["materiales", "transporte", "herramientas", "servicios", "otros"]),
+    descripcion: z.string().trim().max(300).nullable().optional(),
+    monto: z.number().positive(),
+    fecha: z.string(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("boletas").select("monto, tipo_gasto, fecha").eq("id", data.id).single();
+    const { error } = await context.supabase.from("boletas").update({
+      tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
+      monto: data.monto, fecha: data.fecha,
+    }).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "boletas", accion: "update",
+      cambio: `Boleta editada`,
+      valor_antes: prev ? `${prev.tipo_gasto} ${prev.monto} ${prev.fecha}` : null,
+      valor_despues: `${data.tipo_gasto} ${data.monto} ${data.fecha}`,
+    });
+    return { ok: true };
+  });
+
+export const deleteBoleta = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("boletas").select("archivo_path, archivo_nombre, monto").eq("id", data.id).single();
+    if (prev?.archivo_path) {
+      await context.supabase.storage.from("boletas").remove([prev.archivo_path]);
+    }
+    const { error } = await context.supabase.from("boletas").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "boletas", accion: "delete",
+      cambio: `Boleta eliminada (${prev?.archivo_nombre ?? "sin nombre"})`,
+      valor_antes: prev ? `monto=${prev.monto}` : null, valor_despues: null,
+    });
+    return { ok: true };
+  });
+
+export const limpiarDatosPrueba = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    confirmacion: z.literal("CONFIRMAR"),
+    cotizaciones: z.boolean(),
+    boletas: z.boolean(),
+    egresos: z.boolean(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const out: Record<string, number> = {};
+    if (data.cotizaciones) {
+      const { data: rows } = await context.supabase.from("cotizaciones").select("id");
+      const ids = (rows ?? []).map((r) => r.id);
+      if (ids.length) {
+        await context.supabase.from("pagos").delete().in("cotizacion_id", ids);
+        const { error, count } = await context.supabase.from("cotizaciones").delete({ count: "exact" }).in("id", ids);
+        if (error) throw new Error(error.message);
+        out.cotizaciones = count ?? ids.length;
+      } else out.cotizaciones = 0;
+    }
+    if (data.boletas) {
+      const { data: rows } = await context.supabase.from("boletas").select("id, archivo_path");
+      const paths = (rows ?? []).map((r) => r.archivo_path).filter(Boolean);
+      if (paths.length) await context.supabase.storage.from("boletas").remove(paths);
+      const { error, count } = await context.supabase.from("boletas").delete({ count: "exact" }).gt("monto", -1);
+      if (error) throw new Error(error.message);
+      out.boletas = count ?? 0;
+    }
+    if (data.egresos) {
+      const { error, count } = await context.supabase.from("solicitudes_egreso").delete({ count: "exact" }).gt("monto", -1);
+      if (error) throw new Error(error.message);
+      out.egresos = count ?? 0;
+    }
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email, entidad: "sistema", accion: "purge",
+      cambio: `Limpieza de datos de prueba: ${JSON.stringify(out)}`,
+      valor_antes: null, valor_despues: JSON.stringify(out),
+    });
+    return out;
+  });
+

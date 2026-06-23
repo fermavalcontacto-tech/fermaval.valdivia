@@ -1,13 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig, listConfigAudit } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
+
 
 const q = queryOptions({ queryKey: ["config"], queryFn: () => getConfig() });
 const qAudit = queryOptions({ queryKey: ["config-audit"], queryFn: () => listConfigAudit() });
@@ -76,10 +79,69 @@ function ConfiguracionPage() {
           <Button onClick={() => save.mutate()} disabled={save.isPending} variant="hero">{save.isPending ? "Guardando..." : "Guardar cambios"}</Button>
         </div>
       </Card>
+      <HerramientasPrueba />
       <AuditLogCard />
     </div>
   );
 }
+
+function HerramientasPrueba() {
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState("");
+  const [opts, setOpts] = useState({ cotizaciones: true, boletas: true, egresos: true });
+  const mut = useMutation({
+    mutationFn: () => limpiarDatosPrueba({ data: { confirmacion: "CONFIRMAR", ...opts } }),
+    onSuccess: (r) => {
+      toast.success(`Limpieza completa: ${JSON.stringify(r)}`);
+      setConfirm("");
+      qc.invalidateQueries({ queryKey: ["cotizaciones"] });
+      qc.invalidateQueries({ queryKey: ["boletas"] });
+      qc.invalidateQueries({ queryKey: ["config-audit"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const ready = confirm === "CONFIRMAR" && (opts.cotizaciones || opts.boletas || opts.egresos);
+  return (
+    <Card className="border-destructive/40 p-6">
+      <div className="mb-3 flex items-center gap-2">
+        <AlertTriangle className="h-5 w-5 text-destructive" />
+        <h2 className="font-display text-2xl text-destructive">HERRAMIENTAS DE PRUEBAS</h2>
+      </div>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Limpia datos de demostración antes del lanzamiento. Esta acción es irreversible y queda registrada en el historial.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={opts.cotizaciones} onCheckedChange={(v) => setOpts({ ...opts, cotizaciones: v })} />
+          Cotizaciones y pagos
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={opts.boletas} onCheckedChange={(v) => setOpts({ ...opts, boletas: v })} />
+          Boletas y archivos
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <Switch checked={opts.egresos} onCheckedChange={(v) => setOpts({ ...opts, egresos: v })} />
+          Solicitudes de egreso
+        </label>
+      </div>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="flex-1 min-w-[220px]">
+          <Label>Escribe "CONFIRMAR" para habilitar</Label>
+          <Input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="CONFIRMAR" />
+        </div>
+        <Button
+          variant="destructive"
+          disabled={!ready || mut.isPending}
+          onClick={() => mut.mutate()}
+        >
+          {mut.isPending ? "Limpiando..." : "Eliminar datos de prueba"}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+
 
 function AuditLogCard() {
   const { data } = useQuery(qAudit);
