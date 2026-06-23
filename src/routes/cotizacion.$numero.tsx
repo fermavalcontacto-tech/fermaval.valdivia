@@ -63,9 +63,10 @@ function QuotePage() {
     queryFn: () => getQuote({ data: { numero } }),
   }));
   const [showPay, setShowPay] = useState(false);
+  const [correo, setCorreo] = useState("");
 
   const accept = useMutation({
-    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje } }),
+    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo } }),
     onSuccess: (r) => {
       toast.success(`Pago del ${formatCLP(r.monto)} registrado. Saldo: ${formatCLP(r.saldo)}`);
       setShowPay(false);
