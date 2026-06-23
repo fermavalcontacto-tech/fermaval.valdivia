@@ -86,7 +86,7 @@ function AuthedLayout() {
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60" title={auth.email}>{auth.email}</div>
           <div className="mb-2 px-2 text-xs">
-            <span className="rounded bg-accent/20 px-2 py-0.5 text-accent">{auth.isAdmin ? "Administrador" : "Operador"}</span>
+            <span className="rounded bg-accent/20 px-2 py-0.5 text-accent">{auth.isSuperadmin ? "Administrador General" : auth.isAdmin ? "Administrador" : "Operador"}</span>
           </div>
           <Button onClick={signOut} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
