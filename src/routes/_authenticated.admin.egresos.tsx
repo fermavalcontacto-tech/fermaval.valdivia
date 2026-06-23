@@ -31,7 +31,23 @@ function EgresosPage() {
 
   const decide = useMutation({
     mutationFn: (v: { id: string; estado: "aprobado" | "rechazado" }) => decideEgreso({ data: v }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["egresos"] }); toast.success("Actualizado"); },
+    onSuccess: (_r, vars) => {
+      qc.invalidateQueries({ queryKey: ["egresos"] });
+      toast.success("Actualizado");
+      if (vars.estado === "aprobado") {
+        const s = (data ?? []).find((x) => x.id === vars.id);
+        if (s) {
+          downloadComprobantePDF({
+            id: s.id, tipo: s.tipo, descripcion: s.descripcion, monto: Number(s.monto),
+            fecha: s.fecha, solicitado_por: s.solicitado_por, boleta_subida_por: s.boleta_subida_por,
+            estado: "aprobado",
+            decidido_at: new Date().toISOString(),
+            aprobador_nombre: "Administrador General",
+            aprobador_email: auth.email,
+          });
+        }
+      }
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const del = useMutation({
