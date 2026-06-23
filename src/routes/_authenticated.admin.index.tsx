@@ -4,7 +4,8 @@ import { getDashboard } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { TrendingUp, FileText, PackageCheck, Wallet, Receipt } from "lucide-react";
+import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const q = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
@@ -33,6 +34,41 @@ function Dashboard() {
         <h1 className="font-display text-4xl text-primary">DASHBOARD</h1>
         <p className="text-sm text-muted-foreground">Resumen del mes actual</p>
       </div>
+
+      {data.egresosPendientes > 0 ? (
+        <Card className="border-amber-400/50 bg-amber-50 dark:bg-amber-950/30 p-5">
+          <div className="flex items-start gap-4">
+            <div className="rounded-full bg-amber-200/70 dark:bg-amber-900/50 p-2">
+              <AlertTriangle className="h-6 w-6 text-amber-700 dark:text-amber-300" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-display text-xl text-amber-900 dark:text-amber-100">
+                Hay solicitudes de dinero pendientes
+              </h3>
+              <p className="mt-1 text-sm text-amber-800 dark:text-amber-200">
+                Tienes <strong className="font-bold">{data.egresosPendientes}</strong>{" "}
+                {data.egresosPendientes === 1 ? "solicitud pendiente" : "solicitudes pendientes"} de revisión.
+              </p>
+            </div>
+            <Link
+              to="/admin/egresos"
+              className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 transition-colors"
+            >
+              Revisar
+            </Link>
+          </div>
+        </Card>
+      ) : (
+        <Card className="border-green-400/50 bg-green-50 dark:bg-green-950/30 p-5">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-5 w-5 text-green-700 dark:text-green-300" />
+            <p className="text-sm text-green-900 dark:text-green-100">
+              Todo al día — no hay solicitudes de dinero pendientes.
+            </p>
+          </div>
+        </Card>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
