@@ -4,6 +4,8 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion,
 } from "@/lib/admin.functions";
+import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
+import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +23,7 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Download, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
