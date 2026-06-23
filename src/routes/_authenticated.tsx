@@ -6,8 +6,9 @@ import logoHorizontal from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 import logoMark from "@/assets/fermaval-logo-transparent.png.asset.json";
 import {
   LayoutDashboard, FileText, PackageCheck, Receipt, FileImage,
-  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X,
+  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X, Search,
 } from "lucide-react";
+
 
 const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
 
@@ -31,7 +32,9 @@ export const Route = createFileRoute("/_authenticated")({
 const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean }> = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { to: "/admin/cotizaciones", label: "Cotizaciones", icon: FileText },
+  { to: "/admin/buscar", label: "Buscar Cotizaciones", icon: Search },
   { to: "/admin/pedidos", label: "Pedidos", icon: PackageCheck },
+
   { to: "/admin/egresos", label: "Egresos", icon: Receipt },
   { to: "/admin/boletas", label: "Boletas", icon: FileImage },
   { to: "/admin/finanzas", label: "Finanzas", icon: TrendingUp },
