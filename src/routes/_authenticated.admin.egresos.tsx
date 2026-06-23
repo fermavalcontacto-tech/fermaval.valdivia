@@ -58,10 +58,10 @@ function EgresosPage() {
                     }`}>{s.estado}</span>
                   </td>
                   <td className="p-3">
-                    {auth.isAdmin && s.estado === "pendiente" && (
+                    {auth.email.toLowerCase() === "fermaval.contacto@gmail.com" && s.estado === "pendiente" && (
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => decide.mutate({ id: s.id, estado: "aprobado" })}><Check className="h-4 w-4 text-green-600" /></Button>
-                        <Button size="sm" variant="outline" onClick={() => decide.mutate({ id: s.id, estado: "rechazado" })}><X className="h-4 w-4 text-red-600" /></Button>
+                        <Button size="sm" variant="outline" title="Aprobar" onClick={() => decide.mutate({ id: s.id, estado: "aprobado" })}><Check className="h-4 w-4 text-green-600" /></Button>
+                        <Button size="sm" variant="outline" title="Rechazar" onClick={() => decide.mutate({ id: s.id, estado: "rechazado" })}><X className="h-4 w-4 text-red-600" /></Button>
                       </div>
                     )}
                   </td>
