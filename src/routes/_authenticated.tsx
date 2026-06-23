@@ -9,7 +9,9 @@ import {
   TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X,
 } from "lucide-react";
 
-type RoleCtx = { userId: string; isAdmin: boolean; email: string };
+const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
+
+type RoleCtx = { userId: string; isAdmin: boolean; isSuperadmin: boolean; email: string };
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,8 +20,11 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
     const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-    return { auth: { userId: data.user.id, isAdmin, email: data.user.email ?? "" } };
+    const email = data.user.email ?? "";
+    const isSuperadmin = email.toLowerCase() === SUPERADMIN_EMAIL;
+    return { auth: { userId: data.user.id, isAdmin, isSuperadmin, email } };
   },
+
   component: AuthedLayout,
 });
 
