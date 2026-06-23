@@ -105,15 +105,49 @@ export const createEgreso = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
-    const { error } = await context.supabase.from("solicitudes_egreso").insert({
+    const { data: inserted, error } = await context.supabase.from("solicitudes_egreso").insert({
       tipo: data.tipo, descripcion: data.descripcion, monto: data.monto, fecha,
       solicitante_id: context.userId, estado: "pendiente",
       solicitado_por: data.solicitado_por,
       boleta_subida_por: data.boleta_subida_por ?? null,
-    });
+    }).select("id").single();
     if (error) throw new Error(error.message);
+
+    // Notify admin inbox (Flow 1) — best-effort.
+    try {
+      const { sendGmail, ADMIN_INBOX } = await import("@/lib/gmail.server");
+      const { getRequestHeader } = await import("@tanstack/react-start/server");
+      const host = getRequestHeader("host") ?? "";
+      const proto = getRequestHeader("x-forwarded-proto") ?? "https";
+      const base = host ? `${proto}://${host}` : "";
+      const id = inserted?.id ?? "";
+      const shortId = id ? `SE-${id.slice(0, 8).toUpperCase()}` : "SE-NUEVA";
+      const monto = data.monto.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+      const text = [
+        "Nueva Solicitud de Dinero pendiente de revisión.",
+        "",
+        `ID: ${shortId}`,
+        `Solicitado por: ${data.solicitado_por}`,
+        `Responsable boleta: ${data.boleta_subida_por ?? "—"}`,
+        `Tipo: ${data.tipo}`,
+        `Monto: ${monto}`,
+        `Fecha: ${fecha}`,
+        `Motivo / Detalle: ${data.descripcion}`,
+        "",
+        base ? `Revisar / autorizar: ${base}/admin/egresos` : "Revisar en el panel /admin/egresos",
+      ].join("\r\n");
+      await sendGmail({
+        to: ADMIN_INBOX,
+        subject: `Nueva Solicitud de Dinero Pendiente - ${shortId}`,
+        text,
+      });
+    } catch (e) {
+      console.error("notifyNewEgreso failed:", (e as Error).message);
+    }
+
     return { ok: true };
   });
+
 
 export const deleteEgreso = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
