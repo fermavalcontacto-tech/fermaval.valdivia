@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2 } from "lucide-react";
+import { Plus, Check, X, Trash2, Download } from "lucide-react";
+import { downloadComprobantePDF } from "@/lib/comprobante-pdf";
 
 export const Route = createFileRoute("/_authenticated/admin/egresos")({
   component: EgresosPage,
