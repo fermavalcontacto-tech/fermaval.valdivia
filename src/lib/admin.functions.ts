@@ -91,9 +91,10 @@ export const decideEgreso = createServerFn({ method: "POST" })
     estado: z.enum(["aprobado", "rechazado"]),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: roles } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
-    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-    if (!isAdmin) throw new Error("Solo el administrador puede aprobar o rechazar");
+    const email = (context.claims?.email ?? "").toLowerCase();
+    if (email !== "fermaval.contacto@gmail.com") {
+      throw new Error("Solo el Administrador General (fermaval.contacto@gmail.com) puede aprobar o rechazar.");
+    }
     const { error } = await context.supabase.from("solicitudes_egreso").update({
       estado: data.estado, decidido_por: context.userId, decidido_at: new Date().toISOString(),
     }).eq("id", data.id);
