@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,16 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const q = queryOptions({ queryKey: ["config"], queryFn: () => getConfig() });
+const qAudit = queryOptions({ queryKey: ["config-audit"], queryFn: () => listConfigAudit() });
 
 export const Route = createFileRoute("/_authenticated/admin/configuracion")({
   beforeLoad: ({ context }) => {
-    if (!context.auth.isAdmin) throw redirect({ to: "/admin" });
+    if (!context.auth.isSuperadmin) throw redirect({ to: "/admin" });
   },
   loader: ({ context }) => context.queryClient.ensureQueryData(q),
   component: ConfiguracionPage,
 });
+
 
 function ConfiguracionPage() {
   const qc = useQueryClient();
@@ -74,6 +76,44 @@ function ConfiguracionPage() {
           <Button onClick={() => save.mutate()} disabled={save.isPending} variant="hero">{save.isPending ? "Guardando..." : "Guardar cambios"}</Button>
         </div>
       </Card>
+      <AuditLogCard />
     </div>
   );
 }
+
+function AuditLogCard() {
+  const { data } = useQuery(qAudit);
+  return (
+    <Card className="p-6">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="font-display text-2xl text-primary">REGISTRO DE CAMBIOS</h2>
+          <p className="text-xs text-muted-foreground">Últimas 100 modificaciones de configuración y colores</p>
+        </div>
+      </div>
+      <div className="max-h-96 overflow-auto">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-card text-left text-xs uppercase text-muted-foreground">
+            <tr><th className="py-2 pr-3">Fecha</th><th className="pr-3">Usuario</th><th className="pr-3">Entidad</th><th className="pr-3">Cambio</th><th className="pr-3">Antes</th><th>Después</th></tr>
+          </thead>
+          <tbody>
+            {(data ?? []).map((r) => (
+              <tr key={r.id} className="border-t border-border">
+                <td className="py-2 pr-3 whitespace-nowrap text-muted-foreground">{new Date(r.created_at).toLocaleString("es-CL")}</td>
+                <td className="pr-3">{r.user_email}</td>
+                <td className="pr-3">{r.entidad}</td>
+                <td className="pr-3">{r.cambio}</td>
+                <td className="pr-3 max-w-[200px] truncate" title={r.valor_antes ?? ""}>{r.valor_antes ?? "—"}</td>
+                <td className="max-w-[200px] truncate" title={r.valor_despues ?? ""}>{r.valor_despues ?? "—"}</td>
+              </tr>
+            ))}
+            {(data ?? []).length === 0 && (
+              <tr><td colSpan={6} className="py-6 text-center text-muted-foreground">Sin cambios registrados aún.</td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+

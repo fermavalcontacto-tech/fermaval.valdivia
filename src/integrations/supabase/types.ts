@@ -118,6 +118,42 @@ export type Database = {
         }
         Relationships: []
       }
+      config_audit_log: {
+        Row: {
+          accion: string
+          cambio: string
+          created_at: string
+          entidad: string
+          id: string
+          user_email: string
+          user_id: string | null
+          valor_antes: string | null
+          valor_despues: string | null
+        }
+        Insert: {
+          accion: string
+          cambio: string
+          created_at?: string
+          entidad: string
+          id?: string
+          user_email: string
+          user_id?: string | null
+          valor_antes?: string | null
+          valor_despues?: string | null
+        }
+        Update: {
+          accion?: string
+          cambio?: string
+          created_at?: string
+          entidad?: string
+          id?: string
+          user_email?: string
+          user_id?: string | null
+          valor_antes?: string | null
+          valor_despues?: string | null
+        }
+        Relationships: []
+      }
       configuracion_web: {
         Row: {
           direccion: string

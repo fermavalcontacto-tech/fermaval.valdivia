@@ -9,7 +9,9 @@ import {
   TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X,
 } from "lucide-react";
 
-type RoleCtx = { userId: string; isAdmin: boolean; email: string };
+const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
+
+type RoleCtx = { userId: string; isAdmin: boolean; isSuperadmin: boolean; email: string };
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,8 +20,11 @@ export const Route = createFileRoute("/_authenticated")({
     if (error || !data.user) throw redirect({ to: "/auth" });
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
     const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-    return { auth: { userId: data.user.id, isAdmin, email: data.user.email ?? "" } };
+    const email = data.user.email ?? "";
+    const isSuperadmin = email.toLowerCase() === SUPERADMIN_EMAIL;
+    return { auth: { userId: data.user.id, isAdmin, isSuperadmin, email } };
   },
+
   component: AuthedLayout,
 });
 
@@ -64,9 +69,9 @@ function AuthedLayout() {
               <n.icon className="h-4 w-4" /> {n.label}
             </Link>
           ))}
-          {auth.isAdmin && (
+          {auth.isSuperadmin && (
             <>
-              <div className="mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">Admin</div>
+              <div className="mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">Superadmin</div>
               {navAdmin.map((n) => (
                 <Link key={n.to} to={n.to}
                   activeProps={{ className: "bg-sidebar-primary text-sidebar-primary-foreground" }}
@@ -76,11 +81,12 @@ function AuthedLayout() {
               ))}
             </>
           )}
+
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60" title={auth.email}>{auth.email}</div>
           <div className="mb-2 px-2 text-xs">
-            <span className="rounded bg-accent/20 px-2 py-0.5 text-accent">{auth.isAdmin ? "Administrador" : "Operador"}</span>
+            <span className="rounded bg-accent/20 px-2 py-0.5 text-accent">{auth.isSuperadmin ? "Administrador General" : auth.isAdmin ? "Administrador" : "Operador"}</span>
           </div>
           <Button onClick={signOut} variant="ghost" className="w-full justify-start text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
             <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
