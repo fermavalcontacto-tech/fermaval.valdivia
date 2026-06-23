@@ -228,6 +228,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { data: cotPendientes } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).in("estado", ["cotizacion_creada","esperando_pago"]);
     const { data: pedidosConf } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).eq("estado", "pedido_confirmado");
     const { data: gastosMes } = await context.supabase.from("solicitudes_egreso").select("monto, estado").eq("estado", "aprobado").gte("fecha", inicioMesISO.slice(0, 10));
+    const { count: egresosPendientesCount } = await context.supabase.from("solicitudes_egreso").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
 
     const ventas = (cotMes ?? []).reduce((s, c) => s + Number(c.pago_recibido), 0);
     const totalCotizado = (cotMes ?? []).reduce((s, c) => s + Number(c.total), 0);
