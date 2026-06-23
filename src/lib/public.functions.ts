@@ -130,17 +130,48 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       })
       .eq("id", cot.id);
 
-    // Flow 2: notify admin that the client approved the quote — best-effort.
+    // Notificaciones — best-effort, no rompen el flujo de aceptación.
     try {
-      const { sendGmail, ADMIN_INBOX } = await import("@/lib/gmail.server");
+      const { sendGmail, INTERNAL_BCC } = await import("@/lib/gmail.server");
       const { getRequestHeader } = await import("@tanstack/react-start/server");
       const host = getRequestHeader("host") ?? "";
       const proto = getRequestHeader("x-forwarded-proto") ?? "https";
       const base = host ? `${proto}://${host}` : "";
       const cliente = cot.cliente as { nombre?: string; correo?: string; telefono?: string } | null;
-      const totalFmt = total.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
-      const montoFmt = monto.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
-      const text = [
+      const fmt = (n: number) =>
+        n.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+      const totalFmt = fmt(total);
+      const montoFmt = fmt(monto);
+      const saldoFmt = fmt(saldo);
+      const linkCot = base ? `${base}/cotizacion/${cot.numero}` : `/cotizacion/${cot.numero}`;
+
+      // 1) Correo al CLIENTE — confirmación de aceptación
+      const clientText = [
+        `Hola ${cliente?.nombre ?? ""},`,
+        "",
+        `¡Gracias por aceptar tu cotización ${cot.numero}!`,
+        "",
+        `Total: ${totalFmt}`,
+        `Pago comprometido (${data.porcentaje}%): ${montoFmt}`,
+        `Saldo por pagar: ${saldoFmt}`,
+        "",
+        `Puedes revisar tu cotización aquí: ${linkCot}`,
+        "",
+        "Un ejecutivo se pondrá en contacto contigo para coordinar el pago y la confirmación final del pedido.",
+        "",
+        "Saludos,",
+        "Equipo FERMAVAL",
+        "fermaval.contacto@gmail.com",
+      ].join("\r\n");
+      await sendGmail({
+        to: data.correo,
+        bcc: INTERNAL_BCC,
+        subject: `Hemos recibido tu aceptación de la cotización ${cot.numero}`,
+        text: clientText,
+      });
+
+      // 2) Correo INTERNO — alerta operativa (los 4 perfiles + admin)
+      const internalText = [
         `El cliente ha APROBADO la cotización ${cot.numero}.`,
         "",
         `Cliente: ${cliente?.nombre ?? "—"}`,
@@ -148,17 +179,15 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
         `Teléfono: ${cliente?.telefono ?? "—"}`,
         `Total cotización: ${totalFmt}`,
         `Pago comprometido: ${montoFmt} (${data.porcentaje}%)`,
-        `Saldo: ${saldo.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })}`,
+        `Saldo: ${saldoFmt}`,
         "",
-        base
-          ? `Ver cotización: ${base}/cotizacion/${cot.numero}`
-          : `Cotización: /cotizacion/${cot.numero}`,
+        `Ver cotización: ${linkCot}`,
         base ? `Panel admin: ${base}/admin/cotizaciones` : "",
       ].filter(Boolean).join("\r\n");
       await sendGmail({
-        to: ADMIN_INBOX,
+        to: INTERNAL_BCC,
         subject: `cotizacion nro ${cot.numero} - APROBADA POR CLIENTE`,
-        text,
+        text: internalText,
       });
     } catch (e) {
       console.error("notifyClientAccepted failed:", (e as Error).message);
