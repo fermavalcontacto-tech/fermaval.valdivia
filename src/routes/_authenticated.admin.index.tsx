@@ -4,7 +4,8 @@ import { getDashboard } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { TrendingUp, FileText, PackageCheck, Wallet, Receipt } from "lucide-react";
+import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 const q = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
