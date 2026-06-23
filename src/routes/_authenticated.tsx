@@ -69,9 +69,9 @@ function AuthedLayout() {
               <n.icon className="h-4 w-4" /> {n.label}
             </Link>
           ))}
-          {auth.isAdmin && (
+          {auth.isSuperadmin && (
             <>
-              <div className="mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">Admin</div>
+              <div className="mt-4 px-3 text-xs font-semibold uppercase tracking-wider text-sidebar-foreground/40">Superadmin</div>
               {navAdmin.map((n) => (
                 <Link key={n.to} to={n.to}
                   activeProps={{ className: "bg-sidebar-primary text-sidebar-primary-foreground" }}
@@ -81,6 +81,7 @@ function AuthedLayout() {
               ))}
             </>
           )}
+
         </nav>
         <div className="border-t border-sidebar-border p-3">
           <div className="mb-2 truncate px-2 text-xs text-sidebar-foreground/60" title={auth.email}>{auth.email}</div>
