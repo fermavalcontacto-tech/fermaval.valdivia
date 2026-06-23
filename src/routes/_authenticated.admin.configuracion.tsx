@@ -1,13 +1,16 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig, listConfigAudit } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AlertTriangle } from "lucide-react";
+
 
 const q = queryOptions({ queryKey: ["config"], queryFn: () => getConfig() });
 const qAudit = queryOptions({ queryKey: ["config-audit"], queryFn: () => listConfigAudit() });
