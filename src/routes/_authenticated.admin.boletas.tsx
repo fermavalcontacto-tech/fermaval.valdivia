@@ -180,11 +180,14 @@ function EditarBoletaDialog({
 }
 
 function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
+  const { auth } = Route.useRouteContext();
+  const isSuper = auth.isSuperadmin;
+  const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<Tipo>("materiales");
   const [descripcion, setDescripcion] = useState("");
   const [monto, setMonto] = useState("");
-  const [fecha, setFecha] = useState(new Date().toISOString().slice(0,10));
+  const [fecha, setFecha] = useState(today);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -196,7 +199,8 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
       const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
       if (upErr) throw upErr;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha, archivo_path: path, archivo_nombre: file.name } });
+      const fechaFinal = isSuper ? fecha : today;
+      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path: path, archivo_nombre: file.name } });
       toast.success("Boleta subida");
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
@@ -224,7 +228,11 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
           <div><Label>Descripción</Label><Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
-            <div><Label>Fecha</Label><Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} /></div>
+            <div>
+              <Label>Fecha {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+              <Input type="date" value={fecha} max={isSuper ? undefined : today} disabled={!isSuper} onChange={(e) => setFecha(e.target.value)} />
+              {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
+            </div>
           </div>
           <div>
             <Label>Archivo</Label>
