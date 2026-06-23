@@ -61,8 +61,8 @@ function CotizacionesPage() {
       descuento: c.descuento ?? 0, total: c.total,
       pago_recibido: c.pago_recibido, saldo: c.saldo,
       estado: ESTADO_LABEL[c.estado] ?? c.estado,
-      aprobador_nombre: auth.user?.email?.split("@")[0] ?? "Administrador",
-      aprobador_email: auth.user?.email ?? "",
+      aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
+      aprobador_email: auth.email ?? "",
       aprobado_at: new Date().toISOString(),
     };
   }
