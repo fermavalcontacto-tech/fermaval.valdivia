@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,16 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const q = queryOptions({ queryKey: ["config"], queryFn: () => getConfig() });
+const qAudit = queryOptions({ queryKey: ["config-audit"], queryFn: () => listConfigAudit() });
 
 export const Route = createFileRoute("/_authenticated/admin/configuracion")({
   beforeLoad: ({ context }) => {
-    if (!context.auth.isAdmin) throw redirect({ to: "/admin" });
+    if (!context.auth.isSuperadmin) throw redirect({ to: "/admin" });
   },
   loader: ({ context }) => context.queryClient.ensureQueryData(q),
   component: ConfiguracionPage,
 });
+
 
 function ConfiguracionPage() {
   const qc = useQueryClient();
