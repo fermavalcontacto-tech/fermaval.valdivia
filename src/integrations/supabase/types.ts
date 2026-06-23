@@ -215,6 +215,7 @@ export type Database = {
           created_by: string | null
           descuento: number
           estado: Database["public"]["Enums"]["quote_status"]
+          estado_pedido: Database["public"]["Enums"]["estado_pedido"]
           id: string
           largo_m: number
           metros2: number
@@ -235,6 +236,7 @@ export type Database = {
           created_by?: string | null
           descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
+          estado_pedido?: Database["public"]["Enums"]["estado_pedido"]
           id?: string
           largo_m: number
           metros2: number
@@ -255,6 +257,7 @@ export type Database = {
           created_by?: string | null
           descuento?: number
           estado?: Database["public"]["Enums"]["quote_status"]
+          estado_pedido?: Database["public"]["Enums"]["estado_pedido"]
           id?: string
           largo_m?: number
           metros2?: number
@@ -398,6 +401,11 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "operator"
+      estado_pedido:
+        | "en_preparacion"
+        | "en_produccion"
+        | "pedido_entregado"
+        | "finalizado"
       expense_status: "pendiente" | "aprobado" | "rechazado"
       expense_type:
         | "materiales"
@@ -540,6 +548,12 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "operator"],
+      estado_pedido: [
+        "en_preparacion",
+        "en_produccion",
+        "pedido_entregado",
+        "finalizado",
+      ],
       expense_status: ["pendiente", "aprobado", "rechazado"],
       expense_type: [
         "materiales",
