@@ -4,6 +4,15 @@
 const GATEWAY_URL = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
 export const FROM_EMAIL = "fermaval.contacto@gmail.com";
 export const ADMIN_INBOX = "fermaval.contacto@gmail.com";
+// Los 4 perfiles internos FERMAVAL que reciben copia (BCC) de cada
+// notificación de aceptación de cotización y de confirmación de pedido.
+export const INTERNAL_RECIPIENTS = [
+  "fermaval.contacto@gmail.com",
+  "freddy.torres.oliva@gmail.com",
+  "Ocatorr32@gmail.com",
+  "Bayrontorresnaipil@gmail.com",
+] as const;
+export const INTERNAL_BCC = INTERNAL_RECIPIENTS.join(", ");
 
 function b64url(s: string) {
   return s.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
@@ -15,6 +24,7 @@ export function buildMime(opts: {
   from: string;
   to: string;
   cc?: string;
+  bcc?: string;
   subject: string;
   text: string;
   attachments?: Attachment[];
@@ -24,6 +34,7 @@ export function buildMime(opts: {
     `From: ${opts.from}`,
     `To: ${opts.to}`,
     opts.cc ? `Cc: ${opts.cc}` : "",
+    opts.bcc ? `Bcc: ${opts.bcc}` : "",
     `Subject: =?UTF-8?B?${Buffer.from(opts.subject, "utf-8").toString("base64")}?=`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,
@@ -54,6 +65,7 @@ export function buildMime(opts: {
 export async function sendGmail(opts: {
   to: string;
   cc?: string;
+  bcc?: string;
   subject: string;
   text: string;
   attachments?: Attachment[];

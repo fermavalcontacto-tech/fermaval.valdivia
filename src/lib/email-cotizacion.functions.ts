@@ -13,9 +13,9 @@ export const sendCotizacionEmail = createServerFn({ method: "POST" })
     pago_pdf_base64: z.string().min(10),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { sendGmail } = await import("@/lib/gmail.server");
+    const { sendGmail, INTERNAL_BCC } = await import("@/lib/gmail.server");
     const aprobadorEmail = context.claims?.email ?? "";
-    const subject = `cotizacion nro ${data.numero}`;
+    const subject = `Confirmación de pedido - cotización ${data.numero}`;
     const body = [
       `Estimado/a ${data.cliente_nombre},`,
       "",
@@ -32,6 +32,7 @@ export const sendCotizacionEmail = createServerFn({ method: "POST" })
     await sendGmail({
       to: data.to,
       cc: aprobadorEmail && aprobadorEmail !== data.to ? aprobadorEmail : undefined,
+      bcc: INTERNAL_BCC,
       subject,
       text: body,
       attachments: [
