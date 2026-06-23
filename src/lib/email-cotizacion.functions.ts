@@ -93,7 +93,7 @@ export const sendCotizacionEmail = createServerFn({ method: "POST" })
       ],
     });
 
-    const raw = b64url(btoa(unescape(encodeURIComponent(mime))));
+    const raw = b64url(Buffer.from(mime, "utf-8").toString("base64"));
 
     const res = await fetch(`${GATEWAY_URL}/users/me/messages/send`, {
       method: "POST",
