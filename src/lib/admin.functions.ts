@@ -644,10 +644,13 @@ export const setEstadoPedido = createServerFn({ method: "POST" })
       }
     }
 
-    const patch: Record<string, unknown> = { estado_pedido: data.estado_pedido };
+    const patch: { estado_pedido: typeof data.estado_pedido; estado?: "pedido_terminado" } = {
+      estado_pedido: data.estado_pedido,
+    };
     if (data.estado_pedido === "finalizado") patch.estado = "pedido_terminado";
 
     const { error } = await context.supabase.from("cotizaciones").update(patch).eq("id", data.id);
+
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "estado_pedido",
