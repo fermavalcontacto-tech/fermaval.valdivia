@@ -84,7 +84,7 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
-      .select("id, total, pago_recibido, estado, numero")
+      .select("id, total, pago_recibido, estado, numero, cliente:clientes(nombre, correo, telefono)")
       .eq("numero", data.numero)
       .single();
     if (error || !cot) throw new Error("Cotización no encontrada");
@@ -113,8 +113,43 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       })
       .eq("id", cot.id);
 
+    // Flow 2: notify admin that the client approved the quote — best-effort.
+    try {
+      const { sendGmail, ADMIN_INBOX } = await import("@/lib/gmail.server");
+      const { getRequestHeader } = await import("@tanstack/react-start/server");
+      const host = getRequestHeader("host") ?? "";
+      const proto = getRequestHeader("x-forwarded-proto") ?? "https";
+      const base = host ? `${proto}://${host}` : "";
+      const cliente = cot.cliente as { nombre?: string; correo?: string; telefono?: string } | null;
+      const totalFmt = total.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+      const montoFmt = monto.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
+      const text = [
+        `El cliente ha APROBADO la cotización ${cot.numero}.`,
+        "",
+        `Cliente: ${cliente?.nombre ?? "—"}`,
+        `Correo: ${cliente?.correo ?? "—"}`,
+        `Teléfono: ${cliente?.telefono ?? "—"}`,
+        `Total cotización: ${totalFmt}`,
+        `Pago comprometido: ${montoFmt} (${data.porcentaje}%)`,
+        `Saldo: ${saldo.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 })}`,
+        "",
+        base
+          ? `Ver cotización: ${base}/cotizacion/${cot.numero}`
+          : `Cotización: /cotizacion/${cot.numero}`,
+        base ? `Panel admin: ${base}/admin/cotizaciones` : "",
+      ].filter(Boolean).join("\r\n");
+      await sendGmail({
+        to: ADMIN_INBOX,
+        subject: `cotizacion nro ${cot.numero} - APROBADA POR CLIENTE`,
+        text,
+      });
+    } catch (e) {
+      console.error("notifyClientAccepted failed:", (e as Error).message);
+    }
+
     return { ok: true, monto, saldo };
   });
+
 
 export const getPublicConfig = createServerFn({ method: "GET" }).handler(async () => {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
