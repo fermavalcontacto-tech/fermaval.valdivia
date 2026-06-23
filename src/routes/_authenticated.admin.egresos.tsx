@@ -211,26 +211,17 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Creador de la Solicitud *</Label>
-              <Select value={form.solicitado_por} onValueChange={(v) => setForm({ ...form, solicitado_por: v as Persona })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Responsable de Subir Boleta</Label>
-              <Select value={form.boleta_subida_por} onValueChange={(v) => setForm({ ...form, boleta_subida_por: v as Persona | "ninguno" })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ninguno">Sin asignar</SelectItem>
-                  {PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Creador de la Solicitud *</Label>
+            <Select value={form.solicitado_por} onValueChange={(v) => setForm({ ...form, solicitado_por: v as Persona })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              La boleta se asignará y subirá más tarde desde el apartado “Rendir Boleta”.
+            </p>
           </div>
         </div>
         <DialogFooter><Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Solicitar"}</Button></DialogFooter>
