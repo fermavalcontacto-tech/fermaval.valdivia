@@ -60,6 +60,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     ancho_m: z.number().positive(),
     color_nombre: z.string().nullable().optional(),
     precio_m2: z.number().positive(),
+    fecha_solicitud: z.string().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
@@ -68,11 +69,13 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const total = Math.round(metros2 * data.precio_m2);
     // Get next sequence via service role helper - operator can't call. Fallback to timestamp:
     const numero = "FV-" + Date.now().toString().slice(-7);
+    const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
     const { error } = await context.supabase.from("cotizaciones").insert({
       numero, cliente_id: cliente.id, largo_m: data.largo_m, ancho_m: data.ancho_m,
       metros2, precio_m2: data.precio_m2, total, saldo: total,
       color_nombre: data.color_nombre ?? null, created_by: context.userId,
       estado: "cotizacion_creada", plazo_horas: 72,
+      fecha_solicitud: fechaSolicitud,
     });
     if (error) throw new Error(error.message);
     return { numero };
