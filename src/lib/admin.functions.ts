@@ -266,6 +266,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       ventas, totalCotizado, gastos, utilidades, iva,
       cotPendientes: cotPendientes?.length ?? 0,
       pedidosConfirmados: pedidosConf?.length ?? 0,
+      egresosPendientes: egresosPendientesCount ?? 0,
       months,
     };
   });
