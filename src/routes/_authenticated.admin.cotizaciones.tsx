@@ -4,6 +4,8 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion,
 } from "@/lib/admin.functions";
+import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
+import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +23,7 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Pencil, Trash2 } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Download, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
@@ -44,9 +46,58 @@ function CotizacionesPage() {
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
   const [editing, setEditing] = useState<Cotizacion | null>(null);
 
+  function toPdfData(c: Cotizacion): CotizacionPDF {
+    return {
+      numero: c.numero,
+      fecha: c.created_at,
+      cliente: {
+        nombre: c.cliente?.nombre ?? "—",
+        correo: c.cliente?.correo ?? "",
+        telefono: c.cliente?.telefono ?? "—",
+        direccion: c.cliente?.direccion ?? "—",
+      },
+      largo_m: c.largo_m, ancho_m: c.ancho_m, metros2: c.metros2,
+      color_nombre: c.color_nombre, precio_m2: c.precio_m2,
+      descuento: c.descuento ?? 0, total: c.total,
+      pago_recibido: c.pago_recibido, saldo: c.saldo,
+      estado: ESTADO_LABEL[c.estado] ?? c.estado,
+      aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
+      aprobador_email: auth.email ?? "",
+      aprobado_at: new Date().toISOString(),
+    };
+  }
+
+  async function dispatchAprobacion(c: Cotizacion) {
+    const pdfData = toPdfData(c);
+    downloadCotizacionPDF(pdfData);
+    downloadPagoPDF(pdfData);
+    const correo = c.cliente?.correo;
+    if (!correo) {
+      toast.warning("Cliente sin correo: PDFs descargados, no se envió email.");
+      return;
+    }
+    try {
+      const { cotizacionBase64, pagoBase64 } = pdfsForCotizacion(pdfData);
+      await sendCotizacionEmail({ data: {
+        numero: c.numero, to: correo, cliente_nombre: pdfData.cliente.nombre,
+        total: c.total, cotizacion_pdf_base64: cotizacionBase64, pago_pdf_base64: pagoBase64,
+      }});
+      toast.success(`Email enviado a ${correo}`);
+    } catch (e) {
+      toast.error(`Email no enviado: ${(e as Error).message}`);
+    }
+  }
+
   const mut = useMutation({
-    mutationFn: (v: { id: string; estado: Estado }) => updateCotizacionEstado({ data: v }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); toast.success("Estado actualizado"); },
+    mutationFn: (v: { id: string; estado: Estado; cot: Cotizacion }) =>
+      updateCotizacionEstado({ data: { id: v.id, estado: v.estado } }).then(() => v),
+    onSuccess: async (v) => {
+      qc.invalidateQueries({ queryKey: ["cotizaciones"] });
+      toast.success("Estado actualizado");
+      if (v.estado === "pedido_confirmado") {
+        await dispatchAprobacion({ ...v.cot, estado: v.estado });
+      }
+    },
     onError: (e: Error) => toast.error(e.message),
   });
   const del = useMutation({
@@ -87,7 +138,7 @@ function CotizacionesPage() {
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
                   <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
                   <td className="p-3">
-                    <Select value={c.estado} onValueChange={(v) => mut.mutate({ id: c.id, estado: v as Estado })}>
+                    <Select value={c.estado} onValueChange={(v) => mut.mutate({ id: c.id, estado: v as Estado, cot: c })}>
                       <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
                     </Select>
@@ -99,6 +150,11 @@ function CotizacionesPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
+                      {(c.estado === "pedido_confirmado" || c.estado === "pedido_terminado") && (
+                        <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c)}>
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      )}
                       {auth.isSuperadmin && (
                         <>
                           <Button variant="ghost" size="sm" title="Editar" onClick={() => setEditing(c)}>
