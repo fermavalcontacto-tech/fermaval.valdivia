@@ -124,12 +124,15 @@ function EgresosPage() {
 }
 
 function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
+  const { auth } = Route.useRouteContext();
+  const isSuper = auth.email.toLowerCase() === "fermaval.contacto@gmail.com";
+  const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     tipo: "materiales" as const,
     descripcion: "",
     monto: "",
-    fecha: new Date().toISOString().slice(0,10),
+    fecha: today,
     solicitado_por: "Freddy" as Persona,
     boleta_subida_por: "ninguno" as Persona | "ninguno",
   });
@@ -138,7 +141,7 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
       tipo: form.tipo,
       descripcion: form.descripcion,
       monto: Number(form.monto),
-      fecha: form.fecha,
+      fecha: isSuper ? form.fecha : today,
       solicitado_por: form.solicitado_por,
       boleta_subida_por: form.boleta_subida_por === "ninguno" ? null : form.boleta_subida_por,
     } }),
@@ -163,7 +166,17 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
           <div><Label>Descripción</Label><Textarea value={form.descripcion} onChange={(e)=>setForm({...form, descripcion: e.target.value})} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={form.monto} onChange={(e)=>setForm({...form, monto: e.target.value})} /></div>
-            <div><Label>Fecha</Label><Input type="date" value={form.fecha} onChange={(e)=>setForm({...form, fecha: e.target.value})} /></div>
+            <div>
+              <Label>Fecha {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+              <Input
+                type="date"
+                value={form.fecha}
+                max={isSuper ? undefined : today}
+                disabled={!isSuper}
+                onChange={(e)=>setForm({...form, fecha: e.target.value})}
+              />
+              {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
