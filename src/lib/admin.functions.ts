@@ -417,8 +417,8 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
-    const XLSX = await import("xlsx");
-    const wb = XLSX.utils.book_new();
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
 
     const ventasRows = (cots ?? []).map((c) => ({
       Numero: c.numero,
@@ -429,15 +429,33 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       Estado: c.estado,
       Fecha: (c.fecha_solicitud as string) ?? new Date(c.created_at as string).toLocaleDateString("es-CL"),
     }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ventasRows), "Ventas");
+    const wsVentas = wb.addWorksheet("Ventas");
+    wsVentas.columns = [
+      { header: "Numero", key: "Numero" },
+      { header: "Cliente", key: "Cliente" },
+      { header: "Total", key: "Total" },
+      { header: "Pagado", key: "Pagado" },
+      { header: "Saldo", key: "Saldo" },
+      { header: "Estado", key: "Estado" },
+      { header: "Fecha", key: "Fecha" },
+    ];
+    wsVentas.addRows(ventasRows);
 
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
       "Solicitado Por": g.solicitado_por ?? "",
       "Boleta Subida Por": g.boleta_subida_por ?? "",
     }));
-
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(gastosRows), "Gastos");
+    const wsGastos = wb.addWorksheet("Gastos");
+    wsGastos.columns = [
+      { header: "Tipo", key: "Tipo" },
+      { header: "Descripcion", key: "Descripcion" },
+      { header: "Monto", key: "Monto" },
+      { header: "Fecha", key: "Fecha" },
+      { header: "Solicitado Por", key: "Solicitado Por" },
+      { header: "Boleta Subida Por", key: "Boleta Subida Por" },
+    ];
+    wsGastos.addRows(gastosRows);
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
     const totalGastos = gastosRows.reduce((s, r) => s + r.Monto, 0);
@@ -451,9 +469,15 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       { Concepto: "IVA (19%)", Valor: iva },
       { Concepto: "Resultado final", Valor: utilidades - iva },
     ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumen), "Resumen");
+    const wsResumen = wb.addWorksheet("Resumen");
+    wsResumen.columns = [
+      { header: "Concepto", key: "Concepto" },
+      { header: "Valor", key: "Valor" },
+    ];
+    wsResumen.addRows(resumen);
 
-    const buf = XLSX.write(wb, { type: "base64", bookType: "xlsx" });
+    const arrayBuffer = await wb.xlsx.writeBuffer();
+    const buf = Buffer.from(arrayBuffer as ArrayBuffer).toString("base64");
     return { filename: `fermaval-${data.year}-${String(data.month).padStart(2,"0")}.xlsx`, base64: buf };
   });
 
