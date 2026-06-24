@@ -90,14 +90,28 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
-      .select("id, total, pago_recibido, estado, numero, cliente:clientes(nombre, correo, telefono)")
+      .select("id, total, pago_recibido, estado, numero, access_token, cliente:clientes(nombre, correo, telefono)")
       .eq("numero", data.numero)
       .single();
     if (error || !cot) throw new Error("Cotización no encontrada");
+    // Authorization: caller must present the per-quote secret token issued at creation
+    // (timing-safe compare to avoid leaking length/prefix). Without this, the email
+    // check is trivially bypassable because the email is sent to /cotizacion/$numero.
+    const expected = String(cot.access_token ?? "");
+    const provided = String(data.token ?? "");
+    if (!expected || provided.length !== expected.length) {
+      throw new Error("Cotización no encontrada");
+    }
+    let diff = 0;
+    for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+    if (diff !== 0) throw new Error("Cotización no encontrada");
     if (cot.estado === "pedido_terminado" || cot.estado === "rechazada") {
       throw new Error("Esta cotización ya no puede ser aceptada");
     }
-    // Authorization: only the customer (whose email is on file) may accept.
+    if (cot.estado === "pedido_confirmado") {
+      throw new Error("Esta cotización ya fue confirmada como pedido.");
+    }
+    // Confirm the customer also re-types their email (second factor on top of the token link).
     const clienteCorreo = (cot.cliente as { correo?: string } | null)?.correo ?? "";
     if (clienteCorreo.trim().toLowerCase() !== data.correo.trim().toLowerCase()) {
       throw new Error("El correo no coincide con el registrado en esta cotización.");
