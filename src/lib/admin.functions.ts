@@ -70,12 +70,14 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     // Get next sequence via service role helper - operator can't call. Fallback to timestamp:
     const numero = "FV-" + Date.now().toString().slice(-7);
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
+    const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
     const { error } = await context.supabase.from("cotizaciones").insert({
       numero, cliente_id: cliente.id, largo_m: data.largo_m, ancho_m: data.ancho_m,
       metros2, precio_m2: data.precio_m2, total, saldo: total,
       color_nombre: data.color_nombre ?? null, created_by: context.userId,
       estado: "cotizacion_creada", plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
+      access_token,
     });
     if (error) throw new Error(error.message);
     return { numero };
