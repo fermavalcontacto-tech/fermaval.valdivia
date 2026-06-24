@@ -39,7 +39,7 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
     }),
     onSuccess: (r) => {
       toast.success(`Cotización ${r.numero} generada`);
-      navigate({ to: "/cotizacion/$numero", params: { numero: r.numero } });
+      navigate({ to: "/cotizacion/$numero", params: { numero: r.numero }, search: { t: r.access_token } });
     },
     onError: (e: Error) => toast.error(e.message),
   });
