@@ -162,7 +162,8 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       const totalFmt = fmt(total);
       const montoFmt = fmt(monto);
       const saldoFmt = fmt(saldo);
-      const linkCot = base ? `${base}/cotizacion/${cot.numero}` : `/cotizacion/${cot.numero}`;
+      const tokenQs = `?t=${encodeURIComponent(String(cot.access_token ?? ""))}`;
+      const linkCot = base ? `${base}/cotizacion/${cot.numero}${tokenQs}` : `/cotizacion/${cot.numero}${tokenQs}`;
 
       // 1) Correo al CLIENTE — confirmación de aceptación
       const clientText = [
