@@ -17,6 +17,7 @@ const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
   porcentaje: z.union([z.literal(20), z.literal(50)]),
   correo: z.string().trim().email().max(160),
+  token: z.string().min(16).max(80),
 });
 
 export const createPublicQuote = createServerFn({ method: "POST" })
