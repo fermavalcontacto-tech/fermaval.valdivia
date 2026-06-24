@@ -21,36 +21,53 @@ function maskCorreo(c: string | null | undefined): string {
 }
 
 const getQuote = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ numero: z.string().max(40) }).parse(d))
+  .inputValidator((d) => z.object({ numero: z.string().max(40), token: z.string().max(80).optional() }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
-        "numero, created_at, estado, largo_m, ancho_m, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+        "numero, access_token, created_at, estado, largo_m, ancho_m, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    // Strip PII before sending to the browser: only first name + masked email.
-    let safeCot: unknown = cot;
-    if (cot) {
+    // Per-quote secret token gate: without a matching token, treat as not found so attackers
+    // can't enumerate sequential quote numbers to harvest totals/payment status.
+    const expected = String(cot?.access_token ?? "");
+    const provided = String(data.token ?? "");
+    let ok = false;
+    if (cot && expected && provided.length === expected.length) {
+      let diff = 0;
+      for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ provided.charCodeAt(i);
+      ok = diff === 0;
+    }
+    let safeCot: unknown = null;
+    if (cot && ok) {
       const c = cot.cliente as { nombre?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
+      // Strip the token and full PII before sending to the browser.
+      const { access_token: _at, ...rest } = cot;
+      void _at;
       safeCot = {
-        ...cot,
+        ...rest,
         cliente: { nombre: firstName, correo: maskCorreo(c?.correo) },
       };
     }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot: safeCot as typeof cot, cfg };
+    return { cot: safeCot as typeof cot | null, cfg };
   });
 
 export const Route = createFileRoute("/cotizacion/$numero")({
-  loader: ({ params, context }) =>
+  validateSearch: (s: Record<string, unknown>) => ({ t: typeof s.t === "string" ? s.t : undefined }),
+  loaderDeps: ({ search }) => ({ t: search.t }),
+  loader: ({ params, deps, context }) =>
     context.queryClient.ensureQueryData(
-      queryOptions({ queryKey: ["quote", params.numero], queryFn: () => getQuote({ data: { numero: params.numero } }) }),
+      queryOptions({
+        queryKey: ["quote", params.numero, deps.t ?? ""],
+        queryFn: () => getQuote({ data: { numero: params.numero, token: deps.t } }),
+      }),
     ),
   component: QuotePage,
 });
