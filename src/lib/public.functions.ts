@@ -56,6 +56,9 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       numero = "FV-" + String(seqVal as unknown as number).padStart(5, "0");
     }
 
+    // Per-quote secret token: required to view or accept this quote from the public link.
+    const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+
     const { data: cot, error: cotErr } = await supabaseAdmin
       .from("cotizaciones")
       .insert({
@@ -71,12 +74,13 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         saldo: total,
         estado: "cotizacion_creada",
         plazo_horas: 72,
+        access_token,
       })
-      .select("numero")
+      .select("numero, access_token")
       .single();
     if (cotErr) throw new Error("No se pudo crear la cotización: " + cotErr.message);
 
-    return { numero: cot.numero };
+    return { numero: cot.numero, access_token: cot.access_token };
   });
 
 export const acceptQuoteAndPay = createServerFn({ method: "POST" })
