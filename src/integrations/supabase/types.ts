@@ -207,6 +207,7 @@ export type Database = {
       }
       cotizaciones: {
         Row: {
+          access_token: string
           ancho_m: number
           cliente_id: string
           color_id: string | null
@@ -229,6 +230,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          access_token: string
           ancho_m: number
           cliente_id: string
           color_id?: string | null
@@ -251,6 +253,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          access_token?: string
           ancho_m?: number
           cliente_id?: string
           color_id?: string | null

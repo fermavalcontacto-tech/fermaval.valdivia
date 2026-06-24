@@ -146,7 +146,7 @@ function CotizacionesPage() {
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
                       <Button asChild variant="ghost" size="sm" title="Ver cotización pública">
-                        <Link to="/cotizacion/$numero" params={{ numero: c.numero }} target="_blank">
+                        <Link to="/cotizacion/$numero" params={{ numero: c.numero }} search={{ t: (c as { access_token?: string }).access_token }} target="_blank">
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
