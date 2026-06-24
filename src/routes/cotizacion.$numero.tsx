@@ -74,16 +74,18 @@ export const Route = createFileRoute("/cotizacion/$numero")({
 
 function QuotePage() {
   const { numero } = Route.useParams();
+  const search = Route.useSearch();
+  const token = search.t;
   const router = useRouter();
   const { data } = useSuspenseQuery(queryOptions({
-    queryKey: ["quote", numero],
-    queryFn: () => getQuote({ data: { numero } }),
+    queryKey: ["quote", numero, token ?? ""],
+    queryFn: () => getQuote({ data: { numero, token } }),
   }));
   const [showPay, setShowPay] = useState(false);
   const [correo, setCorreo] = useState("");
 
   const accept = useMutation({
-    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo } }),
+    mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo, token: token ?? "" } }),
     onSuccess: (r) => {
       toast.success(`Pago del ${formatCLP(r.monto)} registrado. Saldo: ${formatCLP(r.saldo)}`);
       setShowPay(false);
