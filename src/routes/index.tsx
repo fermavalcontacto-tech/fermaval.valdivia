@@ -135,6 +135,9 @@ function Home() {
             <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">FÁBRICA EN VALDIVIA</h2>
             <p className="mt-4 text-muted-foreground">{cfg.direccion}</p>
             <p className="text-muted-foreground">Tel: {cfg.telefono}</p>
+            <p className="text-muted-foreground">
+              Correo: <a href="mailto:fermaval.contacto@gmail.com" className="underline hover:text-accent">fermaval.contacto@gmail.com</a>
+            </p>
             <div className="mt-6">
               <Button asChild variant="hero">
                 <a href={cfg.mapa_url} target="_blank" rel="noreferrer">
