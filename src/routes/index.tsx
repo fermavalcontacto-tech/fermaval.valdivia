@@ -20,9 +20,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "FERMAVAL — Cotizador de cubiertas en Valdivia" },
-      { name: "description", content: "Fabricación de planchas y cubiertas en Valdivia. Cotiza online: $7.990 por m². Entrega en 72 horas." },
+      { name: "description", content: "Fabricación de planchas y cubiertas en Valdivia. Cotiza online: $7.990 por m². Entrega máximo en 72 horas." },
       { property: "og:title", content: "FERMAVAL — Cubiertas y Revestimientos" },
-      { property: "og:description", content: "Cotiza online tus cubiertas. $7.990 / m². Entrega en 72 h." },
+      { property: "og:description", content: "Cotiza online tus cubiertas. $7.990 / m². Entrega máximo en 72 h." },
       { property: "og:image", content: productos.url },
     ],
   }),
