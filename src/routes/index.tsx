@@ -69,7 +69,7 @@ function Home() {
                 <div className="font-display text-4xl text-primary">{formatCLP(Number(cfg.precio_m2))}<span className="text-base text-muted-foreground"> / m²</span></div>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4 text-accent" /> Entrega 72 h
+                <Clock className="h-4 w-4 text-accent" /> Entrega máximo 72 h
               </div>
             </div>
           </div>
