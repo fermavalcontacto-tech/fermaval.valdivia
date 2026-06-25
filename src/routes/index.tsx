@@ -20,9 +20,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "FERMAVAL — Cotizador de cubiertas en Valdivia" },
-      { name: "description", content: "Fabricación de planchas y cubiertas en Valdivia. Cotiza online: $7.990 por m². Entrega en 72 horas." },
+      { name: "description", content: "Fabricación de planchas y cubiertas en Valdivia. Cotiza online: $7.990 por m². Entrega máximo en 72 horas." },
       { property: "og:title", content: "FERMAVAL — Cubiertas y Revestimientos" },
-      { property: "og:description", content: "Cotiza online tus cubiertas. $7.990 / m². Entrega en 72 h." },
+      { property: "og:description", content: "Cotiza online tus cubiertas. $7.990 / m². Entrega máximo en 72 h." },
       { property: "og:image", content: productos.url },
     ],
   }),
@@ -69,7 +69,7 @@ function Home() {
                 <div className="font-display text-4xl text-primary">{formatCLP(Number(cfg.precio_m2))}<span className="text-base text-muted-foreground"> / m²</span></div>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4 text-accent" /> Entrega 72 h
+                <Clock className="h-4 w-4 text-accent" /> Entrega máximo 72 h
               </div>
             </div>
           </div>
@@ -135,6 +135,9 @@ function Home() {
             <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">FÁBRICA EN VALDIVIA</h2>
             <p className="mt-4 text-muted-foreground">{cfg.direccion}</p>
             <p className="text-muted-foreground">Tel: {cfg.telefono}</p>
+            <p className="text-muted-foreground">
+              Correo: <a href="mailto:fermaval.contacto@gmail.com" className="underline hover:text-accent">fermaval.contacto@gmail.com</a>
+            </p>
             <div className="mt-6">
               <Button asChild variant="hero">
                 <a href={cfg.mapa_url} target="_blank" rel="noreferrer">

@@ -68,6 +68,9 @@ export function PublicFooter({ telefono, direccion, instagram }: { telefono?: st
         <div>
           <h4 className="text-sm font-semibold uppercase tracking-wider text-accent">Contacto</h4>
           <p className="mt-2 text-sm text-primary-foreground/80">{telefono ?? "+56 9 3012 6744"}</p>
+          <p className="text-sm text-primary-foreground/80">
+            <a href="mailto:fermaval.contacto@gmail.com" className="hover:text-accent">fermaval.contacto@gmail.com</a>
+          </p>
           <p className="text-sm text-primary-foreground/80">{instagram ?? "@fermaval.valdivia"}</p>
         </div>
         <div>
