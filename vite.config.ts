@@ -6,9 +6,14 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// Base path: solo se aplica cuando compilas para GitHub Pages
+// (ejecuta con `GITHUB_PAGES=1 bun run build`). En desarrollo y en la
+// preview/publicación de Lovable se mantiene "/" para que los assets carguen.
+const isGithubPages = process.env.GITHUB_PAGES === "1";
+
 export default defineConfig({
   vite: {
-    base: "/fermaval.valdivia/",
+    base: isGithubPages ? "/fermaval.valdivia/" : "/",
   },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
