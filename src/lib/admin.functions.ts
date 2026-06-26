@@ -507,7 +507,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const metros2 = Number((data.largo_m * data.ancho_m).toFixed(2));
+    const metros2 = Number((data.largo_m * 1 * data.cantidad_planchas).toFixed(2));
     const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
     const saldo = Math.max(0, total - data.pago_recibido);
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
@@ -517,7 +517,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
     const { error } = await context.supabase.from("cotizaciones").update({
-      largo_m: data.largo_m, ancho_m: data.ancho_m, metros2,
+      largo_m: data.largo_m, ancho_m: 1, cantidad_planchas: data.cantidad_planchas, metros2,
       precio_m2: data.precio_m2, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_nombre: data.color_nombre ?? null, estado: data.estado,
