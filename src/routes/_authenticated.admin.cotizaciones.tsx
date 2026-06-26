@@ -209,7 +209,7 @@ function EditarCotizacionDialog({
 }: { cot: Cotizacion | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "",
-    largo_m: "0", ancho_m: "0", color: "", precio_m2: "0",
+    largo_m: "0", cantidad_planchas: "1", color: "", precio_m2: "0",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
   useEffect(() => {
