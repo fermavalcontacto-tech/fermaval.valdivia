@@ -254,8 +254,8 @@ function EditarCotizacionDialog({
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /></div>
-          <div><Label>Ancho (m)</Label><Input type="number" step="0.01" value={form.ancho_m} onChange={(e)=>setForm({...form, ancho_m: e.target.value})} /></div>
+          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /><p className="mt-1 text-xs text-muted-foreground">Ancho fijo: 1 m</p></div>
+          <div><Label>Cantidad de planchas</Label><Input type="number" step="1" min="1" value={form.cantidad_planchas} onChange={(e)=>setForm({...form, cantidad_planchas: e.target.value})} /></div>
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
