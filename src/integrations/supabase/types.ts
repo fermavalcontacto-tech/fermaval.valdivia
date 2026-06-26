@@ -209,6 +209,7 @@ export type Database = {
         Row: {
           access_token: string
           ancho_m: number
+          cantidad_planchas: number
           cliente_id: string
           color_id: string | null
           color_nombre: string | null
@@ -231,7 +232,8 @@ export type Database = {
         }
         Insert: {
           access_token: string
-          ancho_m: number
+          ancho_m?: number
+          cantidad_planchas?: number
           cliente_id: string
           color_id?: string | null
           color_nombre?: string | null
@@ -255,6 +257,7 @@ export type Database = {
         Update: {
           access_token?: string
           ancho_m?: number
+          cantidad_planchas?: number
           cliente_id?: string
           color_id?: string | null
           color_nombre?: string | null
