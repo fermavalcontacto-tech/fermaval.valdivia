@@ -34,7 +34,7 @@ type Estado = typeof estados[number];
 
 type Cotizacion = {
   id: string; numero: string; created_at: string;
-  largo_m: number; ancho_m: number; metros2: number; precio_m2: number;
+  largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; precio_m2: number;
   descuento: number; total: number; pago_recibido: number; saldo: number;
   color_nombre: string | null; estado: Estado; cliente_id: string;
   cliente: { id?: string; nombre?: string; correo?: string; telefono?: string; direccion?: string } | null;
