@@ -286,11 +286,11 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", ancho_m: "", color: "", precio_m2: "7990", fecha_solicitud: today });
+  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", cantidad_planchas: "1", color: "", precio_m2: "7990", fecha_solicitud: today });
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      largo_m: Number(form.largo_m), ancho_m: Number(form.ancho_m),
+      largo_m: Number(form.largo_m), cantidad_planchas: Number(form.cantidad_planchas),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
