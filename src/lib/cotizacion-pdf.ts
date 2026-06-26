@@ -88,21 +88,48 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setDrawColor(...PRIMARY);
   doc.setLineWidth(0.5);
   doc.line(15, 44, W - 15, 44);
-  rows(doc, 56, [
+  let y = rows(doc, 56, [
     ["Fecha", formatDate(c.fecha)],
     ["Cliente", c.cliente.nombre],
     ["Correo", c.cliente.correo],
     ["Teléfono", c.cliente.telefono],
     ["Dirección", c.cliente.direccion],
-    ["Medidas", `Largo ${c.largo_m} m × Ancho ${c.ancho_m} m (estándar) × ${c.cantidad_planchas ?? 1} plancha(s) = ${c.metros2.toFixed(2)} m²`],
     ["Color", c.color_nombre ?? "—"],
     ["Precio / m²", formatCLP(c.precio_m2)],
+  ]);
+  // Tabla de medidas
+  const items: CotizacionItem[] = (c.items && c.items.length
+    ? c.items
+    : [{ largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas ?? 1, metros2: c.metros2 }]);
+  y += 4;
+  doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...MUTED);
+  doc.text("Medidas", 15, y); y += 5;
+  doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+  const headers = ["#", "Largo (m)", "Ancho (m)", "Cantidad", "m²"];
+  const colsX = [15, 30, 65, 100, 140];
+  doc.setFont("helvetica", "bold");
+  headers.forEach((h, i) => doc.text(h, colsX[i], y));
+  y += 2; doc.setDrawColor(220, 220, 220); doc.line(15, y, W - 15, y); y += 5;
+  doc.setFont("helvetica", "normal");
+  items.forEach((it, i) => {
+    doc.text(String(i + 1), colsX[0], y);
+    doc.text(Number(it.largo_m).toFixed(2), colsX[1], y);
+    doc.text("1 (estándar)", colsX[2], y);
+    doc.text(String(it.cantidad_planchas), colsX[3], y);
+    doc.text(Number(it.metros2).toFixed(2), colsX[4], y);
+    y += 6;
+  });
+  doc.setFont("helvetica", "bold");
+  doc.text("Total m²", colsX[3], y); doc.text(c.metros2.toFixed(2), colsX[4], y); y += 8;
+
+  rows(doc, y, [
     ["Descuento", formatCLP(c.descuento)],
     ["Total", formatCLP(c.total)],
   ]);
   footer(doc);
   return doc;
 }
+
 
 export function buildPagoPDF(c: CotizacionPDF): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
