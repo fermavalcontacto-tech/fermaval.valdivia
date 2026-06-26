@@ -7,6 +7,7 @@ export type CotizacionPDF = {
   cliente: { nombre: string; correo: string; telefono: string; direccion: string };
   largo_m: number;
   ancho_m: number;
+  cantidad_planchas?: number;
   metros2: number;
   color_nombre: string | null;
   precio_m2: number;
