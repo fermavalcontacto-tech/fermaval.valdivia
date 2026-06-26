@@ -8,31 +8,41 @@ import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
 import { toast } from "sonner";
+import { Plus, Trash2 } from "lucide-react";
 
 type Color = { id: string; nombre: string; hex: string; imagen_url: string | null };
+type Item = { largo: string; cantidad: string };
 
 export function CotizadorForm({ precio, colores }: { precio: number; colores: Color[] }) {
   const navigate = useNavigate();
-  const [largo, setLargo] = useState("");
-  const [cantidad, setCantidad] = useState("1");
+  const [items, setItems] = useState<Item[]>([{ largo: "", cantidad: "1" }]);
   const [colorId, setColorId] = useState<string>(colores[0]?.id ?? "");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
   const [direccion, setDireccion] = useState("");
 
-  const m2 = useMemo(() => {
-    const l = Number(largo); const n = Number(cantidad);
-    if (!l || !n) return 0;
-    return Number((l * 1 * n).toFixed(2));
-  }, [largo, cantidad]);
-  const total = Math.round(m2 * precio);
+  const itemsCalc = useMemo(
+    () => items.map((it) => {
+      const l = Number(it.largo) || 0;
+      const n = Number(it.cantidad) || 0;
+      return { largo: l, cantidad: n, m2: Number((l * 1 * n).toFixed(2)) };
+    }),
+    [items],
+  );
+  const m2Total = useMemo(() => Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2)), [itemsCalc]);
+  const total = Math.round(m2Total * precio);
+
+  function updateItem(i: number, patch: Partial<Item>) {
+    setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it));
+  }
+  function addItem() { setItems((arr) => [...arr, { largo: "", cantidad: "1" }]); }
+  function removeItem(i: number) { setItems((arr) => arr.length === 1 ? arr : arr.filter((_, idx) => idx !== i)); }
 
   const mut = useMutation({
     mutationFn: () => createPublicQuote({
       data: {
-        largo_m: Number(largo),
-        cantidad_planchas: Number(cantidad),
+        items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad })),
         color_id: colorId || null,
         cliente: { nombre, telefono, correo, direccion },
       },
@@ -46,8 +56,10 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (Number(largo) <= 0) { toast.error("Ingresa un largo válido"); return; }
-    if (Number(cantidad) <= 0 || !Number.isInteger(Number(cantidad))) { toast.error("Cantidad de planchas inválida"); return; }
+    for (const [i, it] of itemsCalc.entries()) {
+      if (it.largo <= 0) { toast.error(`Medida ${i + 1}: ingresa un largo válido`); return; }
+      if (it.cantidad <= 0 || !Number.isInteger(it.cantidad)) { toast.error(`Medida ${i + 1}: cantidad inválida`); return; }
+    }
     if (!nombre || !telefono || !correo || !direccion) { toast.error("Completa todos tus datos"); return; }
     mut.mutate();
   }
@@ -55,20 +67,47 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
   return (
     <Card className="border-2 border-border bg-card p-6 md:p-8 shadow-xl">
       <form onSubmit={submit} className="grid gap-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <Label htmlFor="largo">Largo de plancha (m)</Label>
-            <Input id="largo" type="number" step="0.01" min="0" value={largo} onChange={(e) => setLargo(e.target.value)} placeholder="0,00" />
-            <p className="mt-1 text-xs text-muted-foreground">Ancho estándar: 1 metro (fijo)</p>
+        <div className="space-y-3">
+          <div className="flex items-end justify-between">
+            <div>
+              <Label>Medidas de planchas</Label>
+              <p className="text-xs text-muted-foreground">Ancho estándar: 1 metro (fijo). Puedes agregar varias medidas.</p>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="cantidad">Cantidad de planchas</Label>
-            <Input id="cantidad" type="number" step="1" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="1" />
-          </div>
+
+          {items.map((it, i) => {
+            const calc = itemsCalc[i];
+            return (
+              <div key={i} className="grid gap-3 rounded-md border bg-muted/20 p-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+                <div>
+                  <Label htmlFor={`largo-${i}`}>Largo de plancha (m)</Label>
+                  <Input id={`largo-${i}`} type="number" step="0.01" min="0" value={it.largo}
+                    onChange={(e) => updateItem(i, { largo: e.target.value })} placeholder="0,00" />
+                </div>
+                <div>
+                  <Label htmlFor={`cant-${i}`}>Cantidad de planchas</Label>
+                  <Input id={`cant-${i}`} type="number" step="1" min="1" value={it.cantidad}
+                    onChange={(e) => updateItem(i, { cantidad: e.target.value })} placeholder="1" />
+                </div>
+                <div className="text-sm">
+                  <div className="text-[10px] uppercase text-muted-foreground">m²</div>
+                  <div className="font-mono text-base font-semibold text-primary">{calc.m2.toFixed(2)}</div>
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} disabled={items.length === 1} title="Quitar">
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            );
+          })}
+
+          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+            <Plus className="mr-1 h-4 w-4" /> Agregar otra medida
+          </Button>
+
           <div className="rounded-md bg-muted p-3">
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Metros cuadrados</div>
-            <div className="font-display text-3xl text-primary">{m2.toFixed(2)} m²</div>
-            <div className="text-[10px] text-muted-foreground">Largo × 1 m × cantidad</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Total metros cuadrados</div>
+            <div className="font-display text-3xl text-primary">{m2Total.toFixed(2)} m²</div>
+            <div className="text-[10px] text-muted-foreground">Suma de todas las medidas (largo × 1 m × cantidad)</div>
           </div>
         </div>
 
@@ -96,7 +135,7 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
           <div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total estimado</div>
             <div className="font-display text-4xl text-primary">{formatCLP(total)}</div>
-            <div className="text-xs text-muted-foreground">{m2.toFixed(2)} m² × {formatCLP(precio)} / m²</div>
+            <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² × {formatCLP(precio)} / m²</div>
           </div>
           <Button type="submit" variant="hero" size="lg" disabled={mut.isPending}>
             {mut.isPending ? "Generando..." : "Generar cotización"}

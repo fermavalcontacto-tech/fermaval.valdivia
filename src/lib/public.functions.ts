@@ -1,6 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const ANCHO_FIJO_M = 1;
+
+const ItemSchema = z.object({
+  largo_m: z.number().positive().max(1000),
+  cantidad_planchas: z.number().int().positive().max(10000),
+});
+
 const CreateQuoteSchema = z.object({
   cliente: z.object({
     nombre: z.string().trim().min(2).max(120),
@@ -8,12 +15,9 @@ const CreateQuoteSchema = z.object({
     correo: z.string().trim().email().max(160),
     direccion: z.string().trim().min(4).max(300),
   }),
-  largo_m: z.number().positive().max(1000),
-  cantidad_planchas: z.number().int().positive().max(10000),
+  items: z.array(ItemSchema).min(1).max(50),
   color_id: z.string().uuid().nullable().optional(),
 });
-
-const ANCHO_FIJO_M = 1;
 
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
@@ -34,8 +38,15 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
     const precio = Number(cfg.precio_m2);
-    const metros2 = Number((data.largo_m * ANCHO_FIJO_M * data.cantidad_planchas).toFixed(2));
-    const total = Math.round(metros2 * precio);
+    const itemsCalc = data.items.map((it) => ({
+      largo_m: it.largo_m,
+      ancho_m: ANCHO_FIJO_M,
+      cantidad_planchas: it.cantidad_planchas,
+      metros2: Number((it.largo_m * ANCHO_FIJO_M * it.cantidad_planchas).toFixed(2)),
+    }));
+    const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
+    const total = Math.round(metros2Total * precio);
+    const first = itemsCalc[0];
 
     let color_nombre: string | null = null;
     if (data.color_id) {
@@ -50,7 +61,6 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       .single();
     if (ceErr) throw new Error("No se pudo registrar el cliente");
 
-    // generate quote number via sequence
     const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
     let numero: string;
     if (seqErr || seqVal == null) {
@@ -59,7 +69,6 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       numero = "FV-" + String(seqVal as unknown as number).padStart(5, "0");
     }
 
-    // Per-quote secret token: required to view or accept this quote from the public link.
     const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
     const { data: cot, error: cotErr } = await supabaseAdmin
@@ -67,10 +76,10 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       .insert({
         numero,
         cliente_id: cliente.id,
-        largo_m: data.largo_m,
+        largo_m: first.largo_m,
         ancho_m: ANCHO_FIJO_M,
-        cantidad_planchas: data.cantidad_planchas,
-        metros2,
+        cantidad_planchas: first.cantidad_planchas,
+        metros2: metros2Total,
         color_id: data.color_id ?? null,
         color_nombre,
         precio_m2: precio,
@@ -79,10 +88,16 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         estado: "cotizacion_creada",
         plazo_horas: 72,
         access_token,
+        origen: "cliente",
       })
-      .select("numero, access_token")
+      .select("id, numero, access_token")
       .single();
     if (cotErr) throw new Error("No se pudo crear la cotización: " + cotErr.message);
+
+    const { error: itErr } = await supabaseAdmin
+      .from("cotizacion_items")
+      .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: cot.id, position: idx })));
+    if (itErr) throw new Error("No se pudieron guardar las medidas: " + itErr.message);
 
     return { numero: cot.numero, access_token: cot.access_token };
   });
@@ -97,9 +112,6 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       .eq("numero", data.numero)
       .single();
     if (error || !cot) throw new Error("Cotización no encontrada");
-    // Authorization: caller must present the per-quote secret token issued at creation
-    // (timing-safe compare to avoid leaking length/prefix). Without this, the email
-    // check is trivially bypassable because the email is sent to /cotizacion/$numero.
     const expected = String(cot.access_token ?? "");
     const provided = String(data.token ?? "");
     if (!expected || provided.length !== expected.length) {
@@ -114,12 +126,10 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
     if (cot.estado === "pedido_confirmado") {
       throw new Error("Esta cotización ya fue confirmada como pedido.");
     }
-    // Confirm the customer also re-types their email (second factor on top of the token link).
     const clienteCorreo = (cot.cliente as { correo?: string } | null)?.correo ?? "";
     if (clienteCorreo.trim().toLowerCase() !== data.correo.trim().toLowerCase()) {
       throw new Error("El correo no coincide con el registrado en esta cotización.");
     }
-    // Idempotency: prevent stacking payment rows for the same quote+percentage.
     const { data: existingPago } = await supabaseAdmin
       .from("pagos")
       .select("id")
@@ -152,7 +162,6 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       })
       .eq("id", cot.id);
 
-    // Notificaciones — best-effort, no rompen el flujo de aceptación.
     try {
       const { sendGmail, INTERNAL_BCC } = await import("@/lib/gmail.server");
       const { getRequestHeader } = await import("@tanstack/react-start/server");
@@ -168,7 +177,6 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
       const tokenQs = `?t=${encodeURIComponent(String(cot.access_token ?? ""))}`;
       const linkCot = base ? `${base}/cotizacion/${cot.numero}${tokenQs}` : `/cotizacion/${cot.numero}${tokenQs}`;
 
-      // 1) Correo al CLIENTE — confirmación de aceptación
       const clientText = [
         `Hola ${cliente?.nombre ?? ""},`,
         "",
@@ -193,7 +201,6 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
         text: clientText,
       });
 
-      // 2) Correo INTERNO — alerta operativa (los 4 perfiles + admin)
       const internalText = [
         `El cliente ha APROBADO la cotización ${cot.numero}.`,
         "",

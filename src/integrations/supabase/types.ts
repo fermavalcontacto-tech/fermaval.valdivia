@@ -205,6 +205,47 @@ export type Database = {
         }
         Relationships: []
       }
+      cotizacion_items: {
+        Row: {
+          ancho_m: number
+          cantidad_planchas: number
+          cotizacion_id: string
+          created_at: string
+          id: string
+          largo_m: number
+          metros2: number
+          position: number
+        }
+        Insert: {
+          ancho_m?: number
+          cantidad_planchas?: number
+          cotizacion_id: string
+          created_at?: string
+          id?: string
+          largo_m: number
+          metros2: number
+          position?: number
+        }
+        Update: {
+          ancho_m?: number
+          cantidad_planchas?: number
+          cotizacion_id?: string
+          created_at?: string
+          id?: string
+          largo_m?: number
+          metros2?: number
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cotizaciones: {
         Row: {
           access_token: string
@@ -223,6 +264,7 @@ export type Database = {
           largo_m: number
           metros2: number
           numero: string
+          origen: string
           pago_recibido: number
           plazo_horas: number
           precio_m2: number
@@ -247,6 +289,7 @@ export type Database = {
           largo_m: number
           metros2: number
           numero: string
+          origen?: string
           pago_recibido?: number
           plazo_horas?: number
           precio_m2: number
@@ -271,6 +314,7 @@ export type Database = {
           largo_m?: number
           metros2?: number
           numero?: string
+          origen?: string
           pago_recibido?: number
           plazo_horas?: number
           precio_m2?: number

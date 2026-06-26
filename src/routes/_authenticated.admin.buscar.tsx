@@ -319,12 +319,28 @@ function DetailPanel({
             <div><span className="text-muted-foreground">Dirección: </span>{cliente?.direccion ?? "—"}</div>
           </div>
           <div className="grid gap-1 border-t pt-3">
-            <div><span className="text-muted-foreground">Medidas: </span>{Number(c.largo_m)} m × 1 m × {c.cantidad_planchas ?? 1} plancha(s)</div>
-            <div><span className="text-muted-foreground">Metros²: </span>{Number(c.metros2)} m²</div>
+            {(() => {
+              const its = ((c as unknown as { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
+                .slice().sort((a, b) => a.position - b.position);
+              const list = its.length ? its : [{ position: 0, largo_m: Number(c.largo_m), cantidad_planchas: c.cantidad_planchas ?? 1, metros2: Number(c.metros2) }];
+              return (
+                <div>
+                  <div className="text-muted-foreground text-xs uppercase">Medidas ({list.length})</div>
+                  <ul className="mt-1 space-y-0.5">
+                    {list.map((it, i) => (
+                      <li key={i} className="font-mono text-xs">{i + 1}. {Number(it.largo_m).toFixed(2)} m × 1 m × {it.cantidad_planchas} = {Number(it.metros2).toFixed(2)} m²</li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
+            <div><span className="text-muted-foreground">Total m²: </span>{Number(c.metros2)} m²</div>
             <div><span className="text-muted-foreground">Color: </span>{c.color_nombre ?? "—"}</div>
             <div><span className="text-muted-foreground">Precio m²: </span>{formatCLP(Number(c.precio_m2))}</div>
+            <div><span className="text-muted-foreground">Origen: </span>{(c as unknown as { origen?: string }).origen ?? "cliente"}</div>
             <div><span className="text-muted-foreground">Estado comercial: </span>{ESTADO_LABEL[c.estado] ?? c.estado}</div>
           </div>
+
         </CardContent>
       </Card>
 

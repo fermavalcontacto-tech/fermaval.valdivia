@@ -27,13 +27,11 @@ const getQuote = createServerFn({ method: "GET" })
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
-        "numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+        "id, numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    // Per-quote secret token gate: without a matching token, treat as not found so attackers
-    // can't enumerate sequential quote numbers to harvest totals/payment status.
     const expected = String(cot?.access_token ?? "");
     const provided = String(data.token ?? "");
     let ok = false;
@@ -43,21 +41,34 @@ const getQuote = createServerFn({ method: "GET" })
       ok = diff === 0;
     }
     let safeCot: unknown = null;
+    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> = [];
     if (cot && ok) {
       const c = cot.cliente as { nombre?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
-      // Strip the token and full PII before sending to the browser.
-      const { access_token: _at, ...rest } = cot;
-      void _at;
+      const { id: _id, access_token: _at, ...rest } = cot;
+      void _id; void _at;
       safeCot = {
         ...rest,
         cliente: { nombre: firstName, correo: maskCorreo(c?.correo) },
       };
+      const { data: its } = await supabaseAdmin
+        .from("cotizacion_items")
+        .select("position, largo_m, ancho_m, cantidad_planchas, metros2")
+        .eq("cotizacion_id", cot.id)
+        .order("position", { ascending: true });
+      items = (its ?? []).map((r) => ({
+        position: Number(r.position),
+        largo_m: Number(r.largo_m),
+        ancho_m: Number(r.ancho_m),
+        cantidad_planchas: Number(r.cantidad_planchas),
+        metros2: Number(r.metros2),
+      }));
     }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot: safeCot as typeof cot | null, cfg };
+    return { cot: safeCot as typeof cot | null, items, cfg };
   });
+
 
 export const Route = createFileRoute("/cotizacion/$numero")({
   validateSearch: (s: Record<string, unknown>) => ({ t: typeof s.t === "string" ? s.t : undefined }),
@@ -143,15 +154,45 @@ function QuotePage() {
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
-                <div className="flex justify-between"><dt className="text-muted-foreground">Largo</dt><dd>{Number(cot.largo_m).toFixed(2)} m</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Ancho</dt><dd>1 m (estándar)</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Cantidad</dt><dd>{cot.cantidad_planchas ?? 1} plancha(s)</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Metros cuadrados</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m²</dt><dd>{formatCLP(Number(cot.precio_m2))}</dd></div>
+                <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>
           </div>
+
+          <div className="border-t border-border px-6 pb-6">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent">Medidas</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="p-2 text-left">#</th>
+                    <th className="p-2 text-right">Largo</th>
+                    <th className="p-2 text-right">Ancho</th>
+                    <th className="p-2 text-right">Cantidad</th>
+                    <th className="p-2 text-right">m²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }]).map((it, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="p-2">{i + 1}</td>
+                      <td className="p-2 text-right">{it.largo_m.toFixed(2)} m</td>
+                      <td className="p-2 text-right">1 m</td>
+                      <td className="p-2 text-right">{it.cantidad_planchas}</td>
+                      <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/30 font-semibold">
+                    <td className="p-2" colSpan={4}>Total m²</td>
+                    <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
 
           <div className="grid gap-4 border-t border-border p-6 md:grid-cols-3">
             <div className="rounded-md bg-muted p-4">

@@ -22,15 +22,33 @@ function enforceFecha(email: string | undefined, fecha: string | undefined): str
 }
 
 
+const ItemSchema = z.object({
+  largo_m: z.number().positive().max(1000),
+  cantidad_planchas: z.number().int().positive().max(10000),
+});
+
 export const listCotizaciones = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono)")
+      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+export const getCotizacionItems = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ cotizacion_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: items, error } = await context.supabase
+      .from("cotizacion_items")
+      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2")
+      .eq("cotizacion_id", data.cotizacion_id)
+      .order("position", { ascending: true });
+    if (error) throw new Error(error.message);
+    return items ?? [];
   });
 
 export const updateCotizacionEstado = createServerFn({ method: "POST" })
@@ -56,8 +74,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
       correo: z.string().trim().email(),
       direccion: z.string().trim().min(3),
     }),
-    largo_m: z.number().positive(),
-    cantidad_planchas: z.number().int().positive().default(1),
+    items: z.array(ItemSchema).min(1).max(50),
     color_nombre: z.string().nullable().optional(),
     precio_m2: z.number().positive(),
     fecha_solicitud: z.string().optional(),
@@ -65,23 +82,36 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
     if (cErr) throw new Error(cErr.message);
-    const metros2 = Number((data.largo_m * 1 * data.cantidad_planchas).toFixed(2));
+    const itemsCalc = data.items.map((it) => ({
+      largo_m: it.largo_m,
+      ancho_m: 1,
+      cantidad_planchas: it.cantidad_planchas,
+      metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
+    }));
+    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.round(metros2 * data.precio_m2);
-    // Get next sequence via service role helper - operator can't call. Fallback to timestamp:
+    const first = itemsCalc[0];
     const numero = "FV-" + Date.now().toString().slice(-7);
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
     const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
-    const { error } = await context.supabase.from("cotizaciones").insert({
-      numero, cliente_id: cliente.id, largo_m: data.largo_m, ancho_m: 1, cantidad_planchas: data.cantidad_planchas,
+    const { data: cot, error } = await context.supabase.from("cotizaciones").insert({
+      numero, cliente_id: cliente.id,
+      largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
       metros2, precio_m2: data.precio_m2, total, saldo: total,
       color_nombre: data.color_nombre ?? null, created_by: context.userId,
       estado: "cotizacion_creada", plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
       access_token,
-    });
+      origen: "interno",
+    }).select("id").single();
     if (error) throw new Error(error.message);
+    const { error: itErr } = await context.supabase
+      .from("cotizacion_items")
+      .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: cot.id, position: idx })));
+    if (itErr) throw new Error(itErr.message);
     return { numero };
   });
+
 
 export const listEgresos = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -496,8 +526,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
       correo: z.string().trim().email(),
       direccion: z.string().trim().min(3),
     }),
-    largo_m: z.number().positive(),
-    cantidad_planchas: z.number().int().positive().default(1),
+    items: z.array(ItemSchema).min(1).max(50),
     color_nombre: z.string().nullable().optional(),
     precio_m2: z.number().positive(),
     descuento: z.number().min(0).default(0),
@@ -507,9 +536,16 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const metros2 = Number((data.largo_m * 1 * data.cantidad_planchas).toFixed(2));
+    const itemsCalc = data.items.map((it) => ({
+      largo_m: it.largo_m,
+      ancho_m: 1,
+      cantidad_planchas: it.cantidad_planchas,
+      metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
+    }));
+    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
     const saldo = Math.max(0, total - data.pago_recibido);
+    const first = itemsCalc[0];
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
     const { error: cErr } = await context.supabase.from("clientes").update({
       nombre: data.cliente.nombre, telefono: data.cliente.telefono,
@@ -517,20 +553,27 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
     const { error } = await context.supabase.from("cotizaciones").update({
-      largo_m: data.largo_m, ancho_m: 1, cantidad_planchas: data.cantidad_planchas, metros2,
+      largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
       precio_m2: data.precio_m2, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_nombre: data.color_nombre ?? null, estado: data.estado,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
+    // Reemplaza items
+    await context.supabase.from("cotizacion_items").delete().eq("cotizacion_id", data.id);
+    const { error: itErr } = await context.supabase
+      .from("cotizacion_items")
+      .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: data.id, position: idx })));
+    if (itErr) throw new Error(itErr.message);
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "update",
       cambio: `Cotización ${prev?.numero ?? data.id} editada`,
       valor_antes: prev ? `total=${prev.total} estado=${prev.estado}` : null,
-      valor_despues: `total=${total} estado=${data.estado}`,
+      valor_despues: `total=${total} estado=${data.estado} items=${itemsCalc.length}`,
     });
     return { ok: true };
   });
+
 
 export const deleteCotizacion = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -653,7 +696,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono, direccion)")
+      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2)")
       .order("created_at", { ascending: false })
       .limit(200);
 
