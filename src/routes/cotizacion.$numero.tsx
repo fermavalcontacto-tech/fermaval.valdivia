@@ -27,7 +27,7 @@ const getQuote = createServerFn({ method: "GET" })
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
-        "numero, access_token, created_at, estado, largo_m, ancho_m, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+        "numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
