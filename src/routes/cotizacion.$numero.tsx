@@ -27,13 +27,11 @@ const getQuote = createServerFn({ method: "GET" })
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
-        "numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
+        "id, numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, correo)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    // Per-quote secret token gate: without a matching token, treat as not found so attackers
-    // can't enumerate sequential quote numbers to harvest totals/payment status.
     const expected = String(cot?.access_token ?? "");
     const provided = String(data.token ?? "");
     let ok = false;
@@ -43,21 +41,34 @@ const getQuote = createServerFn({ method: "GET" })
       ok = diff === 0;
     }
     let safeCot: unknown = null;
+    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> = [];
     if (cot && ok) {
       const c = cot.cliente as { nombre?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
-      // Strip the token and full PII before sending to the browser.
-      const { access_token: _at, ...rest } = cot;
-      void _at;
+      const { id: _id, access_token: _at, ...rest } = cot;
+      void _id; void _at;
       safeCot = {
         ...rest,
         cliente: { nombre: firstName, correo: maskCorreo(c?.correo) },
       };
+      const { data: its } = await supabaseAdmin
+        .from("cotizacion_items")
+        .select("position, largo_m, ancho_m, cantidad_planchas, metros2")
+        .eq("cotizacion_id", cot.id)
+        .order("position", { ascending: true });
+      items = (its ?? []).map((r) => ({
+        position: Number(r.position),
+        largo_m: Number(r.largo_m),
+        ancho_m: Number(r.ancho_m),
+        cantidad_planchas: Number(r.cantidad_planchas),
+        metros2: Number(r.metros2),
+      }));
     }
     const { data: cfg } = await supabaseAdmin
       .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
-    return { cot: safeCot as typeof cot | null, cfg };
+    return { cot: safeCot as typeof cot | null, items, cfg };
   });
+
 
 export const Route = createFileRoute("/cotizacion/$numero")({
   validateSearch: (s: Record<string, unknown>) => ({ t: typeof s.t === "string" ? s.t : undefined }),
