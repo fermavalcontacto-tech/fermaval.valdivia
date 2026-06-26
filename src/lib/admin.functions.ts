@@ -497,7 +497,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
       direccion: z.string().trim().min(3),
     }),
     largo_m: z.number().positive(),
-    ancho_m: z.number().positive(),
+    cantidad_planchas: z.number().int().positive().default(1),
     color_nombre: z.string().nullable().optional(),
     precio_m2: z.number().positive(),
     descuento: z.number().min(0).default(0),
