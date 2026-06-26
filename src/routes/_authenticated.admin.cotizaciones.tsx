@@ -47,6 +47,14 @@ function CotizacionesPage() {
   const [editing, setEditing] = useState<Cotizacion | null>(null);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
+      .slice().sort((a, b) => a.position - b.position)
+      .map((it) => ({
+        largo_m: Number(it.largo_m),
+        ancho_m: Number(it.ancho_m),
+        cantidad_planchas: Number(it.cantidad_planchas),
+        metros2: Number(it.metros2),
+      }));
     return {
       numero: c.numero,
       fecha: c.created_at,
@@ -57,6 +65,7 @@ function CotizacionesPage() {
         direccion: c.cliente?.direccion ?? "—",
       },
       largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas, metros2: c.metros2,
+      items: its,
       color_nombre: c.color_nombre, precio_m2: c.precio_m2,
       descuento: c.descuento ?? 0, total: c.total,
       pago_recibido: c.pago_recibido, saldo: c.saldo,
@@ -66,6 +75,7 @@ function CotizacionesPage() {
       aprobado_at: new Date().toISOString(),
     };
   }
+
 
   async function dispatchAprobacion(c: Cotizacion) {
     const pdfData = toPdfData(c);
