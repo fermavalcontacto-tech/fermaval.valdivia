@@ -217,7 +217,7 @@ function EditarCotizacionDialog({
     setForm({
       nombre: cot.cliente?.nombre ?? "", telefono: cot.cliente?.telefono ?? "",
       correo: cot.cliente?.correo ?? "", direccion: cot.cliente?.direccion ?? "",
-      largo_m: String(cot.largo_m), ancho_m: String(cot.ancho_m),
+      largo_m: String(cot.largo_m), cantidad_planchas: String(cot.cantidad_planchas ?? 1),
       color: cot.color_nombre ?? "", precio_m2: String(cot.precio_m2),
       descuento: String(cot.descuento ?? 0), pago_recibido: String(cot.pago_recibido),
       estado: cot.estado,
