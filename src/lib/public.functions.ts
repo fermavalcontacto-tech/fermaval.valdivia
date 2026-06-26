@@ -9,9 +9,11 @@ const CreateQuoteSchema = z.object({
     direccion: z.string().trim().min(4).max(300),
   }),
   largo_m: z.number().positive().max(1000),
-  ancho_m: z.number().positive().max(1000),
+  cantidad_planchas: z.number().int().positive().max(10000),
   color_id: z.string().uuid().nullable().optional(),
 });
+
+const ANCHO_FIJO_M = 1;
 
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
