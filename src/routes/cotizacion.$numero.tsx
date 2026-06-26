@@ -154,15 +154,45 @@ function QuotePage() {
             <div>
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
-                <div className="flex justify-between"><dt className="text-muted-foreground">Largo</dt><dd>{Number(cot.largo_m).toFixed(2)} m</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Ancho</dt><dd>1 m (estándar)</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Cantidad</dt><dd>{cot.cantidad_planchas ?? 1} plancha(s)</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Metros cuadrados</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
                 <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m²</dt><dd>{formatCLP(Number(cot.precio_m2))}</dd></div>
+                <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>
           </div>
+
+          <div className="border-t border-border px-6 pb-6">
+            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent">Medidas</h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="p-2 text-left">#</th>
+                    <th className="p-2 text-right">Largo</th>
+                    <th className="p-2 text-right">Ancho</th>
+                    <th className="p-2 text-right">Cantidad</th>
+                    <th className="p-2 text-right">m²</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }]).map((it, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="p-2">{i + 1}</td>
+                      <td className="p-2 text-right">{it.largo_m.toFixed(2)} m</td>
+                      <td className="p-2 text-right">1 m</td>
+                      <td className="p-2 text-right">{it.cantidad_planchas}</td>
+                      <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-muted/30 font-semibold">
+                    <td className="p-2" colSpan={4}>Total m²</td>
+                    <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
 
           <div className="grid gap-4 border-t border-border p-6 md:grid-cols-3">
             <div className="rounded-md bg-muted p-4">
