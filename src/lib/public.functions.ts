@@ -34,7 +34,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
     const precio = Number(cfg.precio_m2);
-    const metros2 = Number((data.largo_m * data.ancho_m).toFixed(2));
+    const metros2 = Number((data.largo_m * ANCHO_FIJO_M * data.cantidad_planchas).toFixed(2));
     const total = Math.round(metros2 * precio);
 
     let color_nombre: string | null = null;
