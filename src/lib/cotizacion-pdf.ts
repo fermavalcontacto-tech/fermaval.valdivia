@@ -1,6 +1,13 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate } from "@/lib/format";
 
+export type CotizacionItem = {
+  largo_m: number;
+  ancho_m: number;
+  cantidad_planchas: number;
+  metros2: number;
+};
+
 export type CotizacionPDF = {
   numero: string;
   fecha: string;
@@ -9,6 +16,7 @@ export type CotizacionPDF = {
   ancho_m: number;
   cantidad_planchas?: number;
   metros2: number;
+  items?: CotizacionItem[];
   color_nombre: string | null;
   precio_m2: number;
   descuento: number;
@@ -20,6 +28,7 @@ export type CotizacionPDF = {
   aprobador_email: string;
   aprobado_at: string;
 };
+
 
 const PRIMARY: [number, number, number] = [180, 30, 30];
 const MUTED: [number, number, number] = [110, 110, 110];
