@@ -127,15 +127,18 @@ function CotizacionesPage() {
 
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
+              {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
               {((data ?? []) as Cotizacion[]).map((c) => {
                 const cli = c.cliente as { nombre?: string } | null;
+                const origen = (c as { origen?: string }).origen ?? "cliente";
                 return (
                 <tr key={c.id} className="border-b last:border-0">
                   <td className="p-3 font-mono">{c.numero}</td>
                   <td className="p-3">{cli?.nombre ?? "—"}</td>
+                  <td className="p-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${origen === "interno" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{origen}</span></td>
                   <td className="p-3">{formatDate(c.created_at)}</td>
                   <td className="p-3">{formatCLP(c.total)}</td>
+
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
                   <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
                   <td className="p-3">
