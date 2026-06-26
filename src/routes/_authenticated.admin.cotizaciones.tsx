@@ -56,7 +56,7 @@ function CotizacionesPage() {
         telefono: c.cliente?.telefono ?? "—",
         direccion: c.cliente?.direccion ?? "—",
       },
-      largo_m: c.largo_m, ancho_m: c.ancho_m, metros2: c.metros2,
+      largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas, metros2: c.metros2,
       color_nombre: c.color_nombre, precio_m2: c.precio_m2,
       descuento: c.descuento ?? 0, total: c.total,
       pago_recibido: c.pago_recibido, saldo: c.saldo,
