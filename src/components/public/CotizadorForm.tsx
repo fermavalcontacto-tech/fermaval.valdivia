@@ -104,6 +104,36 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
             <Plus className="mr-1 h-4 w-4" /> Agregar otra medida
           </Button>
 
+          {itemsCalc.some((x) => x.m2 > 0) && (
+            <div className="rounded-md border bg-background p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalle del pedido</div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr className="border-b">
+                      <th className="py-1 text-left font-medium">#</th>
+                      <th className="py-1 text-right font-medium">Largo</th>
+                      <th className="py-1 text-right font-medium">Ancho</th>
+                      <th className="py-1 text-right font-medium">Cantidad</th>
+                      <th className="py-1 text-right font-medium">m²</th>
+                    </tr>
+                  </thead>
+                  <tbody className="font-mono">
+                    {itemsCalc.map((it, i) => (
+                      <tr key={i} className="border-b last:border-0">
+                        <td className="py-1">{i + 1}</td>
+                        <td className="py-1 text-right">{it.largo} m</td>
+                        <td className="py-1 text-right">1 m</td>
+                        <td className="py-1 text-right">{it.cantidad}</td>
+                        <td className="py-1 text-right font-semibold">{it.m2.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           <div className="rounded-md bg-muted p-3">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total metros cuadrados</div>
             <div className="font-display text-3xl text-primary">{m2Total.toFixed(2)} m²</div>
