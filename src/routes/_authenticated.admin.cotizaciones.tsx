@@ -241,7 +241,7 @@ function EditarCotizacionDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const m2 = Number(form.largo_m) * Number(form.ancho_m);
+  const m2 = Number(form.largo_m) * 1 * Number(form.cantidad_planchas);
   const total = Math.max(0, Math.round(m2 * Number(form.precio_m2) - Number(form.descuento)));
   const saldo = Math.max(0, total - Number(form.pago_recibido));
 
