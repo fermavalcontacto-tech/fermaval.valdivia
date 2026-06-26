@@ -85,7 +85,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     ["Correo", c.cliente.correo],
     ["Teléfono", c.cliente.telefono],
     ["Dirección", c.cliente.direccion],
-    ["Medidas", `${c.largo_m} m × ${c.ancho_m} m = ${c.metros2.toFixed(2)} m²`],
+    ["Medidas", `Largo ${c.largo_m} m × Ancho ${c.ancho_m} m (estándar) × ${c.cantidad_planchas ?? 1} plancha(s) = ${c.metros2.toFixed(2)} m²`],
     ["Color", c.color_nombre ?? "—"],
     ["Precio / m²", formatCLP(c.precio_m2)],
     ["Descuento", formatCLP(c.descuento)],
