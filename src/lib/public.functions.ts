@@ -9,9 +9,11 @@ const CreateQuoteSchema = z.object({
     direccion: z.string().trim().min(4).max(300),
   }),
   largo_m: z.number().positive().max(1000),
-  ancho_m: z.number().positive().max(1000),
+  cantidad_planchas: z.number().int().positive().max(10000),
   color_id: z.string().uuid().nullable().optional(),
 });
+
+const ANCHO_FIJO_M = 1;
 
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
@@ -32,7 +34,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
     const precio = Number(cfg.precio_m2);
-    const metros2 = Number((data.largo_m * data.ancho_m).toFixed(2));
+    const metros2 = Number((data.largo_m * ANCHO_FIJO_M * data.cantidad_planchas).toFixed(2));
     const total = Math.round(metros2 * precio);
 
     let color_nombre: string | null = null;
@@ -66,7 +68,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         numero,
         cliente_id: cliente.id,
         largo_m: data.largo_m,
-        ancho_m: data.ancho_m,
+        ancho_m: ANCHO_FIJO_M,
+        cantidad_planchas: data.cantidad_planchas,
         metros2,
         color_id: data.color_id ?? null,
         color_nombre,

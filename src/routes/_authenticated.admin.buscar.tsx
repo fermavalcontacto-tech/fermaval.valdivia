@@ -319,7 +319,7 @@ function DetailPanel({
             <div><span className="text-muted-foreground">Dirección: </span>{cliente?.direccion ?? "—"}</div>
           </div>
           <div className="grid gap-1 border-t pt-3">
-            <div><span className="text-muted-foreground">Medidas: </span>{Number(c.largo_m)} m × {Number(c.ancho_m)} m</div>
+            <div><span className="text-muted-foreground">Medidas: </span>{Number(c.largo_m)} m × 1 m × {c.cantidad_planchas ?? 1} plancha(s)</div>
             <div><span className="text-muted-foreground">Metros²: </span>{Number(c.metros2)} m²</div>
             <div><span className="text-muted-foreground">Color: </span>{c.color_nombre ?? "—"}</div>
             <div><span className="text-muted-foreground">Precio m²: </span>{formatCLP(Number(c.precio_m2))}</div>

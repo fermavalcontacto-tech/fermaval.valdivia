@@ -34,7 +34,7 @@ type Estado = typeof estados[number];
 
 type Cotizacion = {
   id: string; numero: string; created_at: string;
-  largo_m: number; ancho_m: number; metros2: number; precio_m2: number;
+  largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; precio_m2: number;
   descuento: number; total: number; pago_recibido: number; saldo: number;
   color_nombre: string | null; estado: Estado; cliente_id: string;
   cliente: { id?: string; nombre?: string; correo?: string; telefono?: string; direccion?: string } | null;
@@ -56,7 +56,7 @@ function CotizacionesPage() {
         telefono: c.cliente?.telefono ?? "—",
         direccion: c.cliente?.direccion ?? "—",
       },
-      largo_m: c.largo_m, ancho_m: c.ancho_m, metros2: c.metros2,
+      largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas, metros2: c.metros2,
       color_nombre: c.color_nombre, precio_m2: c.precio_m2,
       descuento: c.descuento ?? 0, total: c.total,
       pago_recibido: c.pago_recibido, saldo: c.saldo,
@@ -209,7 +209,7 @@ function EditarCotizacionDialog({
 }: { cot: Cotizacion | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "",
-    largo_m: "0", ancho_m: "0", color: "", precio_m2: "0",
+    largo_m: "0", cantidad_planchas: "1", color: "", precio_m2: "0",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
   useEffect(() => {
@@ -217,7 +217,7 @@ function EditarCotizacionDialog({
     setForm({
       nombre: cot.cliente?.nombre ?? "", telefono: cot.cliente?.telefono ?? "",
       correo: cot.cliente?.correo ?? "", direccion: cot.cliente?.direccion ?? "",
-      largo_m: String(cot.largo_m), ancho_m: String(cot.ancho_m),
+      largo_m: String(cot.largo_m), cantidad_planchas: String(cot.cantidad_planchas ?? 1),
       color: cot.color_nombre ?? "", precio_m2: String(cot.precio_m2),
       descuento: String(cot.descuento ?? 0), pago_recibido: String(cot.pago_recibido),
       estado: cot.estado,
@@ -232,7 +232,7 @@ function EditarCotizacionDialog({
         nombre: form.nombre, telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      largo_m: Number(form.largo_m), ancho_m: Number(form.ancho_m),
+      largo_m: Number(form.largo_m), cantidad_planchas: Number(form.cantidad_planchas),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       descuento: Number(form.descuento), pago_recibido: Number(form.pago_recibido),
       estado: form.estado,
@@ -241,7 +241,7 @@ function EditarCotizacionDialog({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const m2 = Number(form.largo_m) * Number(form.ancho_m);
+  const m2 = Number(form.largo_m) * 1 * Number(form.cantidad_planchas);
   const total = Math.max(0, Math.round(m2 * Number(form.precio_m2) - Number(form.descuento)));
   const saldo = Math.max(0, total - Number(form.pago_recibido));
 
@@ -254,8 +254,8 @@ function EditarCotizacionDialog({
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /></div>
-          <div><Label>Ancho (m)</Label><Input type="number" step="0.01" value={form.ancho_m} onChange={(e)=>setForm({...form, ancho_m: e.target.value})} /></div>
+          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /><p className="mt-1 text-xs text-muted-foreground">Ancho fijo: 1 m</p></div>
+          <div><Label>Cantidad de planchas</Label><Input type="number" step="1" min="1" value={form.cantidad_planchas} onChange={(e)=>setForm({...form, cantidad_planchas: e.target.value})} /></div>
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
@@ -286,11 +286,11 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", ancho_m: "", color: "", precio_m2: "7990", fecha_solicitud: today });
+  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", largo_m: "", cantidad_planchas: "1", color: "", precio_m2: "7990", fecha_solicitud: today });
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      largo_m: Number(form.largo_m), ancho_m: Number(form.ancho_m),
+      largo_m: Number(form.largo_m), cantidad_planchas: Number(form.cantidad_planchas),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
@@ -307,8 +307,8 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /></div>
-          <div><Label>Ancho (m)</Label><Input type="number" step="0.01" value={form.ancho_m} onChange={(e)=>setForm({...form, ancho_m: e.target.value})} /></div>
+          <div><Label>Largo (m)</Label><Input type="number" step="0.01" value={form.largo_m} onChange={(e)=>setForm({...form, largo_m: e.target.value})} /><p className="mt-1 text-xs text-muted-foreground">Ancho fijo: 1 m</p></div>
+          <div><Label>Cantidad de planchas</Label><Input type="number" step="1" min="1" value={form.cantidad_planchas} onChange={(e)=>setForm({...form, cantidad_planchas: e.target.value})} /></div>
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div className="sm:col-span-2">

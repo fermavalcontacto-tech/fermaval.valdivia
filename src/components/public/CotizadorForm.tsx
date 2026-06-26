@@ -14,7 +14,7 @@ type Color = { id: string; nombre: string; hex: string; imagen_url: string | nul
 export function CotizadorForm({ precio, colores }: { precio: number; colores: Color[] }) {
   const navigate = useNavigate();
   const [largo, setLargo] = useState("");
-  const [ancho, setAncho] = useState("");
+  const [cantidad, setCantidad] = useState("1");
   const [colorId, setColorId] = useState<string>(colores[0]?.id ?? "");
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
@@ -22,17 +22,17 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
   const [direccion, setDireccion] = useState("");
 
   const m2 = useMemo(() => {
-    const l = Number(largo); const a = Number(ancho);
-    if (!l || !a) return 0;
-    return Number((l * a).toFixed(2));
-  }, [largo, ancho]);
+    const l = Number(largo); const n = Number(cantidad);
+    if (!l || !n) return 0;
+    return Number((l * 1 * n).toFixed(2));
+  }, [largo, cantidad]);
   const total = Math.round(m2 * precio);
 
   const mut = useMutation({
     mutationFn: () => createPublicQuote({
       data: {
         largo_m: Number(largo),
-        ancho_m: Number(ancho),
+        cantidad_planchas: Number(cantidad),
         color_id: colorId || null,
         cliente: { nombre, telefono, correo, direccion },
       },
@@ -46,7 +46,8 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (m2 <= 0) { toast.error("Ingresa largo y ancho válidos"); return; }
+    if (Number(largo) <= 0) { toast.error("Ingresa un largo válido"); return; }
+    if (Number(cantidad) <= 0 || !Number.isInteger(Number(cantidad))) { toast.error("Cantidad de planchas inválida"); return; }
     if (!nombre || !telefono || !correo || !direccion) { toast.error("Completa todos tus datos"); return; }
     mut.mutate();
   }
@@ -56,16 +57,18 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
       <form onSubmit={submit} className="grid gap-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div>
-            <Label htmlFor="largo">Largo (m)</Label>
+            <Label htmlFor="largo">Largo de plancha (m)</Label>
             <Input id="largo" type="number" step="0.01" min="0" value={largo} onChange={(e) => setLargo(e.target.value)} placeholder="0,00" />
+            <p className="mt-1 text-xs text-muted-foreground">Ancho estándar: 1 metro (fijo)</p>
           </div>
           <div>
-            <Label htmlFor="ancho">Ancho (m)</Label>
-            <Input id="ancho" type="number" step="0.01" min="0" value={ancho} onChange={(e) => setAncho(e.target.value)} placeholder="0,00" />
+            <Label htmlFor="cantidad">Cantidad de planchas</Label>
+            <Input id="cantidad" type="number" step="1" min="1" value={cantidad} onChange={(e) => setCantidad(e.target.value)} placeholder="1" />
           </div>
           <div className="rounded-md bg-muted p-3">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Metros cuadrados</div>
             <div className="font-display text-3xl text-primary">{m2.toFixed(2)} m²</div>
+            <div className="text-[10px] text-muted-foreground">Largo × 1 m × cantidad</div>
           </div>
         </div>
 
