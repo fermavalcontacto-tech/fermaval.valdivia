@@ -232,7 +232,7 @@ function EditarCotizacionDialog({
         nombre: form.nombre, telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      largo_m: Number(form.largo_m), ancho_m: Number(form.ancho_m),
+      largo_m: Number(form.largo_m), cantidad_planchas: Number(form.cantidad_planchas),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       descuento: Number(form.descuento), pago_recibido: Number(form.pago_recibido),
       estado: form.estado,
