@@ -120,10 +120,11 @@ function CotizacionesPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="p-3">N°</th><th className="p-3">Cliente</th><th className="p-3">Fecha</th>
+                <th className="p-3">N°</th><th className="p-3">Cliente</th><th className="p-3">Origen</th><th className="p-3">Fecha</th>
                 <th className="p-3">Total</th><th className="p-3">Pagado</th><th className="p-3">Saldo</th>
                 <th className="p-3">Estado</th><th className="p-3 text-right">Acciones</th>
               </tr>
+
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
