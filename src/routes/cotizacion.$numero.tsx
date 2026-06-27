@@ -123,11 +123,35 @@ function QuotePage() {
   const cliente = cot.cliente as { nombre: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
+  function handleDownload() {
+    const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }])
+      .map((it) => ({ largo_m: Number(it.largo_m), ancho_m: 1, cantidad_planchas: Number(it.cantidad_planchas), metros2: Number(it.metros2) }));
+    const pdf: CotizacionPDF = {
+      numero: cot.numero,
+      fecha: cot.created_at,
+      cliente: { nombre: cliente?.nombre ?? "—", correo: cliente?.correo ?? "", telefono: "—", direccion: "—" },
+      largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2),
+      items,
+      color_nombre: cot.color_nombre, precio_m2: Number(cot.precio_m2),
+      descuento: 0, total: Number(cot.total), pago_recibido: Number(cot.pago_recibido), saldo: Number(cot.saldo),
+      estado: ESTADO_LABEL[cot.estado] ?? cot.estado,
+      aprobador_nombre: "", aprobador_email: "", aprobado_at: "",
+      origen: "cliente",
+    };
+    downloadCotizacionPDF(pdf);
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <PublicHeader linktreeUrl={data.cfg?.linktree_url} />
       <div className="container mx-auto max-w-3xl px-4 py-10">
-        <Button asChild variant="ghost" size="sm" className="mb-4"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Volver</Link></Button>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <Button asChild variant="ghost" size="sm"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Volver</Link></Button>
+          <Button onClick={handleDownload} variant="hero" size="sm">
+            <Download className="mr-1 h-4 w-4" /> Descargar PDF
+          </Button>
+        </div>
+
 
         <Card className="overflow-hidden border-2 border-border bg-card">
           <div className="brand-gradient p-6 text-primary-foreground">
