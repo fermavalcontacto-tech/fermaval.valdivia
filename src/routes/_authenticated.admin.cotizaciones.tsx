@@ -242,6 +242,12 @@ function CotizacionesPage() {
           onSaved={() => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); setEditing(null); }}
         />
       )}
+
+      <PdfPreviewDialog
+        data={preview?.data ?? null}
+        onOpenChange={(o) => { if (!o) setPreview(null); }}
+        onShareWhatsApp={(d) => preview?.cot ? shareWhatsApp(preview.cot) : shareWhatsAppFromPdf(d)}
+      />
     </div>
   );
 }
