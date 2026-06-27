@@ -6,6 +6,7 @@ const ANCHO_FIJO_M = 1;
 const ItemSchema = z.object({
   largo_m: z.number().positive().max(1000),
   cantidad_planchas: z.number().int().positive().max(10000),
+  color_id: z.string().uuid().nullable().optional(),
 });
 
 const CreateQuoteSchema = z.object({
