@@ -145,12 +145,14 @@ function EditarBoletaDialog({
 }: { boleta: Boleta | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const [form, setForm] = useState({
     tipo: "materiales" as Tipo, descripcion: "", monto: "0", fecha: "",
+    responsable: "" as Persona | "",
   });
   useEffect(() => {
     if (!boleta) return;
     setForm({
       tipo: boleta.tipo_gasto, descripcion: boleta.descripcion ?? "",
       monto: String(boleta.monto), fecha: boleta.fecha,
+      responsable: boleta.responsable ?? "",
     });
   }, [boleta]);
 
@@ -159,10 +161,12 @@ function EditarBoletaDialog({
       id: boleta!.id, tipo_gasto: form.tipo,
       descripcion: form.descripcion || null,
       monto: Number(form.monto), fecha: form.fecha,
+      responsable: form.responsable || null,
     } }),
     onSuccess: () => { toast.success("Boleta actualizada"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   return (
     <Dialog open={!!boleta} onOpenChange={onOpenChange}>
