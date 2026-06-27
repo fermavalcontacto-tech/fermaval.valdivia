@@ -835,7 +835,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2)")
+      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre)")
       .order("created_at", { ascending: false })
       .limit(200);
 
