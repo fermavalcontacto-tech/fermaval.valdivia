@@ -399,12 +399,12 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
     onSuccess: (r) => {
-      toast.success(`Creada ${r.numero} — generando PDF...`);
+      toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
       const total = Math.round(m2 * Number(form.precio_m2));
       const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
       const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
-      downloadCotizacionPDF({
+      const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
         cliente: { nombre: form.nombre, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
@@ -420,7 +420,8 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         origen: "interno",
         creado_por_nombre: auth.email?.split("@")[0],
         creado_por_email: auth.email,
-      });
+      };
+      onPreview(pdfData);
       onCreated(); setOpen(false);
       setItems([{ largo: "", cantidad: "1" }]);
     },
