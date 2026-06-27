@@ -699,6 +699,12 @@ export const updateConfig = createServerFn({ method: "POST" })
     precio_m2: z.number().positive(),
     hero_titulo: z.string().min(1).max(120),
     hero_subtitulo: z.string().min(1).max(200),
+    hero_h1_linea1: z.string().min(1).max(60),
+    hero_h1_linea2: z.string().min(1).max(60),
+    hero_h1_linea3: z.string().min(1).max(80),
+    marca_texto: z.string().min(1).max(400),
+    productos_titulo: z.string().min(1).max(80),
+    cotizador_titulo: z.string().min(1).max(80),
     info_comercial: z.string().min(1).max(500),
     linktree_url: z.string().url(),
     mapa_url: z.string().url(),
@@ -721,9 +727,11 @@ export const updateConfig = createServerFn({ method: "POST" })
     }).eq("id", 1);
     if (error) throw new Error(error.message);
     const fields: Array<keyof typeof data> = [
-      "precio_m2","hero_titulo","hero_subtitulo","info_comercial","linktree_url",
-      "mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url",
+      "precio_m2","hero_titulo","hero_subtitulo","hero_h1_linea1","hero_h1_linea2","hero_h1_linea3",
+      "marca_texto","productos_titulo","cotizador_titulo",
+      "info_comercial","linktree_url","mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url",
     ];
+
     const rows: Array<{ user_id: string; user_email: string; entidad: string; accion: string; cambio: string; valor_antes: string | null; valor_despues: string | null }> = [];
     for (const k of fields) {
       const before = prev ? (prev as Record<string, unknown>)[k] : null;
