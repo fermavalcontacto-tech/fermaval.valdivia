@@ -1148,3 +1148,93 @@ export const getCotizacionAudit = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+// ====== Gestión de empleados (solo superadmin) ======
+export const listEmpleados = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    assertSuperadmin(context.claims.email as string | undefined);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: usersData, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
+    if (error) throw new Error(error.message);
+    const ids = usersData.users.map((u) => u.id);
+    const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids);
+    const byUser = new Map<string, string[]>();
+    for (const r of roles ?? []) {
+      const arr = byUser.get(r.user_id) ?? [];
+      arr.push(r.role);
+      byUser.set(r.user_id, arr);
+    }
+    return usersData.users.map((u) => ({
+      id: u.id,
+      email: u.email ?? "",
+      created_at: u.created_at,
+      last_sign_in_at: u.last_sign_in_at,
+      confirmed: !!u.email_confirmed_at,
+      roles: byUser.get(u.id) ?? [],
+      is_superadmin: (u.email ?? "").toLowerCase() === SUPERADMIN_EMAIL,
+    }));
+  });
+
+export const crearEmpleado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    email: z.string().trim().email().max(255),
+    password: z.string().min(8).max(128),
+    nombre: z.string().trim().max(120).optional(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertSuperadmin(context.claims.email as string | undefined);
+    if (data.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      throw new Error("Ese correo está reservado para el Administrador General.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { nombre: data.nombre ?? "" },
+    });
+    if (error || !created.user) throw new Error(error?.message ?? "No se pudo crear el usuario");
+    // Asignar rol estándar 'admin' (mismos permisos que los 3 perfiles del equipo)
+    const { error: rErr } = await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "admin" });
+    if (rErr) throw new Error(rErr.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_email: context.claims.email, entidad: "user_roles",
+      cambio: `Alta empleado ${data.email}`, valor_antes: null, valor_despues: "admin",
+    });
+    return { id: created.user.id };
+  });
+
+export const eliminarEmpleado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ user_id: z.string().uuid(), email: z.string().email() }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertSuperadmin(context.claims.email as string | undefined);
+    if (data.email.toLowerCase() === SUPERADMIN_EMAIL) {
+      throw new Error("No puedes eliminar al Administrador General.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_email: context.claims.email, entidad: "user_roles",
+      cambio: `Eliminación empleado ${data.email}`, valor_antes: "admin", valor_despues: null,
+    });
+    return { ok: true };
+  });
+
+export const resetPasswordEmpleado = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ user_id: z.string().uuid(), password: z.string().min(8).max(128) }).parse(d))
+  .handler(async ({ data, context }) => {
+    assertSuperadmin(context.claims.email as string | undefined);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.password });
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_email: context.claims.email, entidad: "user_roles",
+      cambio: `Reset password empleado ${data.user_id}`, valor_antes: null, valor_despues: "***",
+    });
+    return { ok: true };
+  });
