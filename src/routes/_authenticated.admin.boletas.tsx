@@ -123,7 +123,7 @@ function BoletasPage() {
                   </td>
                 </tr>
               ))}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Sin boletas aún.</td></tr>}
+              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Sin boletas aún.</td></tr>}
             </tbody>
           </table>
         </div>
