@@ -80,6 +80,29 @@ export function buildComprobantePDF(c: ComprobanteEgreso): jsPDF {
     y += Math.max(7, lines.length * 6);
   });
 
+  // Detalle de latas (color por lata)
+  const latas = c.latas ?? [];
+  if (latas.length > 0) {
+    y += 4;
+    doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...MUTED);
+    doc.text("Detalle de latas", 15, y); y += 5;
+    doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.setFont("helvetica", "bold");
+    doc.text("#", 15, y); doc.text("Descripción", 22, y);
+    doc.text("Cant.", 130, y); doc.text("Color", 150, y);
+    y += 2; doc.setDrawColor(220, 220, 220); doc.line(15, y, W - 15, y); y += 5;
+    doc.setFont("helvetica", "normal");
+    latas.forEach((l, i) => {
+      doc.text(String(i + 1), 15, y);
+      doc.text(String(l.descripcion).slice(0, 70), 22, y);
+      doc.text(String(l.cantidad), 130, y);
+      doc.text(String(l.color), 150, y);
+      y += 6;
+    });
+    y += 2;
+  }
+
+
   // Footer
   doc.setDrawColor(220, 220, 220);
   doc.line(15, 270, W - 15, 270);
