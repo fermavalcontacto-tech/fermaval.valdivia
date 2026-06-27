@@ -439,6 +439,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     fecha: z.string(),
     archivo_path: z.string(),
     archivo_nombre: z.string().optional().nullable(),
+    responsable: personaSchema,
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -446,11 +447,13 @@ export const createBoleta = createServerFn({ method: "POST" })
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha,
       archivo_path: data.archivo_path, archivo_nombre: data.archivo_nombre ?? null,
+      responsable: data.responsable,
       subido_por: context.userId,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const getDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
