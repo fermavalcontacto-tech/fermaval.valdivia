@@ -27,6 +27,9 @@ export type CotizacionPDF = {
   aprobador_nombre: string;
   aprobador_email: string;
   aprobado_at: string;
+  creado_por_nombre?: string;
+  creado_por_email?: string;
+  origen?: string;
 };
 
 
