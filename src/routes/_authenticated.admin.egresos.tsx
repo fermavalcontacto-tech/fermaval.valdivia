@@ -259,3 +259,88 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
     </Dialog>
   );
 }
+
+function LatasDialog({ id, initial, onSaved }: { id: string; initial: LataItem[]; onSaved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [latas, setLatas] = useState<LataItem[]>(initial.length ? initial : []);
+  const mut = useMutation({
+    mutationFn: () => updateEgresoLatas({ data: { id, latas } }),
+    onSuccess: () => { toast.success("Latas actualizadas"); onSaved(); setOpen(false); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  function update(i: number, patch: Partial<LataItem>) {
+    setLatas((arr) => arr.map((l, idx) => idx === i ? { ...l, ...patch } : l));
+  }
+  function add() {
+    setLatas((arr) => [...arr, { descripcion: "", cantidad: 1, color: "Blanco" }]);
+  }
+  function remove(i: number) {
+    setLatas((arr) => arr.filter((_, idx) => idx !== i));
+  }
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setLatas(initial); }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" title="Personalizar latas (color por lata)">
+          <Palette className="h-4 w-4 mr-1" /> Latas
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Personalizar latas solicitadas</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2">
+          {latas.length === 0 && (
+            <p className="rounded border bg-muted/30 p-3 text-sm text-muted-foreground">
+              Aún no hay latas registradas. Agrega la primera con el botón inferior.
+            </p>
+          )}
+          {latas.map((l, i) => (
+            <div key={i} className="grid grid-cols-[1fr_90px_160px_auto] items-end gap-2 rounded border p-2">
+              <div>
+                <Label className="text-xs">Descripción / referencia</Label>
+                <Input value={l.descripcion} onChange={(e) => update(i, { descripcion: e.target.value })} placeholder="Ej: Esmalte 1 gal" />
+              </div>
+              <div>
+                <Label className="text-xs">Cantidad</Label>
+                <Input type="number" min={1} value={l.cantidad}
+                  onChange={(e) => update(i, { cantidad: Math.max(1, Number(e.target.value) || 1) })} />
+              </div>
+              <div>
+                <Label className="text-xs">Color</Label>
+                <Select value={l.color} onValueChange={(v) => update(i, { color: v })}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      <span className="inline-flex items-center gap-2">
+                        <span className="inline-block h-3 w-3 rounded-full border" style={{ background: COLOR_SWATCH[l.color] ?? "#999" }} />
+                        {l.color}
+                      </span>
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COLORES_LATA.map((c) => (
+                      <SelectItem key={c} value={c}>
+                        <span className="inline-flex items-center gap-2">
+                          <span className="inline-block h-3 w-3 rounded-full border" style={{ background: COLOR_SWATCH[c] ?? "#999" }} />
+                          {c}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => remove(i)} title="Quitar"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={add}><Plus className="h-4 w-4 mr-1" /> Agregar lata</Button>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="hero" onClick={() => mut.mutate()} disabled={mut.isPending}>
+            {mut.isPending ? "Guardando..." : "Guardar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
