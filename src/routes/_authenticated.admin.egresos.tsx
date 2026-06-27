@@ -85,13 +85,16 @@ function EgresosPage() {
                 <th className="p-3">Monto</th>
                 <th className="p-3">Solicitado Por</th>
                 <th className="p-3">Boleta Subida Por</th>
+                <th className="p-3">Latas (color)</th>
                 <th className="p-3">Estado</th>
                 <th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {(data ?? []).map((s) => (
+              {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
+              {(data ?? []).map((s) => {
+                const latas = (s.latas as LataItem[] | null) ?? [];
+                return (
                 <tr key={s.id} className="border-b last:border-0">
                   <td className="p-3">{formatDate(s.fecha)}</td>
                   <td className="p-3">{TIPO_GASTO_LABEL[s.tipo]}</td>
@@ -100,6 +103,20 @@ function EgresosPage() {
                   <td className="p-3">{s.solicitado_por ?? "—"}</td>
                   <td className="p-3">{s.boleta_subida_por ?? "—"}</td>
                   <td className="p-3">
+                    {latas.length === 0 ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : (
+                      <div className="flex flex-wrap gap-1">
+                        {latas.map((l, i) => (
+                          <span key={i} className="inline-flex items-center gap-1 rounded-full border bg-muted/30 px-2 py-0.5 text-[11px]">
+                            <span className="inline-block h-2.5 w-2.5 rounded-full border" style={{ background: COLOR_SWATCH[l.color] ?? "#999" }} />
+                            {l.cantidad}× {l.descripcion}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="p-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                       s.estado === "aprobado" ? "bg-green-100 text-green-800" :
                       s.estado === "rechazado" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"
@@ -107,6 +124,9 @@ function EgresosPage() {
                   </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
+                      {auth.isAdmin && (
+                        <LatasDialog id={s.id} initial={latas} onSaved={() => qc.invalidateQueries({ queryKey: ["egresos"] })} />
+                      )}
                       {s.estado === "aprobado" && (
                         <Button
                           size="sm"
@@ -119,6 +139,7 @@ function EgresosPage() {
                             decidido_at: s.decidido_at ?? null,
                             aprobador_nombre: "Administrador General",
                             aprobador_email: "fermaval.contacto@gmail.com",
+                            latas,
                           })}
                         >
                           <Download className="h-4 w-4 mr-1" /> Comprobante
@@ -154,8 +175,10 @@ function EgresosPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={8} className="p-6 text-center text-muted-foreground">Sin solicitudes.</td></tr>}
+                );
+              })}
+              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Sin solicitudes.</td></tr>}
+
             </tbody>
           </table>
         </div>
