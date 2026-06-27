@@ -9,6 +9,8 @@ export type CotizacionItem = {
   cantidad_planchas: number;
   metros2: number;
   color_nombre?: string | null;
+  tipo?: string | null;
+  espesor_mm?: number | null;
 };
 
 export type CotizacionPDF = {
@@ -33,9 +35,9 @@ export type CotizacionPDF = {
   creado_por_nombre?: string;
   creado_por_email?: string;
   origen?: string;
+  responsable_nombre?: string | null;
 };
 
-// ───── Paleta corporativa formal ─────
 const NAVY: [number, number, number] = [20, 40, 80];
 const NAVY_DARK: [number, number, number] = [12, 26, 56];
 const GREY_DARK: [number, number, number] = [55, 65, 81];
@@ -43,17 +45,31 @@ const GREY: [number, number, number] = [120, 128, 140];
 const GREY_LIGHT: [number, number, number] = [225, 228, 234];
 const ZEBRA: [number, number, number] = [247, 248, 250];
 const BLACK: [number, number, number] = [17, 24, 39];
+const ALERT_BG: [number, number, number] = [253, 246, 230];
+const ALERT_BORDER: [number, number, number] = [202, 138, 4];
+const ALERT_TEXT: [number, number, number] = [120, 80, 0];
 
-// ───── Datos fijos de la empresa ─────
 const EMPRESA = {
   razon: "FERMAVAL Cubiertas y Revestimientos",
-  rut: "RUT: 77.123.456-7",
+  rut: "RUT: 77.339.375-3",
   direccion: "Ruta T-505, Sector Vuelta La Culebra, Parcela #8, Valdivia",
   telefono: "+56 9 0000 0000",
   email: "fermaval.contacto@gmail.com",
 };
 
-// ───── Pre-carga del logo como dataURL ─────
+const BANCO = {
+  empresa: "FERMAVAL SPA",
+  rut: "77.339.375-3",
+  banco: "Santander",
+  tipo: "Cuenta Corriente (Cta. Cte.)",
+  cuenta: "81530840",
+  correo: "fermavalspa@gmail.com",
+};
+
+const LEGAL_TITLE = "Nota sobre el retiro de materiales";
+const LEGAL_BODY =
+  "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. Recuerde que el retiro de planchas de zinc debe cumplir con la normativa chilena vigente (Decreto 158 MOP), la cual prohíbe que la carga sobresalga más de 2 metros de la carrocería.";
+
 let LOGO_DATA: string | null = null;
 let LOGO_W = 0;
 let LOGO_H = 0;
@@ -88,11 +104,8 @@ function drawLogo(doc: jsPDF, x: number, y: number, maxW: number, maxH: number) 
     try {
       doc.addImage(LOGO_DATA, "JPEG", x, y, w, h);
       return;
-    } catch {
-      /* fallthrough */
-    }
+    } catch { /* fallthrough */ }
   }
-  // Placeholder elegante
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.4);
   doc.roundedRect(x, y, maxW, maxH, 1.5, 1.5, "S");
@@ -108,11 +121,7 @@ function drawLogo(doc: jsPDF, x: number, y: number, maxW: number, maxH: number) 
 
 function drawLetterhead(doc: jsPDF, docTitle: string, numero: string) {
   const W = doc.internal.pageSize.getWidth();
-
-  // Logo
   drawLogo(doc, 15, 12, 55, 22);
-
-  // Datos empresa derecha
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(...NAVY_DARK);
@@ -120,23 +129,14 @@ function drawLetterhead(doc: jsPDF, docTitle: string, numero: string) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...GREY_DARK);
-  const right = [
-    EMPRESA.rut,
-    EMPRESA.direccion,
-    `Tel: ${EMPRESA.telefono}`,
-    EMPRESA.email,
-  ];
-  right.forEach((t, i) => doc.text(t, W - 15, 20 + i * 4.2, { align: "right" }));
-
-  // Línea separadora navy
+  [EMPRESA.rut, EMPRESA.direccion, `Tel: ${EMPRESA.telefono}`, EMPRESA.email]
+    .forEach((t, i) => doc.text(t, W - 15, 20 + i * 4.2, { align: "right" }));
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.8);
   doc.line(15, 40, W - 15, 40);
   doc.setDrawColor(...GREY_LIGHT);
   doc.setLineWidth(0.2);
   doc.line(15, 41.2, W - 15, 41.2);
-
-  // Título documento
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
   doc.setTextColor(...NAVY_DARK);
@@ -145,8 +145,6 @@ function drawLetterhead(doc: jsPDF, docTitle: string, numero: string) {
   doc.setFontSize(11);
   doc.setTextColor(...NAVY);
   doc.text(`N° ${numero}`, W - 15, 50, { align: "right" });
-
-  // Marca de agua sutil
   doc.setTextColor(245, 247, 250);
   doc.setFontSize(70);
   doc.setFont("helvetica", "bold");
@@ -162,31 +160,14 @@ function drawFooter(doc: jsPDF) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(...GREY);
-  doc.text(
-    "Términos: Validez 7 días corridos. Pago: 50% al confirmar pedido, saldo contra entrega. Precios en CLP.",
-    W / 2,
-    H - 17,
-    { align: "center" },
-  );
-  doc.text(
-    `${EMPRESA.razon}  ·  ${EMPRESA.email}  ·  ${EMPRESA.telefono}`,
-    W / 2,
-    H - 12,
-    { align: "center" },
-  );
+  doc.text("Términos: Validez 7 días corridos. Pago: 50% al confirmar pedido, saldo contra entrega. Precios en CLP.", W / 2, H - 17, { align: "center" });
+  doc.text(`${EMPRESA.razon}  ·  ${EMPRESA.email}  ·  ${EMPRESA.telefono}`, W / 2, H - 12, { align: "center" });
   doc.setTextColor(...GREY_LIGHT);
   doc.setFontSize(7);
   doc.text(`Documento generado el ${new Date().toLocaleString("es-CL")}`, W / 2, H - 7, { align: "center" });
 }
 
-function infoBlock(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  w: number,
-  title: string,
-  rows: Array<[string, string]>,
-): number {
+function infoBlock(doc: jsPDF, x: number, y: number, w: number, title: string, rows: Array<[string, string]>): number {
   doc.setFillColor(...NAVY_DARK);
   doc.rect(x, y, w, 6, "F");
   doc.setFont("helvetica", "bold");
@@ -214,18 +195,87 @@ function infoBlock(
   return y + 6 + bodyH;
 }
 
+function drawNewPageIfNeeded(doc: jsPDF, y: number, needed: number): number {
+  const H = doc.internal.pageSize.getHeight();
+  if (y + needed > H - 30) {
+    doc.addPage();
+    drawLetterhead(doc, "Cotización Comercial (cont.)", "—");
+    return 58;
+  }
+  return y;
+}
+
+function drawBankBlock(doc: jsPDF, y: number): number {
+  const W = doc.internal.pageSize.getWidth();
+  y = drawNewPageIfNeeded(doc, y, 50);
+  doc.setFillColor(240, 245, 252);
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(15, y, W - 30, 44, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text("DATOS PARA TRANSFERENCIA", 20, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...BLACK);
+  const rows = [
+    ["Empresa:", BANCO.empresa],
+    ["RUT:", BANCO.rut],
+    ["Banco:", BANCO.banco],
+    ["Tipo de cuenta:", BANCO.tipo],
+    ["N° de cuenta:", BANCO.cuenta],
+    ["Correo:", BANCO.correo],
+  ];
+  rows.forEach((r, i) => {
+    const col = i < 3 ? 0 : 1;
+    const row = i % 3;
+    const x = 22 + col * ((W - 40) / 2);
+    const yy = y + 13 + row * 6;
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...GREY_DARK);
+    doc.text(r[0], x, yy);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BLACK);
+    doc.text(r[1], x + 28, yy);
+  });
+  return y + 50;
+}
+
+function drawLegalBlock(doc: jsPDF, y: number): number {
+  const W = doc.internal.pageSize.getWidth();
+  const padding = 5;
+  const bodyLines = doc.splitTextToSize(LEGAL_BODY, W - 30 - padding * 2);
+  const h = 10 + bodyLines.length * 4.2 + padding;
+  y = drawNewPageIfNeeded(doc, y, h + 6);
+  doc.setFillColor(...ALERT_BG);
+  doc.setDrawColor(...ALERT_BORDER);
+  doc.setLineWidth(0.6);
+  doc.roundedRect(15, y, W - 30, h, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...ALERT_TEXT);
+  doc.text(`⚠  ${LEGAL_TITLE.toUpperCase()}`, 15 + padding, y + 6.5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(60, 50, 20);
+  doc.text(bodyLines, 15 + padding, y + 12);
+  return y + h + 6;
+}
+
 export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
 
   drawLetterhead(doc, "Cotización Comercial", c.numero);
 
-  // Fecha validez (+7 días)
   const fechaEmision = c.fecha ? new Date(c.fecha) : new Date();
   const fechaValidez = new Date(fechaEmision);
   fechaValidez.setDate(fechaValidez.getDate() + 7);
 
-  // Bloques cliente / documento
+  const isInterno = c.origen === "interno";
+  const responsable = c.responsable_nombre ?? c.creado_por_nombre ?? c.aprobador_nombre ?? "Equipo FERMAVAL";
+
   const blockY = 58;
   const blockW = (W - 30 - 6) / 2;
   const endA = infoBlock(doc, 15, blockY, blockW, "Datos del cliente", [
@@ -238,27 +288,19 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     ["N° cotización:", c.numero],
     ["Fecha emisión:", formatDate(fechaEmision.toISOString())],
     ["Válido hasta:", formatDate(fechaValidez.toISOString())],
-    ["Estado:", String(c.estado || "—").toUpperCase()],
+    ["Responsable:", responsable],
   ]);
 
   let y = Math.max(endA, endB) + 8;
 
-  // Tabla de items — encabezado
-  const items: CotizacionItem[] =
-    c.items && c.items.length
-      ? c.items
-      : [{
-          largo_m: c.largo_m,
-          ancho_m: c.ancho_m,
-          cantidad_planchas: c.cantidad_planchas ?? 1,
-          metros2: c.metros2,
-          color_nombre: c.color_nombre,
-        }];
+  const items: CotizacionItem[] = c.items && c.items.length
+    ? c.items
+    : [{ largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas ?? 1, metros2: c.metros2, color_nombre: c.color_nombre }];
 
   const cols = [
-    { x: 15, w: 12, label: "#", align: "left" as const },
-    { x: 27, w: 78, label: "Descripción", align: "left" as const },
-    { x: 105, w: 18, label: "Cantidad", align: "right" as const },
+    { x: 15, w: 10, label: "#", align: "left" as const },
+    { x: 25, w: 80, label: "Descripción", align: "left" as const },
+    { x: 105, w: 18, label: "Cant.", align: "right" as const },
     { x: 123, w: 32, label: "Precio Unit.", align: "right" as const },
     { x: 155, w: 40, label: "Total", align: "right" as const },
   ];
@@ -276,39 +318,40 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   });
   y += 7;
 
-  // Filas
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...BLACK);
-  const rowH = 8;
+  const rowH = 9;
   items.forEach((it, i) => {
     if (i % 2 === 1) {
       doc.setFillColor(...ZEBRA);
       doc.rect(tableX, y, tableW, rowH, "F");
     }
-    const desc = `Plancha ${Number(it.largo_m).toFixed(2)} m × 1.00 m  ·  ${Number(it.metros2).toFixed(2)} m²` +
-      (it.color_nombre ? `  ·  Color: ${it.color_nombre}` : "");
+    const tipoTxt = it.tipo ?? "Ondulado";
+    const espesorTxt = `${(it.espesor_mm ?? 0.4)} mm`;
+    const desc =
+      `${tipoTxt} · ${espesorTxt}` +
+      (it.color_nombre ? ` · ${it.color_nombre}` : "") +
+      `\nPlancha ${Number(it.largo_m).toFixed(2)} m × 1.00 m  ·  ${Number(it.metros2).toFixed(2)} m²`;
     const cant = `${it.cantidad_planchas}`;
     const subtotal = Number(it.metros2) * c.precio_m2;
     doc.setTextColor(...GREY_DARK);
-    doc.text(String(i + 1), cols[0].x + 2, y + 5.4);
+    doc.text(String(i + 1), cols[0].x + 2, y + 5.5);
     doc.setTextColor(...BLACK);
     const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
-    doc.text(descLines, cols[1].x + 2, y + 5.4);
-    doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.4, { align: "right" });
-    doc.text(formatCLP(c.precio_m2), cols[3].x + cols[3].w - 2, y + 5.4, { align: "right" });
-    doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.4, { align: "right" });
+    doc.text(descLines, cols[1].x + 2, y + 4);
+    doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
+    doc.text(formatCLP(c.precio_m2), cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
+    doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
     y += rowH;
   });
 
-  // Borde tabla
   doc.setDrawColor(...GREY_LIGHT);
   doc.setLineWidth(0.2);
   doc.rect(tableX, y - items.length * rowH - 7, tableW, items.length * rowH + 7, "S");
 
   y += 4;
 
-  // Totales (esquina inferior derecha)
   const subtotal = items.reduce((s, it) => s + Number(it.metros2) * c.precio_m2, 0);
   const neto = Math.max(0, subtotal - (c.descuento || 0));
   const iva = Math.round(neto * 0.19);
@@ -348,7 +391,8 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
 
   y += 8;
 
-  // Cláusula de validez destacada
+  // Validez 7 días
+  y = drawNewPageIfNeeded(doc, y, 18);
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.3);
   doc.setFillColor(248, 250, 253);
@@ -360,16 +404,20 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...GREY_DARK);
-  doc.text(
-    "Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.",
-    20,
-    y + 10,
-  );
+  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
   y += 20;
+
+  // Datos bancarios (solo si origen interno)
+  if (isInterno) {
+    y = drawBankBlock(doc, y);
+  }
+
+  // Cláusula legal obligatoria
+  y = drawLegalBlock(doc, y);
 
   // Firmas
   const H = doc.internal.pageSize.getHeight();
-  const sigY = Math.min(y + 10, H - 50);
+  const sigY = Math.min(y + 6, H - 35);
   const sigW = 70;
   doc.setDrawColor(...GREY_DARK);
   doc.setLineWidth(0.3);
@@ -379,12 +427,12 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFontSize(8.5);
   doc.setTextColor(...NAVY_DARK);
   doc.text("Aceptación del Cliente", 25 + sigW / 2, sigY + 4, { align: "center" });
-  doc.text("Firma y Timbre FERMAVAL", W - 25 - sigW / 2, sigY + 4, { align: "center" });
+  doc.text(`Responsable: ${responsable}`, W - 25 - sigW / 2, sigY + 4, { align: "center" });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
   doc.setTextColor(...GREY);
   doc.text("Nombre / RUT / Fecha", 25 + sigW / 2, sigY + 8, { align: "center" });
-  doc.text("Representante autorizado", W - 25 - sigW / 2, sigY + 8, { align: "center" });
+  doc.text("Firma y Timbre FERMAVAL", W - 25 - sigW / 2, sigY + 8, { align: "center" });
 
   drawFooter(doc);
   return doc;
@@ -409,6 +457,7 @@ export function buildPagoPDF(c: CotizacionPDF): jsPDF {
     ["Pago recibido:", `${formatCLP(c.pago_recibido)}  (${pct}%)`],
     ["Saldo pendiente:", formatCLP(c.saldo)],
     ["Estado:", c.estado.toUpperCase()],
+    ["Responsable:", c.responsable_nombre ?? c.aprobador_nombre],
     ["Aprobado por:", `${c.aprobador_nombre} ${c.aprobador_email ? `(${c.aprobador_email})` : ""}`],
     ["Fecha aprobación:", c.aprobado_at ? new Date(c.aprobado_at).toLocaleString("es-CL") : "—"],
   ]);
