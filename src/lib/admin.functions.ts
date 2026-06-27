@@ -623,7 +623,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, fecha_solicitud, created_at, cliente:clientes(nombre)")
       .gte("fecha_solicitud", start.toISOString().slice(0,10)).lt("fecha_solicitud", end.toISOString().slice(0,10));
     const { data: gastos } = await context.supabase
-      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
+      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por, latas")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
     const ExcelJS = (await import("exceljs")).default;
@@ -650,10 +650,16 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     ];
     wsVentas.addRows(ventasRows);
 
+    type Lata = { descripcion: string; cantidad: number; color: string };
+    const fmtLatas = (latas: unknown): string => {
+      const arr = Array.isArray(latas) ? (latas as Lata[]) : [];
+      return arr.map((l) => `${l.cantidad}× ${l.descripcion} [${l.color}]`).join(" | ");
+    };
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
       "Solicitado Por": g.solicitado_por ?? "",
       "Boleta Subida Por": g.boleta_subida_por ?? "",
+      "Latas (color)": fmtLatas(g.latas),
     }));
     const wsGastos = wb.addWorksheet("Gastos");
     wsGastos.columns = [
@@ -663,8 +669,10 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       { header: "Fecha", key: "Fecha" },
       { header: "Solicitado Por", key: "Solicitado Por" },
       { header: "Boleta Subida Por", key: "Boleta Subida Por" },
+      { header: "Latas (color)", key: "Latas (color)" },
     ];
     wsGastos.addRows(gastosRows);
+
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
     const totalGastos = gastosRows.reduce((s, r) => s + r.Monto, 0);
