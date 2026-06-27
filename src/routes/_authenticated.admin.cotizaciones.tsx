@@ -23,7 +23,7 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Pencil, Trash2, Download, Mail } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
