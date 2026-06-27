@@ -4,6 +4,11 @@ import { z } from "zod";
 
 export const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
 
+export const TIPOS_PRODUCTO = [
+  "Ondulado", "PV8", "PV8 Invertido", "Microondulado", "6V", "PV4", "Lata Lisa",
+] as const;
+export const ESPESOR_FIJO_MM = 0.4;
+
 function assertSuperadmin(email: string | undefined) {
   if ((email ?? "").toLowerCase() !== SUPERADMIN_EMAIL) {
     throw new Error("No tienes permisos para modificar la configuración del sitio.");
@@ -14,48 +19,89 @@ function isSuperadminEmail(email: string | undefined) {
   return (email ?? "").toLowerCase() === SUPERADMIN_EMAIL;
 }
 
-/** Forces today's date for non-superadmin users. Superadmin may backdate. */
 function enforceFecha(email: string | undefined, fecha: string | undefined): string {
   const today = new Date().toISOString().slice(0, 10);
   if (!isSuperadminEmail(email)) return today;
   return fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : today;
 }
 
+const TipoEnum = z.enum(TIPOS_PRODUCTO);
 
 const ItemSchema = z.object({
   largo_m: z.number().positive().max(1000),
   cantidad_planchas: z.number().int().positive().max(10000),
   color_id: z.string().uuid().nullable().optional(),
+  tipo: TipoEnum.optional().default("Ondulado"),
+  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
 });
 
+type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number; stock_m: number };
+
+async function resolveVariantes(
+  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Variante[] | null }> } } },
+  items: Array<{ color_id?: string | null; tipo?: string; espesor_mm?: number }>,
+): Promise<Map<string, Variante>> {
+  const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
+  if (!colorIds.length) return new Map();
+  const { data: vars } = await supabase.from("producto_variantes").select("id, tipo, color_id, espesor_mm, stock_m").in("color_id", colorIds);
+  const map = new Map<string, Variante>();
+  for (const v of (vars ?? [])) {
+    map.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, v);
+  }
+  return map;
+}
+
+function variantKey(tipo: string, colorId: string, espesor: number) {
+  return `${tipo}|${colorId}|${Number(espesor).toFixed(2)}`;
+}
+
 async function buildItemsCalc(
-  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Array<{ id: string; nombre: string; stock_m: number }> | null }> } } },
-  items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null }>,
+  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Array<{ id: string; nombre: string }> | null }> } } } & Parameters<typeof resolveVariantes>[0],
+  items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
 ) {
-  const ids = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
-  const colorMap = new Map<string, { nombre: string; stock_m: number }>();
-  if (ids.length) {
-    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
-    for (const c of (cols ?? [])) colorMap.set(c.id, { nombre: c.nombre, stock_m: Number(c.stock_m) });
+  const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
+  const colorNames = new Map<string, string>();
+  if (colorIds.length) {
+    const { data: cols } = await supabase.from("colores").select("id, nombre").in("id", colorIds);
+    for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
-  const itemsCalc = items.map((it) => ({
-    largo_m: it.largo_m,
-    ancho_m: 1,
-    cantidad_planchas: it.cantidad_planchas,
-    metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
-    color_id: it.color_id ?? null,
-    color_nombre: it.color_id ? (colorMap.get(it.color_id)?.nombre ?? null) : null,
-  }));
-  // Stock validation per color
-  const byColor = new Map<string, number>();
+  const variantes = await resolveVariantes(supabase, items);
+
+  const itemsCalc = items.map((it) => {
+    const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
+    const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
+    const variante = it.color_id ? variantes.get(variantKey(tipo, it.color_id, espesor)) : undefined;
+    return {
+      largo_m: it.largo_m,
+      ancho_m: 1,
+      cantidad_planchas: it.cantidad_planchas,
+      metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
+      color_id: it.color_id ?? null,
+      color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
+      tipo,
+      espesor_mm: espesor,
+      variante_id: variante?.id ?? null,
+    };
+  });
+
+  // Validación de stock por variante (tipo+color+espesor)
+  const byVariant = new Map<string, { variante: Variante; metros: number; nombre: string }>();
   for (const it of itemsCalc) {
-    if (it.color_id) byColor.set(it.color_id, (byColor.get(it.color_id) ?? 0) + it.metros2);
+    if (!it.color_id) continue;
+    const v = variantes.get(variantKey(it.tipo, it.color_id, it.espesor_mm));
+    if (!v) {
+      throw new Error(`No existe variante de stock para ${it.tipo} · ${it.color_nombre ?? "color"} · ${it.espesor_mm} mm. Créala en Administración.`);
+    }
+    const prev = byVariant.get(v.id);
+    byVariant.set(v.id, {
+      variante: v,
+      metros: (prev?.metros ?? 0) + it.metros2,
+      nombre: `${it.tipo} ${it.color_nombre ?? ""} ${it.espesor_mm}mm`.trim(),
+    });
   }
-  for (const [cid, m] of byColor) {
-    const col = colorMap.get(cid);
-    if (!col) throw new Error("Color no disponible");
-    if (col.stock_m < m) {
-      throw new Error(`Stock insuficiente para "${col.nombre}" (disponible: ${col.stock_m} m, solicitado: ${m.toFixed(2)} m).`);
+  for (const [, info] of byVariant) {
+    if (Number(info.variante.stock_m) < info.metros) {
+      throw new Error(`Stock insuficiente para "${info.nombre}" (disponible: ${info.variante.stock_m} m, solicitado: ${info.metros.toFixed(2)} m).`);
     }
   }
   return itemsCalc;
@@ -66,7 +112,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre)")
+      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, variante_id)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -78,55 +124,57 @@ export const getCotizacionItems = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: items, error } = await context.supabase
       .from("cotizacion_items")
-      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre")
+      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, variante_id")
       .eq("cotizacion_id", data.cotizacion_id)
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);
     return items ?? [];
   });
 
+type SupabaseLike = typeof import("@supabase/supabase-js").SupabaseClient.prototype;
+
 async function discountStockForCotizacion(
-  supabase: typeof import("@supabase/supabase-js").SupabaseClient.prototype,
-  cotId: string,
-  userId: string,
-  userEmail: string,
+  supabase: SupabaseLike, cotId: string, userId: string, userEmail: string,
 ) {
   const { data: cot } = await supabase
-    .from("cotizaciones")
-    .select("id, numero, stock_descontado_at")
-    .eq("id", cotId).single();
+    .from("cotizaciones").select("id, numero, stock_descontado_at").eq("id", cotId).single();
   if (!cot || cot.stock_descontado_at) return;
   const { data: items } = await supabase
     .from("cotizacion_items")
-    .select("color_id, color_nombre, metros2")
+    .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
-  const byColor = new Map<string, { nombre: string | null; metros: number }>();
+  const byVariant = new Map<string, { variante_id: string; tipo: string | null; espesor: number; color_id: string | null; color_nombre: string | null; metros: number }>();
   for (const it of items ?? []) {
-    if (!it.color_id) continue;
-    const prev = byColor.get(it.color_id);
-    byColor.set(it.color_id, {
-      nombre: it.color_nombre ?? prev?.nombre ?? null,
+    if (!it.variante_id) continue;
+    const prev = byVariant.get(it.variante_id);
+    byVariant.set(it.variante_id, {
+      variante_id: it.variante_id,
+      tipo: it.tipo ?? prev?.tipo ?? null,
+      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
+      color_id: it.color_id ?? prev?.color_id ?? null,
+      color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
   }
-  if (!byColor.size) {
+  if (!byVariant.size) {
     await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
     return;
   }
-  const ids = Array.from(byColor.keys());
-  const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
-  for (const c of cols ?? []) {
-    const need = byColor.get(c.id)!;
-    if (Number(c.stock_m) < need.metros) {
-      throw new Error(`Stock insuficiente para "${c.nombre}" (disponible: ${c.stock_m} m, necesario: ${need.metros.toFixed(2)} m). Ajusta el stock antes de confirmar.`);
+  const ids = Array.from(byVariant.keys());
+  const { data: vars } = await supabase.from("producto_variantes").select("id, stock_m, tipo, color_id, espesor_mm").in("id", ids);
+  for (const v of vars ?? []) {
+    const need = byVariant.get(v.id)!;
+    if (Number(v.stock_m) < need.metros) {
+      throw new Error(`Stock insuficiente para ${need.tipo ?? ""} ${need.color_nombre ?? ""} ${need.espesor}mm (disponible: ${v.stock_m} m).`);
     }
   }
-  for (const c of cols ?? []) {
-    const need = byColor.get(c.id)!;
-    const nuevo = Number(c.stock_m) - need.metros;
-    await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
+  for (const v of vars ?? []) {
+    const need = byVariant.get(v.id)!;
+    const nuevo = Number(v.stock_m) - need.metros;
+    await supabase.from("producto_variantes").update({ stock_m: nuevo }).eq("id", v.id);
     await supabase.from("stock_movimientos").insert({
-      color_id: c.id, color_nombre: c.nombre,
+      color_id: need.color_id, color_nombre: need.color_nombre,
+      variante_id: v.id, tipo: need.tipo, espesor_mm: need.espesor,
       cotizacion_id: cotId, cotizacion_numero: cot.numero,
       metros: -need.metros, motivo: `Descuento por pago (parcial/total) de ${cot.numero}`,
       user_id: userId, user_email: userEmail,
@@ -136,39 +184,37 @@ async function discountStockForCotizacion(
 }
 
 async function restoreStockForCotizacion(
-  supabase: typeof import("@supabase/supabase-js").SupabaseClient.prototype,
-  cotId: string,
-  userId: string,
-  userEmail: string,
-  motivo: string,
+  supabase: SupabaseLike, cotId: string, userId: string, userEmail: string, motivo: string,
 ) {
   const { data: cot } = await supabase
-    .from("cotizaciones")
-    .select("id, numero, stock_descontado_at")
-    .eq("id", cotId).single();
+    .from("cotizaciones").select("id, numero, stock_descontado_at").eq("id", cotId).single();
   if (!cot || !cot.stock_descontado_at) return;
   const { data: items } = await supabase
     .from("cotizacion_items")
-    .select("color_id, color_nombre, metros2")
+    .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
-  const byColor = new Map<string, { nombre: string | null; metros: number }>();
+  const byVariant = new Map<string, { tipo: string | null; espesor: number; color_id: string | null; color_nombre: string | null; metros: number }>();
   for (const it of items ?? []) {
-    if (!it.color_id) continue;
-    const prev = byColor.get(it.color_id);
-    byColor.set(it.color_id, {
-      nombre: it.color_nombre ?? prev?.nombre ?? null,
+    if (!it.variante_id) continue;
+    const prev = byVariant.get(it.variante_id);
+    byVariant.set(it.variante_id, {
+      tipo: it.tipo ?? prev?.tipo ?? null,
+      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
+      color_id: it.color_id ?? prev?.color_id ?? null,
+      color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
   }
-  if (byColor.size) {
-    const ids = Array.from(byColor.keys());
-    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
-    for (const c of cols ?? []) {
-      const need = byColor.get(c.id)!;
-      const nuevo = Number(c.stock_m) + need.metros;
-      await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
+  if (byVariant.size) {
+    const ids = Array.from(byVariant.keys());
+    const { data: vars } = await supabase.from("producto_variantes").select("id, stock_m").in("id", ids);
+    for (const v of vars ?? []) {
+      const need = byVariant.get(v.id)!;
+      const nuevo = Number(v.stock_m) + need.metros;
+      await supabase.from("producto_variantes").update({ stock_m: nuevo }).eq("id", v.id);
       await supabase.from("stock_movimientos").insert({
-        color_id: c.id, color_nombre: c.nombre,
+        color_id: need.color_id, color_nombre: need.color_nombre,
+        variante_id: v.id, tipo: need.tipo, espesor_mm: need.espesor,
         cotizacion_id: cotId, cotizacion_numero: cot.numero,
         metros: need.metros, motivo: `${motivo} (${cot.numero})`,
         user_id: userId, user_email: userEmail,
@@ -178,7 +224,6 @@ async function restoreStockForCotizacion(
   await supabase.from("cotizaciones").update({ stock_descontado_at: null }).eq("id", cotId);
 }
 
-// "Aceptada + pago (parcial o total)" → estados que disparan el descuento de stock.
 const ESTADOS_CON_PAGO = new Set(["pago_parcial", "pedido_confirmado", "pedido_terminado"]);
 
 export const updateCotizacionEstado = createServerFn({ method: "POST" })
@@ -217,6 +262,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     color_nombre: z.string().nullable().optional(),
     precio_m2: z.number().positive(),
     fecha_solicitud: z.string().optional(),
+    responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
@@ -229,6 +275,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
     const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
+    const responsable = (data.responsable_nombre ?? context.claims?.email ?? "Equipo FERMAVAL").toString().slice(0, 80);
     const { data: cot, error } = await context.supabase.from("cotizaciones").insert({
       numero, cliente_id: cliente.id,
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
@@ -238,6 +285,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
       fecha_solicitud: fechaSolicitud,
       access_token,
       origen: "interno",
+      responsable_nombre: responsable,
     }).select("id").single();
     if (error) throw new Error(error.message);
     const { error: itErr } = await context.supabase
@@ -280,7 +328,6 @@ export const createEgreso = createServerFn({ method: "POST" })
     }).select("id").single();
     if (error) throw new Error(error.message);
 
-    // Notify admin inbox (Flow 1) — best-effort.
     try {
       const { sendGmail, ADMIN_INBOX } = await import("@/lib/gmail.server");
       const { getRequestHeader } = await import("@tanstack/react-start/server");
@@ -292,26 +339,16 @@ export const createEgreso = createServerFn({ method: "POST" })
       const monto = data.monto.toLocaleString("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 });
       const text = [
         "Nueva Solicitud de Dinero pendiente de revisión.",
-        "",
-        `ID: ${shortId}`,
-        `Solicitado por: ${data.solicitado_por}`,
+        "", `ID: ${shortId}`, `Solicitado por: ${data.solicitado_por}`,
         `Responsable boleta: ${data.boleta_subida_por ?? "—"}`,
-        `Tipo: ${data.tipo}`,
-        `Monto: ${monto}`,
-        `Fecha: ${fecha}`,
+        `Tipo: ${data.tipo}`, `Monto: ${monto}`, `Fecha: ${fecha}`,
         `Motivo / Detalle: ${data.descripcion}`,
-        "",
-        base ? `Revisar / autorizar: ${base}/admin/egresos` : "Revisar en el panel /admin/egresos",
+        "", base ? `Revisar / autorizar: ${base}/admin/egresos` : "Revisar en el panel /admin/egresos",
       ].join("\r\n");
-      await sendGmail({
-        to: ADMIN_INBOX,
-        subject: `Nueva Solicitud de Dinero Pendiente - ${shortId}`,
-        text,
-      });
+      await sendGmail({ to: ADMIN_INBOX, subject: `Nueva Solicitud de Dinero Pendiente - ${shortId}`, text });
     } catch (e) {
       console.error("notifyNewEgreso failed:", (e as Error).message);
     }
-
     return { ok: true };
   });
 
@@ -344,7 +381,7 @@ export const decideEgreso = createServerFn({ method: "POST" })
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
-    if (email !== "fermaval.contacto@gmail.com") {
+    if (email !== SUPERADMIN_EMAIL) {
       throw new Error("Solo el Administrador General (fermaval.contacto@gmail.com) puede aprobar o rechazar.");
     }
     const { error } = await context.supabase.from("solicitudes_egreso").update({
@@ -354,7 +391,7 @@ export const decideEgreso = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// ============= LATAS (colores por lata) — visible y editable solo para admins =============
+// ============= LATAS =============
 export const COLORES_LATA = [
   "Rojo","Azul","Verde","Amarillo","Blanco","Negro","Gris","Naranja","Café","Celeste",
 ] as const;
@@ -363,6 +400,8 @@ const LataSchema = z.object({
   descripcion: z.string().trim().min(1).max(120),
   cantidad: z.number().int().positive().max(10000),
   color: z.enum(COLORES_LATA),
+  tipo: TipoEnum.optional().default("Ondulado"),
+  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
 });
 
 export const updateEgresoLatas = createServerFn({ method: "POST" })
@@ -372,21 +411,16 @@ export const updateEgresoLatas = createServerFn({ method: "POST" })
     latas: z.array(LataSchema).max(50),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    // Solo los 4 perfiles administradores (rol 'admin') pueden actualizar.
     const { data: roles } = await context.supabase
       .from("user_roles").select("role").eq("user_id", context.userId);
     const isAdmin = (roles ?? []).some((r) => r.role === "admin");
     if (!isAdmin) throw new Error("Solo los perfiles administradores pueden modificar el color por lata.");
 
     const { error } = await context.supabase
-      .from("solicitudes_egreso")
-      .update({ latas: data.latas })
-      .eq("id", data.id);
+      .from("solicitudes_egreso").update({ latas: data.latas }).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-
 
 export const listBoletas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -437,7 +471,6 @@ export const getDashboard = createServerFn({ method: "GET" })
     const utilidades = ventas - gastos;
     const iva = Math.round(ventas * 0.19 / 1.19);
 
-    // Series by month (last 6 months)
     const since = new Date(); since.setMonth(since.getMonth() - 5); since.setDate(1); since.setHours(0,0,0,0);
     const { data: all } = await context.supabase.from("cotizaciones").select("total, pago_recibido, created_at, estado").gte("created_at", since.toISOString());
     const { data: allGastos } = await context.supabase.from("solicitudes_egreso").select("monto, fecha, estado").eq("estado","aprobado").gte("fecha", since.toISOString().slice(0,10));
@@ -500,7 +533,6 @@ export const upsertColor = createServerFn({ method: "POST" })
         activo: data.activo, orden: data.orden, stock_m: data.stock_m,
       }).eq("id", data.id);
       if (error) throw new Error(error.message);
-      // log stock movement if stock changed
       if (prev && Number(prev.stock_m) !== data.stock_m) {
         await context.supabase.from("stock_movimientos").insert({
           color_id: data.id, color_nombre: data.nombre,
@@ -521,6 +553,12 @@ export const upsertColor = createServerFn({ method: "POST" })
         activo: data.activo, orden: data.orden, stock_m: data.stock_m,
       }).select("id").single();
       if (error) throw new Error(error.message);
+      if (nuevo) {
+        // Crear automáticamente las variantes (todos los tipos × espesor 0.4) con stock 0
+        await context.supabase.from("producto_variantes").insert(
+          TIPOS_PRODUCTO.map((tipo) => ({ tipo, color_id: nuevo.id, espesor_mm: ESPESOR_FIJO_MM, stock_m: 0 })),
+        );
+      }
       if (data.stock_m > 0 && nuevo) {
         await context.supabase.from("stock_movimientos").insert({
           color_id: nuevo.id, color_nombre: data.nombre,
@@ -555,6 +593,49 @@ export const adjustColorStock = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     await context.supabase.from("stock_movimientos").insert({
       color_id: data.color_id, color_nombre: prev.nombre,
+      metros: data.delta_m, motivo: data.motivo,
+      user_id: context.userId, user_email: email,
+    });
+    return { ok: true, stock_m: nuevo };
+  });
+
+// ============= PRODUCTO_VARIANTES (stock por tipo+color+espesor) =============
+
+export const listProductoVariantes = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("producto_variantes")
+      .select("id, tipo, color_id, espesor_mm, stock_m, activo, color:colores(nombre, hex)")
+      .order("tipo", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const adjustVarianteStock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    variante_id: z.string().uuid(),
+    delta_m: z.number().refine((v) => v !== 0, "Ingresa un valor distinto de 0"),
+    motivo: z.string().trim().min(2).max(200),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    const { data: roles } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) throw new Error("Solo administradores pueden ajustar stock.");
+    const { data: prev } = await context.supabase
+      .from("producto_variantes")
+      .select("id, tipo, color_id, espesor_mm, stock_m, color:colores(nombre)").eq("id", data.variante_id).single();
+    if (!prev) throw new Error("Variante no encontrada");
+    const nuevo = Number(prev.stock_m) + data.delta_m;
+    if (nuevo < 0) throw new Error("El ajuste deja stock negativo.");
+    const { error } = await context.supabase.from("producto_variantes").update({ stock_m: nuevo }).eq("id", data.variante_id);
+    if (error) throw new Error(error.message);
+    const colName = (prev.color as { nombre?: string } | null)?.nombre ?? null;
+    await context.supabase.from("stock_movimientos").insert({
+      color_id: prev.color_id, color_nombre: colName,
+      variante_id: data.variante_id, tipo: prev.tipo, espesor_mm: prev.espesor_mm,
       metros: data.delta_m, motivo: data.motivo,
       user_id: context.userId, user_email: email,
     });
@@ -626,7 +707,6 @@ export const updateConfig = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     }).eq("id", 1);
     if (error) throw new Error(error.message);
-    // log per-field diffs
     const fields: Array<keyof typeof data> = [
       "precio_m2","hero_titulo","hero_subtitulo","info_comercial","linktree_url",
       "mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url",
@@ -667,7 +747,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     const start = new Date(data.year, data.month - 1, 1);
     const end = new Date(data.year, data.month, 1);
     const { data: cots } = await context.supabase
-      .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, fecha_solicitud, created_at, cliente:clientes(nombre)")
+      .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, fecha_solicitud, created_at, responsable_nombre, cliente:clientes(nombre)")
       .gte("fecha_solicitud", start.toISOString().slice(0,10)).lt("fecha_solicitud", end.toISOString().slice(0,10));
     const { data: gastos } = await context.supabase
       .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por, latas")
@@ -679,47 +759,40 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     const ventasRows = (cots ?? []).map((c) => ({
       Numero: c.numero,
       Cliente: (c.cliente as { nombre: string } | null)?.nombre ?? "",
-      Total: Number(c.total),
-      Pagado: Number(c.pago_recibido),
-      Saldo: Number(c.saldo),
+      Responsable: (c as { responsable_nombre?: string | null }).responsable_nombre ?? "",
+      Total: Number(c.total), Pagado: Number(c.pago_recibido), Saldo: Number(c.saldo),
       Estado: c.estado,
       Fecha: (c.fecha_solicitud as string) ?? new Date(c.created_at as string).toLocaleDateString("es-CL"),
     }));
     const wsVentas = wb.addWorksheet("Ventas");
     wsVentas.columns = [
-      { header: "Numero", key: "Numero" },
-      { header: "Cliente", key: "Cliente" },
-      { header: "Total", key: "Total" },
-      { header: "Pagado", key: "Pagado" },
-      { header: "Saldo", key: "Saldo" },
-      { header: "Estado", key: "Estado" },
-      { header: "Fecha", key: "Fecha" },
+      { header: "Numero", key: "Numero" }, { header: "Cliente", key: "Cliente" },
+      { header: "Responsable", key: "Responsable" },
+      { header: "Total", key: "Total" }, { header: "Pagado", key: "Pagado" },
+      { header: "Saldo", key: "Saldo" }, { header: "Estado", key: "Estado" }, { header: "Fecha", key: "Fecha" },
     ];
     wsVentas.addRows(ventasRows);
 
-    type Lata = { descripcion: string; cantidad: number; color: string };
+    type Lata = { descripcion: string; cantidad: number; color: string; tipo?: string; espesor_mm?: number };
     const fmtLatas = (latas: unknown): string => {
       const arr = Array.isArray(latas) ? (latas as Lata[]) : [];
-      return arr.map((l) => `${l.cantidad}× ${l.descripcion} [${l.color}]`).join(" | ");
+      return arr.map((l) => `${l.cantidad}× ${l.descripcion} [${l.tipo ?? "Ondulado"} · ${l.color} · ${l.espesor_mm ?? 0.4}mm]`).join(" | ");
     };
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
       "Solicitado Por": g.solicitado_por ?? "",
       "Boleta Subida Por": g.boleta_subida_por ?? "",
-      "Latas (color)": fmtLatas(g.latas),
+      "Latas (tipo · color · espesor)": fmtLatas(g.latas),
     }));
     const wsGastos = wb.addWorksheet("Gastos");
     wsGastos.columns = [
-      { header: "Tipo", key: "Tipo" },
-      { header: "Descripcion", key: "Descripcion" },
-      { header: "Monto", key: "Monto" },
-      { header: "Fecha", key: "Fecha" },
+      { header: "Tipo", key: "Tipo" }, { header: "Descripcion", key: "Descripcion" },
+      { header: "Monto", key: "Monto" }, { header: "Fecha", key: "Fecha" },
       { header: "Solicitado Por", key: "Solicitado Por" },
       { header: "Boleta Subida Por", key: "Boleta Subida Por" },
-      { header: "Latas (color)", key: "Latas (color)" },
+      { header: "Latas (tipo · color · espesor)", key: "Latas (tipo · color · espesor)" },
     ];
     wsGastos.addRows(gastosRows);
-
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
     const totalGastos = gastosRows.reduce((s, r) => s + r.Monto, 0);
@@ -734,10 +807,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       { Concepto: "Resultado final", Valor: utilidades - iva },
     ];
     const wsResumen = wb.addWorksheet("Resumen");
-    wsResumen.columns = [
-      { header: "Concepto", key: "Concepto" },
-      { header: "Valor", key: "Valor" },
-    ];
+    wsResumen.columns = [{ header: "Concepto", key: "Concepto" }, { header: "Valor", key: "Valor" }];
     wsResumen.addRows(resumen);
 
     const arrayBuffer = await wb.xlsx.writeBuffer();
@@ -745,7 +815,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     return { filename: `fermaval-${data.year}-${String(data.month).padStart(2,"0")}.xlsx`, base64: buf };
   });
 
-// ============= Superadmin-only edit/delete: cotizaciones & boletas =============
+// ============= Superadmin-only edit/delete =============
 
 export const updateCotizacionFull = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -764,6 +834,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     descuento: z.number().min(0).default(0),
     pago_recibido: z.number().min(0),
     estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"]),
+    responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
@@ -780,14 +851,15 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
-    const { error } = await context.supabase.from("cotizaciones").update({
+    const updatePatch: Record<string, unknown> = {
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
       precio_m2: data.precio_m2, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_id: first.color_id, color_nombre: colorNombreCot, estado: data.estado,
-    }).eq("id", data.id);
+    };
+    if (data.responsable_nombre !== undefined) updatePatch.responsable_nombre = data.responsable_nombre;
+    const { error } = await context.supabase.from("cotizaciones").update(updatePatch).eq("id", data.id);
     if (error) throw new Error(error.message);
-    // Reemplaza items
     await context.supabase.from("cotizacion_items").delete().eq("cotizacion_id", data.id);
     const { error: itErr } = await context.supabase
       .from("cotizacion_items")
@@ -810,7 +882,6 @@ export const deleteCotizacion = createServerFn({ method: "POST" })
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total").eq("id", data.id).single();
-    // Devolver stock al inventario antes de borrar la cotización.
     await restoreStockForCotizacion(
       context.supabase as never, data.id, context.userId, email,
       "Reposición por eliminación de cotización",
@@ -915,7 +986,7 @@ export const limpiarDatosPrueba = createServerFn({ method: "POST" })
     return out;
   });
 
-// ============= Buscar Cotizaciones (seguimiento de pagos y pedidos) =============
+// ============= Buscar Cotizaciones =============
 
 export const searchCotizaciones = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -929,7 +1000,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre)")
+      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
       .order("created_at", { ascending: false })
       .limit(200);
 
@@ -980,8 +1051,7 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
     const { data: prev } = await context.supabase
-      .from("cotizaciones").select("numero, total, pago_recibido, estado")
-      .eq("id", data.id).single();
+      .from("cotizaciones").select("numero, total, pago_recibido, estado").eq("id", data.id).single();
     if (!prev) throw new Error("Cotización no encontrada");
     const total = Number(prev.total) || 0;
     const factor = data.tier === "sin_pago" ? 0
@@ -996,7 +1066,6 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
       pago_recibido: pago, saldo, estado: nuevoEstado,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
-    // Stock: descuento si quedó aceptada + con pago; reposición si volvió a "sin pago".
     if (nuevoEstado === "pago_parcial" || nuevoEstado === "pedido_confirmado") {
       await discountStockForCotizacion(context.supabase as never, data.id, context.userId, email);
     } else {
@@ -1008,8 +1077,7 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "pago",
       cambio: `Pago de ${prev.numero} establecido en ${data.tier}`,
-      valor_antes: `pagado=${prev.pago_recibido}`,
-      valor_despues: `pagado=${pago} saldo=${saldo}`,
+      valor_antes: `pagado=${prev.pago_recibido}`, valor_despues: `pagado=${pago} saldo=${saldo}`,
     });
     return { ok: true };
   });
@@ -1024,17 +1092,13 @@ export const setEstadoPedido = createServerFn({ method: "POST" })
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
     const { data: prev } = await context.supabase
-      .from("cotizaciones").select("numero, total, pago_recibido, estado_pedido")
-      .eq("id", data.id).single();
+      .from("cotizaciones").select("numero, total, pago_recibido, estado_pedido").eq("id", data.id).single();
     if (!prev) throw new Error("Cotización no encontrada");
 
-    // Si marca FINALIZADO requiere entregado + pago total
     if (data.estado_pedido === "finalizado") {
       const total = Number(prev.total) || 0;
       const pagado = Number(prev.pago_recibido) || 0;
-      if (pagado < total) {
-        throw new Error("No se puede finalizar: el pago total aún no se ha recibido.");
-      }
+      if (pagado < total) throw new Error("No se puede finalizar: el pago total aún no se ha recibido.");
     }
 
     const patch: { estado_pedido: typeof data.estado_pedido; estado?: "pedido_terminado" } = {
@@ -1043,7 +1107,6 @@ export const setEstadoPedido = createServerFn({ method: "POST" })
     if (data.estado_pedido === "finalizado") patch.estado = "pedido_terminado";
 
     const { error } = await context.supabase.from("cotizaciones").update(patch).eq("id", data.id);
-
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "estado_pedido",
@@ -1086,4 +1149,3 @@ export const getCotizacionAudit = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
-
