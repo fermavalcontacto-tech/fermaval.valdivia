@@ -55,6 +55,7 @@ function CotizacionesPage() {
         cantidad_planchas: Number(it.cantidad_planchas),
         metros2: Number(it.metros2),
       }));
+    const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
       numero: c.numero,
       fecha: c.created_at,
@@ -73,7 +74,18 @@ function CotizacionesPage() {
       aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
       aprobador_email: auth.email ?? "",
       aprobado_at: new Date().toISOString(),
+      origen,
+      creado_por_nombre: auth.email?.split("@")[0],
+      creado_por_email: auth.email,
     };
+  }
+
+  function shareWhatsApp(c: Cotizacion) {
+    const phone = (c.cliente?.telefono ?? "").replace(/[^\d]/g, "");
+    const url = `${window.location.origin}/cotizacion/${c.numero}?t=${(c as { access_token?: string }).access_token ?? ""}`;
+    const msg = `Hola ${c.cliente?.nombre ?? ""}, te comparto tu cotización FERMAVAL ${c.numero} por ${formatCLP(c.total)} (${c.metros2.toFixed(2)} m²). Detalles: ${url}`;
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(wa, "_blank");
   }
 
 
