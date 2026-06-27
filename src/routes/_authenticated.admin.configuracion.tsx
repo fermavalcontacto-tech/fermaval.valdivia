@@ -148,9 +148,12 @@ function ImageField({ label, value, onChange, folder }: { label: string; value: 
       const path = `${folder}/${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("web-assets").upload(path, file, { upsert: true, contentType: file.type });
       if (error) throw error;
-      const { data: pub } = supabase.storage.from("web-assets").getPublicUrl(path);
-      onChange(pub.publicUrl);
+      // Bucket is private — use a long-lived signed URL (10 years)
+      const { data: signed, error: sErr } = await supabase.storage.from("web-assets").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (sErr || !signed) throw sErr ?? new Error("No se pudo firmar la URL");
+      onChange(signed.signedUrl);
       toast.success("Imagen subida — recuerda guardar cambios");
+
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
