@@ -94,9 +94,14 @@ function ConfiguracionPage() {
   });
 
 
-  function f(k: keyof FormState) {
-    return { value: form[k], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value }) };
+  type StrKey = { [K in keyof FormState]: FormState[K] extends string ? K : never }[keyof FormState];
+  function f(k: StrKey) {
+    return { value: form[k] as string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value }) };
   }
+  function setField(k: keyof FormFields, patch: Partial<FieldCfg>) {
+    setForm({ ...form, form_fields: { ...form.form_fields, [k]: { ...form.form_fields[k], ...patch } } });
+  }
+
 
   return (
     <div className="space-y-6">
