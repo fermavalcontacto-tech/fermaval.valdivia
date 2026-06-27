@@ -73,21 +73,23 @@ function BoletasPage() {
             <thead className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="p-3">Fecha</th><th className="p-3">Tipo</th><th className="p-3">Descripción</th>
-                <th className="p-3">Monto</th><th className="p-3">Archivo</th><th className="p-3 text-right">Acciones</th>
+                <th className="p-3">Monto</th><th className="p-3">Boleta Subida Por</th><th className="p-3">Archivo</th><th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
+              {isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
               {((data ?? []) as Boleta[]).map((b) => (
                 <tr key={b.id} className="border-b last:border-0">
                   <td className="p-3">{formatDate(b.fecha)}</td>
                   <td className="p-3">{TIPO_GASTO_LABEL[b.tipo_gasto]}</td>
                   <td className="p-3">{b.descripcion ?? "—"}</td>
                   <td className="p-3 font-semibold">{formatCLP(b.monto)}</td>
+                  <td className="p-3">{b.responsable ?? "—"}</td>
                   <td className="p-3">
                     <Button size="sm" variant="outline" onClick={() => download(b.archivo_path, b.archivo_nombre)}>
                       <Download className="mr-1 h-3 w-3" /> {b.archivo_nombre ?? "Archivo"}
                     </Button>
+
                   </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
