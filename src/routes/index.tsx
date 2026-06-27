@@ -169,7 +169,7 @@ function Home() {
             loading="lazy"
           />
           <p className="mt-6 max-w-xl text-sm text-muted-foreground">
-            Fabricación local en Valdivia. Calidad industrial, precios justos y entrega rápida.
+            {cfg.marca_texto}
           </p>
         </div>
       </section>
