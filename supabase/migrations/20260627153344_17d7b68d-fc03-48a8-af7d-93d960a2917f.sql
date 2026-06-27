@@ -1,0 +1,1 @@
+ALTER TABLE public.boletas ADD COLUMN IF NOT EXISTS responsable TEXT;

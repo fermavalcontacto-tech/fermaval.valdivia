@@ -23,6 +23,7 @@ export type Database = {
           fecha: string
           id: string
           monto: number
+          responsable: string | null
           solicitud_id: string | null
           subido_por: string
           tipo_gasto: Database["public"]["Enums"]["expense_type"]
@@ -35,6 +36,7 @@ export type Database = {
           fecha?: string
           id?: string
           monto: number
+          responsable?: string | null
           solicitud_id?: string | null
           subido_por: string
           tipo_gasto: Database["public"]["Enums"]["expense_type"]
@@ -47,6 +49,7 @@ export type Database = {
           fecha?: string
           id?: string
           monto?: number
+          responsable?: string | null
           solicitud_id?: string | null
           subido_por?: string
           tipo_gasto?: Database["public"]["Enums"]["expense_type"]
