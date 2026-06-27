@@ -34,7 +34,7 @@ const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; e
   { to: "/admin/cotizaciones", label: "Cotizaciones", icon: FileText },
   { to: "/admin/buscar", label: "Buscar Cotizaciones", icon: Search },
   { to: "/admin/pedidos", label: "Pedidos", icon: PackageCheck },
-
+  { to: "/admin/colores", label: "Colores y Stock", icon: Palette },
   { to: "/admin/egresos", label: "Egresos", icon: Receipt },
   { to: "/admin/boletas", label: "Boletas", icon: FileImage },
   { to: "/admin/finanzas", label: "Finanzas", icon: TrendingUp },
@@ -42,7 +42,6 @@ const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; e
 ];
 const navAdmin: Array<{ to: string; label: string; icon: typeof Settings }> = [
   { to: "/admin/configuracion", label: "Configuración", icon: Settings },
-  { to: "/admin/colores", label: "Colores", icon: Palette },
 ];
 
 function AuthedLayout() {
