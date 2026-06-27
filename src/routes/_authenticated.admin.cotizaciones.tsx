@@ -176,6 +176,12 @@ function CotizacionesPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
+                      <Button variant="ghost" size="sm" title="Descargar PDF" onClick={() => downloadCotizacionPDF(toPdfData(c))}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Compartir por WhatsApp" onClick={() => shareWhatsApp(c)}>
+                        <MessageCircle className="h-4 w-4 text-emerald-600" />
+                      </Button>
                       {(c.estado === "pedido_confirmado" || c.estado === "pedido_terminado") && (
                         <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c)}>
                           <Mail className="h-4 w-4" />
