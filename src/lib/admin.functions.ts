@@ -307,6 +307,40 @@ export const decideEgreso = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ============= LATAS (colores por lata) — visible y editable solo para admins =============
+export const COLORES_LATA = [
+  "Rojo","Azul","Verde","Amarillo","Blanco","Negro","Gris","Naranja","Café","Celeste",
+] as const;
+
+const LataSchema = z.object({
+  descripcion: z.string().trim().min(1).max(120),
+  cantidad: z.number().int().positive().max(10000),
+  color: z.enum(COLORES_LATA),
+});
+
+export const updateEgresoLatas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    latas: z.array(LataSchema).max(50),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Solo los 4 perfiles administradores (rol 'admin') pueden actualizar.
+    const { data: roles } = await context.supabase
+      .from("user_roles").select("role").eq("user_id", context.userId);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) throw new Error("Solo los perfiles administradores pueden modificar el color por lata.");
+
+    const { error } = await context.supabase
+      .from("solicitudes_egreso")
+      .update({ latas: data.latas })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+
 export const listBoletas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
