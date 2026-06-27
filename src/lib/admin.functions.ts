@@ -128,12 +128,58 @@ async function discountStockForCotizacion(
     await supabase.from("stock_movimientos").insert({
       color_id: c.id, color_nombre: c.nombre,
       cotizacion_id: cotId, cotizacion_numero: cot.numero,
-      metros: -need.metros, motivo: `Descuento por pedido confirmado ${cot.numero}`,
+      metros: -need.metros, motivo: `Descuento por pago (parcial/total) de ${cot.numero}`,
       user_id: userId, user_email: userEmail,
     });
   }
   await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
 }
+
+async function restoreStockForCotizacion(
+  supabase: typeof import("@supabase/supabase-js").SupabaseClient.prototype,
+  cotId: string,
+  userId: string,
+  userEmail: string,
+  motivo: string,
+) {
+  const { data: cot } = await supabase
+    .from("cotizaciones")
+    .select("id, numero, stock_descontado_at")
+    .eq("id", cotId).single();
+  if (!cot || !cot.stock_descontado_at) return;
+  const { data: items } = await supabase
+    .from("cotizacion_items")
+    .select("color_id, color_nombre, metros2")
+    .eq("cotizacion_id", cotId);
+  const byColor = new Map<string, { nombre: string | null; metros: number }>();
+  for (const it of items ?? []) {
+    if (!it.color_id) continue;
+    const prev = byColor.get(it.color_id);
+    byColor.set(it.color_id, {
+      nombre: it.color_nombre ?? prev?.nombre ?? null,
+      metros: (prev?.metros ?? 0) + Number(it.metros2),
+    });
+  }
+  if (byColor.size) {
+    const ids = Array.from(byColor.keys());
+    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
+    for (const c of cols ?? []) {
+      const need = byColor.get(c.id)!;
+      const nuevo = Number(c.stock_m) + need.metros;
+      await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
+      await supabase.from("stock_movimientos").insert({
+        color_id: c.id, color_nombre: c.nombre,
+        cotizacion_id: cotId, cotizacion_numero: cot.numero,
+        metros: need.metros, motivo: `${motivo} (${cot.numero})`,
+        user_id: userId, user_email: userEmail,
+      });
+    }
+  }
+  await supabase.from("cotizaciones").update({ stock_descontado_at: null }).eq("id", cotId);
+}
+
+// "Aceptada + pago (parcial o total)" → estados que disparan el descuento de stock.
+const ESTADOS_CON_PAGO = new Set(["pago_parcial", "pedido_confirmado", "pedido_terminado"]);
 
 export const updateCotizacionEstado = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -146,12 +192,13 @@ export const updateCotizacionEstado = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("cotizaciones").update({ estado: data.estado }).eq("id", data.id);
     if (error) throw new Error(error.message);
-    if (data.estado === "pedido_confirmado" || data.estado === "pedido_terminado") {
-      await discountStockForCotizacion(
-        context.supabase as never,
-        data.id,
-        context.userId,
-        (context.claims?.email ?? "").toLowerCase(),
+    const email = (context.claims?.email ?? "").toLowerCase();
+    if (ESTADOS_CON_PAGO.has(data.estado)) {
+      await discountStockForCotizacion(context.supabase as never, data.id, context.userId, email);
+    } else {
+      await restoreStockForCotizacion(
+        context.supabase as never, data.id, context.userId, email,
+        data.estado === "rechazada" ? "Reposición por cotización rechazada" : "Reposición por cambio de estado",
       );
     }
     return { ok: true };
@@ -763,6 +810,11 @@ export const deleteCotizacion = createServerFn({ method: "POST" })
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total").eq("id", data.id).single();
+    // Devolver stock al inventario antes de borrar la cotización.
+    await restoreStockForCotizacion(
+      context.supabase as never, data.id, context.userId, email,
+      "Reposición por eliminación de cotización",
+    );
     const { error } = await context.supabase.from("cotizaciones").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
@@ -944,6 +996,15 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
       pago_recibido: pago, saldo, estado: nuevoEstado,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
+    // Stock: descuento si quedó aceptada + con pago; reposición si volvió a "sin pago".
+    if (nuevoEstado === "pago_parcial" || nuevoEstado === "pedido_confirmado") {
+      await discountStockForCotizacion(context.supabase as never, data.id, context.userId, email);
+    } else {
+      await restoreStockForCotizacion(
+        context.supabase as never, data.id, context.userId, email,
+        "Reposición por pago revertido a sin pago",
+      );
+    }
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "pago",
       cambio: `Pago de ${prev.numero} establecido en ${data.tier}`,
