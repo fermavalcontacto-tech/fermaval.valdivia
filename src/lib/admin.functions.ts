@@ -739,18 +739,21 @@ export const updateConfig = createServerFn({ method: "POST" })
 
 
     const rows: Array<{ user_id: string; user_email: string; entidad: string; accion: string; cambio: string; valor_antes: string | null; valor_despues: string | null }> = [];
+    const norm = (v: unknown) => v == null ? "" : (typeof v === "object" ? JSON.stringify(v) : String(v));
     for (const k of fields) {
       const before = prev ? (prev as Record<string, unknown>)[k] : null;
       const after = (data as Record<string, unknown>)[k] ?? null;
-      if (String(before ?? "") !== String(after ?? "")) {
+      const b = norm(before), a = norm(after);
+      if (b !== a) {
         rows.push({
           user_id: context.userId, user_email: email, entidad: "configuracion_web", accion: "update",
           cambio: `${k} actualizado`,
-          valor_antes: before == null ? null : String(before),
-          valor_despues: after == null ? null : String(after),
+          valor_antes: before == null ? null : b,
+          valor_despues: after == null ? null : a,
         });
       }
     }
+
     if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
     return { ok: true };
   });
