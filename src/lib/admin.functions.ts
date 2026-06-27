@@ -934,21 +934,23 @@ export const updateBoleta = createServerFn({ method: "POST" })
     descripcion: z.string().trim().max(300).nullable().optional(),
     monto: z.number().positive(),
     fecha: z.string(),
+    responsable: personaSchema.nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const { data: prev } = await context.supabase.from("boletas").select("monto, tipo_gasto, fecha").eq("id", data.id).single();
+    const { data: prev } = await context.supabase.from("boletas").select("monto, tipo_gasto, fecha, responsable").eq("id", data.id).single();
     const { error } = await context.supabase.from("boletas").update({
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha: data.fecha,
+      responsable: data.responsable ?? null,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "boletas", accion: "update",
       cambio: `Boleta editada`,
-      valor_antes: prev ? `${prev.tipo_gasto} ${prev.monto} ${prev.fecha}` : null,
-      valor_despues: `${data.tipo_gasto} ${data.monto} ${data.fecha}`,
+      valor_antes: prev ? `${prev.tipo_gasto} ${prev.monto} ${prev.fecha} resp=${(prev as { responsable?: string | null }).responsable ?? "—"}` : null,
+      valor_despues: `${data.tipo_gasto} ${data.monto} ${data.fecha} resp=${data.responsable ?? "—"}`,
     });
     return { ok: true };
   });
