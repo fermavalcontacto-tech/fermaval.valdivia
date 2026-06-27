@@ -12,6 +12,14 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
 type Color = { id: string; nombre: string; hex: string; imagen_url: string | null; stock_m?: number };
+type FieldCfg = { label: string; visible: boolean; required: boolean };
+type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
+const DEFAULT_FIELDS: FormFields = {
+  nombre: { label: "Nombre", visible: true, required: true },
+  telefono: { label: "Teléfono", visible: true, required: true },
+  correo: { label: "Correo", visible: true, required: true },
+  direccion: { label: "Dirección", visible: true, required: true },
+};
 
 const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
 type Tipo = typeof TIPOS_PRODUCTO[number];
@@ -19,7 +27,14 @@ const ESPESOR_MM = 0.4;
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
-export function CotizadorForm({ precio, colores }: { precio: number; colores: Color[] }) {
+export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
+  const ff: FormFields = {
+    nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
+    telefono: { ...DEFAULT_FIELDS.telefono, ...(formFields?.telefono ?? {}) },
+    correo: { ...DEFAULT_FIELDS.correo, ...(formFields?.correo ?? {}) },
+    direccion: { ...DEFAULT_FIELDS.direccion, ...(formFields?.direccion ?? {}) },
+  };
+
   const navigate = useNavigate();
   const colorMap = useMemo(() => new Map(colores.map((c) => [c.id, c])), [colores]);
   const [items, setItems] = useState<Item[]>([
@@ -75,9 +90,21 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
       if (it.cantidad <= 0 || !Number.isInteger(it.cantidad)) { toast.error(`Plancha ${i + 1}: cantidad inválida`); return; }
       if (!it.color_id) { toast.error(`Plancha ${i + 1}: selecciona un color`); return; }
     }
-    if (!nombre || !telefono || !correo || !direccion) { toast.error("Completa todos tus datos"); return; }
+    const checks: Array<[string, boolean, string]> = [
+      [ff.nombre.label, ff.nombre.visible && ff.nombre.required && !nombre.trim(), nombre],
+      [ff.telefono.label, ff.telefono.visible && ff.telefono.required && !telefono.trim(), telefono],
+      [ff.correo.label, ff.correo.visible && ff.correo.required && !correo.trim(), correo],
+      [ff.direccion.label, ff.direccion.visible && ff.direccion.required && !direccion.trim(), direccion],
+    ];
+    for (const [label, missing] of checks) {
+      if (missing) { toast.error(`Completa el campo "${label}"`); return; }
+    }
+    if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+      toast.error("Correo inválido"); return;
+    }
     mut.mutate();
   }
+
 
   return (
     <Card className="border-2 border-border bg-card p-6 md:p-8 shadow-xl">
@@ -183,11 +210,20 @@ export function CotizadorForm({ precio, colores }: { precio: number; colores: Co
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
-          <div><Label htmlFor="telefono">Teléfono</Label><Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
-          <div><Label htmlFor="correo">Correo</Label><Input id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
-          <div><Label htmlFor="direccion">Dirección</Label><Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+          {ff.nombre.visible && (
+            <div><Label htmlFor="nombre">{ff.nombre.label}{ff.nombre.required && " *"}</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+          )}
+          {ff.telefono.visible && (
+            <div><Label htmlFor="telefono">{ff.telefono.label}{ff.telefono.required && " *"}</Label><Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
+          )}
+          {ff.correo.visible && (
+            <div><Label htmlFor="correo">{ff.correo.label}{ff.correo.required && " *"}</Label><Input id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
+          )}
+          {ff.direccion.visible && (
+            <div><Label htmlFor="direccion">{ff.direccion.label}{ff.direccion.required && " *"}</Label><Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+          )}
         </div>
+
 
         <div className="flex flex-col items-start justify-between gap-4 rounded-md border-2 border-dashed border-accent/40 bg-accent/5 p-4 sm:flex-row sm:items-center">
           <div>

@@ -161,6 +161,7 @@ export type Database = {
         Row: {
           cotizador_titulo: string
           direccion: string
+          form_fields: Json
           hero_h1_linea1: string
           hero_h1_linea2: string
           hero_h1_linea3: string
@@ -183,6 +184,7 @@ export type Database = {
         Insert: {
           cotizador_titulo?: string
           direccion?: string
+          form_fields?: Json
           hero_h1_linea1?: string
           hero_h1_linea2?: string
           hero_h1_linea3?: string
@@ -205,6 +207,7 @@ export type Database = {
         Update: {
           cotizador_titulo?: string
           direccion?: string
+          form_fields?: Json
           hero_h1_linea1?: string
           hero_h1_linea2?: string
           hero_h1_linea3?: string

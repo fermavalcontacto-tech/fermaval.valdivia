@@ -23,6 +23,15 @@ export const Route = createFileRoute("/_authenticated/admin/configuracion")({
   component: ConfiguracionPage,
 });
 
+type FieldCfg = { label: string; visible: boolean; required: boolean };
+type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
+const DEFAULT_FIELDS: FormFields = {
+  nombre: { label: "Nombre", visible: true, required: true },
+  telefono: { label: "Teléfono", visible: true, required: true },
+  correo: { label: "Correo", visible: true, required: true },
+  direccion: { label: "Dirección", visible: true, required: true },
+};
+
 type FormState = {
   precio_m2: string;
   hero_titulo: string; hero_subtitulo: string;
@@ -32,6 +41,7 @@ type FormState = {
   linktree_url: string; mapa_url: string; mapa_embed: string;
   telefono: string; direccion: string; instagram: string;
   logo_url: string; hero_url: string;
+  form_fields: FormFields;
 };
 
 function ConfiguracionPage() {
@@ -46,9 +56,11 @@ function ConfiguracionPage() {
     linktree_url: "", mapa_url: "", mapa_embed: "",
     telefono: "", direccion: "", instagram: "",
     logo_url: "", hero_url: "",
+    form_fields: DEFAULT_FIELDS,
   });
   useEffect(() => {
     if (data) {
+      const ff = (data.form_fields as Partial<FormFields> | null) ?? null;
       setForm({
         precio_m2: String(data.precio_m2),
         hero_titulo: data.hero_titulo, hero_subtitulo: data.hero_subtitulo,
@@ -58,6 +70,12 @@ function ConfiguracionPage() {
         linktree_url: data.linktree_url, mapa_url: data.mapa_url, mapa_embed: data.mapa_embed,
         telefono: data.telefono, direccion: data.direccion, instagram: data.instagram,
         logo_url: data.logo_url ?? "", hero_url: data.hero_url ?? "",
+        form_fields: {
+          nombre: { ...DEFAULT_FIELDS.nombre, ...(ff?.nombre ?? {}) },
+          telefono: { ...DEFAULT_FIELDS.telefono, ...(ff?.telefono ?? {}) },
+          correo: { ...DEFAULT_FIELDS.correo, ...(ff?.correo ?? {}) },
+          direccion: { ...DEFAULT_FIELDS.direccion, ...(ff?.direccion ?? {}) },
+        },
       });
     }
   }, [data]);
@@ -75,9 +93,15 @@ function ConfiguracionPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  function f(k: keyof FormState) {
-    return { value: form[k], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value }) };
+
+  type StrKey = { [K in keyof FormState]: FormState[K] extends string ? K : never }[keyof FormState];
+  function f(k: StrKey) {
+    return { value: form[k] as string, onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value }) };
   }
+  function setField(k: keyof FormFields, patch: Partial<FieldCfg>) {
+    setForm({ ...form, form_fields: { ...form.form_fields, [k]: { ...form.form_fields[k], ...patch } } });
+  }
+
 
   return (
     <div className="space-y-6">
@@ -123,7 +147,39 @@ function ConfiguracionPage() {
         <div className="md:col-span-2"><Label>Mapa (embed URL)</Label><Input {...f("mapa_embed")} /></div>
       </Card>
 
+      {/* Editor del formulario de cotización */}
+      <Card className="p-6">
+        <h2 className="mb-1 font-display text-2xl text-primary">FORMULARIO DE COTIZACIÓN (PÚBLICO)</h2>
+        <p className="mb-4 text-sm text-muted-foreground">Renombra, oculta o haz opcional cada campo de datos del cliente. El campo Nombre siempre es obligatorio.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs uppercase text-muted-foreground">
+              <tr className="border-b"><th className="py-2 pr-3">Campo</th><th className="py-2 pr-3">Etiqueta visible</th><th className="py-2 pr-3 text-center">Visible</th><th className="py-2 pr-3 text-center">Obligatorio</th></tr>
+            </thead>
+            <tbody>
+              {(["nombre","telefono","correo","direccion"] as const).map((k) => {
+                const cfg = form.form_fields[k];
+                const lockedRequired = k === "nombre";
+                return (
+                  <tr key={k} className="border-b last:border-0">
+                    <td className="py-2 pr-3 font-mono text-xs uppercase text-muted-foreground">{k}</td>
+                    <td className="py-2 pr-3"><Input value={cfg.label} onChange={(e) => setField(k, { label: e.target.value })} /></td>
+                    <td className="py-2 pr-3 text-center">
+                      <Switch checked={cfg.visible} disabled={k === "nombre"} onCheckedChange={(v) => setField(k, { visible: v, required: v ? cfg.required : false })} />
+                    </td>
+                    <td className="py-2 pr-3 text-center">
+                      <Switch checked={cfg.required} disabled={lockedRequired || !cfg.visible} onCheckedChange={(v) => setField(k, { required: v })} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <div className="sticky bottom-4 z-10 flex justify-end">
+
         <Button onClick={() => save.mutate()} disabled={save.isPending} variant="hero" size="lg" className="shadow-2xl">
           {save.isPending ? "Guardando..." : "Guardar cambios"}
         </Button>

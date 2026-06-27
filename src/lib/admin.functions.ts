@@ -714,6 +714,11 @@ export const updateConfig = createServerFn({ method: "POST" })
     instagram: z.string().max(80),
     logo_url: z.string().url().nullable().optional(),
     hero_url: z.string().url().nullable().optional(),
+    form_fields: z.record(z.string(), z.object({
+      label: z.string().trim().min(1).max(40),
+      visible: z.boolean(),
+      required: z.boolean(),
+    })).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
@@ -729,22 +734,26 @@ export const updateConfig = createServerFn({ method: "POST" })
     const fields: Array<keyof typeof data> = [
       "precio_m2","hero_titulo","hero_subtitulo","hero_h1_linea1","hero_h1_linea2","hero_h1_linea3",
       "marca_texto","productos_titulo","cotizador_titulo",
-      "info_comercial","linktree_url","mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url",
+      "info_comercial","linktree_url","mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url","form_fields",
     ];
 
+
     const rows: Array<{ user_id: string; user_email: string; entidad: string; accion: string; cambio: string; valor_antes: string | null; valor_despues: string | null }> = [];
+    const norm = (v: unknown) => v == null ? "" : (typeof v === "object" ? JSON.stringify(v) : String(v));
     for (const k of fields) {
       const before = prev ? (prev as Record<string, unknown>)[k] : null;
       const after = (data as Record<string, unknown>)[k] ?? null;
-      if (String(before ?? "") !== String(after ?? "")) {
+      const b = norm(before), a = norm(after);
+      if (b !== a) {
         rows.push({
           user_id: context.userId, user_email: email, entidad: "configuracion_web", accion: "update",
           cambio: `${k} actualizado`,
-          valor_antes: before == null ? null : String(before),
-          valor_despues: after == null ? null : String(after),
+          valor_antes: before == null ? null : b,
+          valor_despues: after == null ? null : a,
         });
       }
     }
+
     if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
     return { ok: true };
   });
