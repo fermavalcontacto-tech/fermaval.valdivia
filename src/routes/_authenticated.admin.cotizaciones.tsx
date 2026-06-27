@@ -411,12 +411,19 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", color: "", precio_m2: "7990", fecha_solicitud: today });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1" }]);
+  const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "" }]);
+  useEffect(() => {
+    if (open && colores.length && !items[0]?.color_id) {
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, colores.length]);
   const itemsCalc = calcItems(items);
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
@@ -424,8 +431,11 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
       const total = Math.round(m2 * Number(form.precio_m2));
-      const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
-      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
+      const its = itemsCalc.map((it) => {
+        const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null };
+      });
+      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null };
       const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
@@ -445,7 +455,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       };
       onPreview(pdfData);
       onCreated(); setOpen(false);
-      setItems([{ largo: "", cantidad: "1" }]);
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "" }]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -459,7 +469,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} />
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div className="sm:col-span-2">
