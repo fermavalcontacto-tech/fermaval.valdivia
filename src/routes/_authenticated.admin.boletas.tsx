@@ -185,6 +185,14 @@ function EditarBoletaDialog({
             <div><Label>Monto</Label><Input type="number" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} /></div>
             <div><Label>Fecha</Label><Input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></div>
           </div>
+          <div>
+            <Label>Boleta subida por</Label>
+            <Select value={form.responsable || undefined} onValueChange={(v) => setForm({ ...form, responsable: v as Persona })}>
+              <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
+              <SelectContent>{PERSONAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+
         </div>
         <DialogFooter>
           <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Guardar cambios"}</Button>
