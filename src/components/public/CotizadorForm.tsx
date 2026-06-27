@@ -210,11 +210,20 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <div><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
-          <div><Label htmlFor="telefono">Teléfono</Label><Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
-          <div><Label htmlFor="correo">Correo</Label><Input id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
-          <div><Label htmlFor="direccion">Dirección</Label><Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+          {ff.nombre.visible && (
+            <div><Label htmlFor="nombre">{ff.nombre.label}{ff.nombre.required && " *"}</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+          )}
+          {ff.telefono.visible && (
+            <div><Label htmlFor="telefono">{ff.telefono.label}{ff.telefono.required && " *"}</Label><Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
+          )}
+          {ff.correo.visible && (
+            <div><Label htmlFor="correo">{ff.correo.label}{ff.correo.required && " *"}</Label><Input id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
+          )}
+          {ff.direccion.visible && (
+            <div><Label htmlFor="direccion">{ff.direccion.label}{ff.direccion.required && " *"}</Label><Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+          )}
         </div>
+
 
         <div className="flex flex-col items-start justify-between gap-4 rounded-md border-2 border-dashed border-accent/40 bg-accent/5 p-4 sm:flex-row sm:items-center">
           <div>
