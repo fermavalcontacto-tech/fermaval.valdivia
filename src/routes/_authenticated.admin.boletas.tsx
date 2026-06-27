@@ -22,8 +22,8 @@ export const Route = createFileRoute("/_authenticated/admin/boletas")({
 });
 
 type Tipo = keyof typeof TIPO_GASTO_LABEL;
-type Persona = "Freddy" | "Bayron" | "Oscar";
-const PERSONAS: Persona[] = ["Freddy", "Bayron", "Oscar"];
+type Persona = "Freddy" | "Bayron" | "Oscar" | "Fermaval";
+const PERSONAS: Persona[] = ["Freddy", "Bayron", "Oscar", "Fermaval"];
 function detectPersona(email: string): Persona | "" {
   const local = (email || "").toLowerCase().split("@")[0] ?? "";
   for (const p of PERSONAS) if (local.includes(p.toLowerCase())) return p;
