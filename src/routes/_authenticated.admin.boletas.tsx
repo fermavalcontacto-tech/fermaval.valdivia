@@ -213,17 +213,19 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [fecha, setFecha] = useState(today);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
 
   async function submit() {
     if (!file) { toast.error("Selecciona un archivo"); return; }
     if (!monto) { toast.error("Ingresa el monto"); return; }
+    if (!responsable) { toast.error("Selecciona el responsable (Boleta subida por)"); return; }
     setUploading(true);
     try {
       const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
       const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
       if (upErr) throw upErr;
       const fechaFinal = isSuper ? fecha : today;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path: path, archivo_nombre: file.name } });
+      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path: path, archivo_nombre: file.name, responsable } });
       toast.success("Boleta subida");
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
@@ -248,6 +250,14 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               <SelectContent>{Object.entries(TIPO_GASTO_LABEL).map(([k,v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          <div>
+            <Label>Boleta subida por <span className="text-destructive">*</span></Label>
+            <Select value={responsable || undefined} onValueChange={(v) => setResponsable(v as Persona)}>
+              <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
+              <SelectContent>{PERSONAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+
           <div><Label>Descripción</Label><Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
