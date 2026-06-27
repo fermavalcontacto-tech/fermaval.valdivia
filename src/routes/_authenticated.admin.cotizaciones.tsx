@@ -384,7 +384,29 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
     onSuccess: (r) => {
-      toast.success(`Creada ${r.numero}`); onCreated(); setOpen(false);
+      toast.success(`Creada ${r.numero} — generando PDF...`);
+      const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
+      const total = Math.round(m2 * Number(form.precio_m2));
+      const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
+      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
+      downloadCotizacionPDF({
+        numero: r.numero,
+        fecha: new Date().toISOString(),
+        cliente: { nombre: form.nombre, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
+        largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2,
+        items: its,
+        color_nombre: form.color || null,
+        precio_m2: Number(form.precio_m2),
+        descuento: 0, total, pago_recibido: 0, saldo: total,
+        estado: "Cotización creada",
+        aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
+        aprobador_email: auth.email ?? "",
+        aprobado_at: new Date().toISOString(),
+        origen: "interno",
+        creado_por_nombre: auth.email?.split("@")[0],
+        creado_por_email: auth.email,
+      });
+      onCreated(); setOpen(false);
       setItems([{ largo: "", cantidad: "1" }]);
     },
     onError: (e: Error) => toast.error(e.message),
