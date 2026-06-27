@@ -50,6 +50,7 @@ function EgresosPage() {
             decidido_at: new Date().toISOString(),
             aprobador_nombre: "Administrador General",
             aprobador_email: auth.email,
+            latas: (s.latas as LataItem[] | null) ?? [],
           });
         }
       }
