@@ -51,13 +51,14 @@ function CotizacionesPage() {
   const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
         largo_m: Number(it.largo_m),
         ancho_m: Number(it.ancho_m),
         cantidad_planchas: Number(it.cantidad_planchas),
         metros2: Number(it.metros2),
+        color_nombre: it.color_nombre ?? null,
       }));
     const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
