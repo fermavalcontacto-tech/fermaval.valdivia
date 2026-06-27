@@ -47,12 +47,13 @@ function Home() {
               <span className="h-2 w-2 rounded-full bg-accent" /> Fabricación en Valdivia
             </span>
             <h1 className="mt-4 font-display text-5xl leading-none text-primary sm:text-6xl md:text-7xl">
-              CUBIERTAS<br/>Y REVESTIMIENTOS<br/>
-              <span className="text-accent">DE CALIDAD INDUSTRIAL</span>
+              {cfg.hero_h1_linea1}<br/>{cfg.hero_h1_linea2}<br/>
+              <span className="text-accent">{cfg.hero_h1_linea3}</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
-              Planchas prepintadas onduladas, PV4, PV8, 6V, microonduladas y lisas. Cotiza online en segundos.
+              {cfg.hero_subtitulo}
             </p>
+
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="lg"><a href="#cotizador">Cotizar ahora</a></Button>
               {cfg.linktree_url && (
