@@ -159,7 +159,11 @@ export type Database = {
       }
       configuracion_web: {
         Row: {
+          cotizador_titulo: string
           direccion: string
+          hero_h1_linea1: string
+          hero_h1_linea2: string
+          hero_h1_linea3: string
           hero_subtitulo: string
           hero_titulo: string
           hero_url: string | null
@@ -170,12 +174,18 @@ export type Database = {
           logo_url: string | null
           mapa_embed: string
           mapa_url: string
+          marca_texto: string
           precio_m2: number
+          productos_titulo: string
           telefono: string
           updated_at: string
         }
         Insert: {
+          cotizador_titulo?: string
           direccion?: string
+          hero_h1_linea1?: string
+          hero_h1_linea2?: string
+          hero_h1_linea3?: string
           hero_subtitulo?: string
           hero_titulo?: string
           hero_url?: string | null
@@ -186,12 +196,18 @@ export type Database = {
           logo_url?: string | null
           mapa_embed?: string
           mapa_url?: string
+          marca_texto?: string
           precio_m2?: number
+          productos_titulo?: string
           telefono?: string
           updated_at?: string
         }
         Update: {
+          cotizador_titulo?: string
           direccion?: string
+          hero_h1_linea1?: string
+          hero_h1_linea2?: string
+          hero_h1_linea3?: string
           hero_subtitulo?: string
           hero_titulo?: string
           hero_url?: string | null
@@ -202,7 +218,9 @@ export type Database = {
           logo_url?: string | null
           mapa_embed?: string
           mapa_url?: string
+          marca_texto?: string
           precio_m2?: number
+          productos_titulo?: string
           telefono?: string
           updated_at?: string
         }
