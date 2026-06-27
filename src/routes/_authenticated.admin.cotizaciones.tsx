@@ -323,13 +323,14 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+  const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "",
     color: "", precio_m2: "0",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1" }]);
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "" }]);
   useEffect(() => {
     if (!cot) return;
     setForm({
@@ -341,9 +342,9 @@ function EditarCotizacionDialog({
     });
     const its = (cot.items ?? []).slice().sort((a, b) => a.position - b.position);
     if (its.length) {
-      setItems(its.map((it) => ({ largo: String(it.largo_m), cantidad: String(it.cantidad_planchas) })));
+      setItems(its.map((it) => ({ largo: String(it.largo_m), cantidad: String(it.cantidad_planchas), color_id: it.color_id ?? "" })));
     } else {
-      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1) }]);
+      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "" }]);
     }
   }, [cot]);
 
@@ -360,7 +361,7 @@ function EditarCotizacionDialog({
         nombre: form.nombre, telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       descuento: Number(form.descuento), pago_recibido: Number(form.pago_recibido),
       estado: form.estado,
