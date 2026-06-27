@@ -188,3 +188,8 @@ export function downloadCotizacionPDF(c: CotizacionPDF) {
 export function downloadPagoPDF(c: CotizacionPDF) {
   buildPagoPDF(c).save(`Comprobante-Pago-${c.numero}.pdf`);
 }
+
+export function cotizacionPdfBlobUrl(c: CotizacionPDF): string {
+  const blob = buildCotizacionPDF(c).output("blob");
+  return URL.createObjectURL(blob);
+}
