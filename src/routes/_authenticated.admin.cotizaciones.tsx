@@ -255,47 +255,65 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string };
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
     const l = Number(it.largo) || 0;
     const n = Number(it.cantidad) || 0;
-    return { largo: l, cantidad: n, m2: Number((l * 1 * n).toFixed(2)) };
+    return { largo: l, cantidad: n, color_id: it.color_id, m2: Number((l * 1 * n).toFixed(2)) };
   });
 }
 
-function ItemsEditor({ items, setItems }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void }) {
+function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[] }) {
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
     <div className="sm:col-span-2 space-y-2">
-      <Label>Medidas (ancho fijo: 1 m)</Label>
+      <Label>Planchas (ancho fijo: 1 m)</Label>
       {items.map((it, i) => (
-        <div key={i} className="grid grid-cols-[1fr_1fr_70px_36px] items-end gap-2">
-          <div>
-            <Label className="text-[10px]">Largo (m)</Label>
-            <Input type="number" step="0.01" value={it.largo}
-              onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+        <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
+          <div className="grid grid-cols-[1fr_1fr_70px_36px] items-end gap-2">
+            <div>
+              <Label className="text-[10px]">Largo (m)</Label>
+              <Input type="number" step="0.01" value={it.largo}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+            </div>
+            <div>
+              <Label className="text-[10px]">Cantidad</Label>
+              <Input type="number" step="1" min="1" value={it.cantidad}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+            </div>
+            <div className="text-sm">
+              <div className="text-[10px] text-muted-foreground">m²</div>
+              <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
+            </div>
+            <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
           </div>
           <div>
-            <Label className="text-[10px]">Cantidad</Label>
-            <Input type="number" step="1" min="1" value={it.cantidad}
-              onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+            <Label className="text-[10px]">Color</Label>
+            <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectContent>
+                {colores.filter((c) => c.activo).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3 w-3 rounded" style={{ background: c.hex }} />
+                      {c.nombre} · stock {Number(c.stock_m).toFixed(2)} m
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="text-sm">
-            <div className="text-[10px] text-muted-foreground">m²</div>
-            <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
-          </div>
-          <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-            onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
         </div>
       ))}
       <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1" }])}>
-          <Plus className="mr-1 h-4 w-4" /> Agregar medida
+        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "" }])}>
+          <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
         <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
       </div>
