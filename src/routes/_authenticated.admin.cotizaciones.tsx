@@ -90,6 +90,13 @@ function CotizacionesPage() {
     window.open(wa, "_blank");
   }
 
+  function shareWhatsAppFromPdf(p: CotizacionPDF) {
+    const phone = (p.cliente.telefono ?? "").replace(/[^\d]/g, "");
+    const msg = `Hola ${p.cliente.nombre}, te comparto tu cotización FERMAVAL ${p.numero} por ${formatCLP(p.total)} (${p.metros2.toFixed(2)} m²). Adjunto el PDF.`;
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(wa, "_blank");
+  }
+
 
   async function dispatchAprobacion(c: Cotizacion) {
     const pdfData = toPdfData(c);
