@@ -1218,7 +1218,7 @@ export const eliminarEmpleado = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
-      user_email: (context.claims.email as string) ?? "", entidad: "user_roles",
+      user_email: (context.claims.email as string) ?? "", entidad: "user_roles", accion: "delete",
       cambio: `Eliminación empleado ${data.email}`, valor_antes: "admin", valor_despues: null,
     });
     return { ok: true };
