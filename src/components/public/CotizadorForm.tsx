@@ -90,9 +90,21 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       if (it.cantidad <= 0 || !Number.isInteger(it.cantidad)) { toast.error(`Plancha ${i + 1}: cantidad inválida`); return; }
       if (!it.color_id) { toast.error(`Plancha ${i + 1}: selecciona un color`); return; }
     }
-    if (!nombre || !telefono || !correo || !direccion) { toast.error("Completa todos tus datos"); return; }
+    const checks: Array<[string, boolean, string]> = [
+      [ff.nombre.label, ff.nombre.visible && ff.nombre.required && !nombre.trim(), nombre],
+      [ff.telefono.label, ff.telefono.visible && ff.telefono.required && !telefono.trim(), telefono],
+      [ff.correo.label, ff.correo.visible && ff.correo.required && !correo.trim(), correo],
+      [ff.direccion.label, ff.direccion.visible && ff.direccion.required && !direccion.trim(), direccion],
+    ];
+    for (const [label, missing] of checks) {
+      if (missing) { toast.error(`Completa el campo "${label}"`); return; }
+    }
+    if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
+      toast.error("Correo inválido"); return;
+    }
     mut.mutate();
   }
+
 
   return (
     <Card className="border-2 border-border bg-card p-6 md:p-8 shadow-xl">
