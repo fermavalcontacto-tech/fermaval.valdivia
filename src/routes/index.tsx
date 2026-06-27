@@ -47,12 +47,13 @@ function Home() {
               <span className="h-2 w-2 rounded-full bg-accent" /> Fabricación en Valdivia
             </span>
             <h1 className="mt-4 font-display text-5xl leading-none text-primary sm:text-6xl md:text-7xl">
-              CUBIERTAS<br/>Y REVESTIMIENTOS<br/>
-              <span className="text-accent">DE CALIDAD INDUSTRIAL</span>
+              {cfg.hero_h1_linea1}<br/>{cfg.hero_h1_linea2}<br/>
+              <span className="text-accent">{cfg.hero_h1_linea3}</span>
             </h1>
             <p className="mt-6 max-w-lg text-base text-muted-foreground">
-              Planchas prepintadas onduladas, PV4, PV8, 6V, microonduladas y lisas. Cotiza online en segundos.
+              {cfg.hero_subtitulo}
             </p>
+
             <div className="mt-8 flex flex-wrap gap-3">
               <Button asChild variant="hero" size="lg"><a href="#cotizador">Cotizar ahora</a></Button>
               {cfg.linktree_url && (
@@ -85,7 +86,7 @@ function Home() {
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Nuestros productos</div>
-            <h2 className="font-display text-4xl text-primary md:text-5xl">COLORES DISPONIBLES</h2>
+            <h2 className="font-display text-4xl text-primary md:text-5xl">{cfg.productos_titulo}</h2>
           </div>
           <p className="hidden max-w-sm text-sm text-muted-foreground md:block">
             Imágenes referenciales de color. Consulta por otros colores.
@@ -116,7 +117,7 @@ function Home() {
         <div className="container mx-auto px-4">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Cotizador instantáneo</div>
-            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">CALCULA TU PEDIDO</h2>
+            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">{cfg.cotizador_titulo}</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Ingresa medidas, elige color y obtén tu cotización al instante. {cfg.info_comercial}
             </p>
@@ -168,7 +169,7 @@ function Home() {
             loading="lazy"
           />
           <p className="mt-6 max-w-xl text-sm text-muted-foreground">
-            Fabricación local en Valdivia. Calidad industrial, precios justos y entrega rápida.
+            {cfg.marca_texto}
           </p>
         </div>
       </section>
