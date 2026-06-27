@@ -1200,7 +1200,7 @@ export const crearEmpleado = createServerFn({ method: "POST" })
     const { error: rErr } = await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "admin" });
     if (rErr) throw new Error(rErr.message);
     await context.supabase.from("config_audit_log").insert({
-      user_email: (context.claims.email as string) ?? "", entidad: "user_roles",
+      user_email: (context.claims.email as string) ?? "", entidad: "user_roles", accion: "insert",
       cambio: `Alta empleado ${data.email}`, valor_antes: null, valor_despues: "admin",
     });
     return { id: created.user.id };
