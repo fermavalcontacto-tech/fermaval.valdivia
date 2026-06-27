@@ -810,6 +810,11 @@ export const deleteCotizacion = createServerFn({ method: "POST" })
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total").eq("id", data.id).single();
+    // Devolver stock al inventario antes de borrar la cotización.
+    await restoreStockForCotizacion(
+      context.supabase as never, data.id, context.userId, email,
+      "Reposición por eliminación de cotización",
+    );
     const { error } = await context.supabase.from("cotizaciones").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
