@@ -679,12 +679,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const itemsCalc = data.items.map((it) => ({
-      largo_m: it.largo_m,
-      ancho_m: 1,
-      cantidad_planchas: it.cantidad_planchas,
-      metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
-    }));
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
     const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
     const saldo = Math.max(0, total - data.pago_recibido);
@@ -695,11 +690,12 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
       correo: data.cliente.correo, direccion: data.cliente.direccion,
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
+    const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
     const { error } = await context.supabase.from("cotizaciones").update({
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
       precio_m2: data.precio_m2, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
-      color_nombre: data.color_nombre ?? null, estado: data.estado,
+      color_id: first.color_id, color_nombre: colorNombreCot, estado: data.estado,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
     // Reemplaza items
