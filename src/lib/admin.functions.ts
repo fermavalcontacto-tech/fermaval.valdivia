@@ -1200,7 +1200,7 @@ export const crearEmpleado = createServerFn({ method: "POST" })
     const { error: rErr } = await supabaseAdmin.from("user_roles").insert({ user_id: created.user.id, role: "admin" });
     if (rErr) throw new Error(rErr.message);
     await context.supabase.from("config_audit_log").insert({
-      user_email: context.claims.email, entidad: "user_roles",
+      user_email: (context.claims.email as string) ?? "", entidad: "user_roles",
       cambio: `Alta empleado ${data.email}`, valor_antes: null, valor_despues: "admin",
     });
     return { id: created.user.id };
@@ -1218,7 +1218,7 @@ export const eliminarEmpleado = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
-      user_email: context.claims.email, entidad: "user_roles",
+      user_email: (context.claims.email as string) ?? "", entidad: "user_roles",
       cambio: `Eliminación empleado ${data.email}`, valor_antes: "admin", valor_despues: null,
     });
     return { ok: true };
@@ -1233,7 +1233,7 @@ export const resetPasswordEmpleado = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.updateUserById(data.user_id, { password: data.password });
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
-      user_email: context.claims.email, entidad: "user_roles",
+      user_email: (context.claims.email as string) ?? "", entidad: "user_roles",
       cambio: `Reset password empleado ${data.user_id}`, valor_antes: null, valor_despues: "***",
     });
     return { ok: true };
