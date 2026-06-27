@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate } from "@/lib/format";
-import logoUrl from "@/assets/fermaval-logo-horizontal.jpg";
+import logoAsset from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
+const logoUrl = (logoAsset as { url: string }).url;
 
 export type CotizacionItem = {
   largo_m: number;
