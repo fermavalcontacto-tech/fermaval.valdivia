@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion,
+  updateCotizacionFull, deleteCotizacion, getColores,
 } from "@/lib/admin.functions";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
@@ -25,6 +25,8 @@ import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
+
+type ColorOption = { id: string; nombre: string; hex: string; activo: boolean; stock_m: number };
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
@@ -49,13 +51,14 @@ function CotizacionesPage() {
   const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
         largo_m: Number(it.largo_m),
         ancho_m: Number(it.ancho_m),
         cantidad_planchas: Number(it.cantidad_planchas),
         metros2: Number(it.metros2),
+        color_nombre: it.color_nombre ?? null,
       }));
     const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
@@ -252,47 +255,65 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string };
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
     const l = Number(it.largo) || 0;
     const n = Number(it.cantidad) || 0;
-    return { largo: l, cantidad: n, m2: Number((l * 1 * n).toFixed(2)) };
+    return { largo: l, cantidad: n, color_id: it.color_id, m2: Number((l * 1 * n).toFixed(2)) };
   });
 }
 
-function ItemsEditor({ items, setItems }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void }) {
+function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[] }) {
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
     <div className="sm:col-span-2 space-y-2">
-      <Label>Medidas (ancho fijo: 1 m)</Label>
+      <Label>Planchas (ancho fijo: 1 m)</Label>
       {items.map((it, i) => (
-        <div key={i} className="grid grid-cols-[1fr_1fr_70px_36px] items-end gap-2">
-          <div>
-            <Label className="text-[10px]">Largo (m)</Label>
-            <Input type="number" step="0.01" value={it.largo}
-              onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+        <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
+          <div className="grid grid-cols-[1fr_1fr_70px_36px] items-end gap-2">
+            <div>
+              <Label className="text-[10px]">Largo (m)</Label>
+              <Input type="number" step="0.01" value={it.largo}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+            </div>
+            <div>
+              <Label className="text-[10px]">Cantidad</Label>
+              <Input type="number" step="1" min="1" value={it.cantidad}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+            </div>
+            <div className="text-sm">
+              <div className="text-[10px] text-muted-foreground">m²</div>
+              <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
+            </div>
+            <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
           </div>
           <div>
-            <Label className="text-[10px]">Cantidad</Label>
-            <Input type="number" step="1" min="1" value={it.cantidad}
-              onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+            <Label className="text-[10px]">Color</Label>
+            <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectContent>
+                {colores.filter((c) => c.activo).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    <span className="inline-flex items-center gap-2">
+                      <span className="h-3 w-3 rounded" style={{ background: c.hex }} />
+                      {c.nombre} · stock {Number(c.stock_m).toFixed(2)} m
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="text-sm">
-            <div className="text-[10px] text-muted-foreground">m²</div>
-            <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
-          </div>
-          <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-            onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar">
-            <Trash2 className="h-4 w-4 text-destructive" />
-          </Button>
         </div>
       ))}
       <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1" }])}>
-          <Plus className="mr-1 h-4 w-4" /> Agregar medida
+        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "" }])}>
+          <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
         <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
       </div>
@@ -302,13 +323,14 @@ function ItemsEditor({ items, setItems }: { items: ItemForm[]; setItems: (a: Ite
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+  const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "",
     color: "", precio_m2: "0",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1" }]);
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "" }]);
   useEffect(() => {
     if (!cot) return;
     setForm({
@@ -320,9 +342,9 @@ function EditarCotizacionDialog({
     });
     const its = (cot.items ?? []).slice().sort((a, b) => a.position - b.position);
     if (its.length) {
-      setItems(its.map((it) => ({ largo: String(it.largo_m), cantidad: String(it.cantidad_planchas) })));
+      setItems(its.map((it) => ({ largo: String(it.largo_m), cantidad: String(it.cantidad_planchas), color_id: it.color_id ?? "" })));
     } else {
-      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1) }]);
+      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "" }]);
     }
   }, [cot]);
 
@@ -339,7 +361,7 @@ function EditarCotizacionDialog({
         nombre: form.nombre, telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       descuento: Number(form.descuento), pago_recibido: Number(form.pago_recibido),
       estado: form.estado,
@@ -357,7 +379,7 @@ function EditarCotizacionDialog({
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} />
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
@@ -389,12 +411,19 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", color: "", precio_m2: "7990", fecha_solicitud: today });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1" }]);
+  const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "" }]);
+  useEffect(() => {
+    if (open && colores.length && !items[0]?.color_id) {
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id }]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, colores.length]);
   const itemsCalc = calcItems(items);
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
@@ -402,8 +431,11 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
       const total = Math.round(m2 * Number(form.precio_m2));
-      const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
-      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
+      const its = itemsCalc.map((it) => {
+        const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null };
+      });
+      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null };
       const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
@@ -423,7 +455,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       };
       onPreview(pdfData);
       onCreated(); setOpen(false);
-      setItems([{ largo: "", cantidad: "1" }]);
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "" }]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -437,7 +469,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} />
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div className="sm:col-span-2">

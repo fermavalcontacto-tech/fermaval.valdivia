@@ -6,6 +6,7 @@ export type CotizacionItem = {
   ancho_m: number;
   cantidad_planchas: number;
   metros2: number;
+  color_nombre?: string | null;
 };
 
 export type CotizacionPDF = {
@@ -103,27 +104,28 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   // Tabla de medidas
   const items: CotizacionItem[] = (c.items && c.items.length
     ? c.items
-    : [{ largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas ?? 1, metros2: c.metros2 }]);
+    : [{ largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas ?? 1, metros2: c.metros2, color_nombre: c.color_nombre }]);
   y += 4;
   doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...MUTED);
   doc.text("Medidas", 15, y); y += 5;
   doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-  const headers = ["#", "Largo (m)", "Ancho (m)", "Cantidad", "m²"];
-  const colsX = [15, 30, 65, 100, 140];
+  const headers = ["#", "Color", "Largo (m)", "Ancho (m)", "Cantidad", "m²"];
+  const colsX = [15, 22, 65, 95, 125, 160];
   doc.setFont("helvetica", "bold");
   headers.forEach((h, i) => doc.text(h, colsX[i], y));
   y += 2; doc.setDrawColor(220, 220, 220); doc.line(15, y, W - 15, y); y += 5;
   doc.setFont("helvetica", "normal");
   items.forEach((it, i) => {
     doc.text(String(i + 1), colsX[0], y);
-    doc.text(Number(it.largo_m).toFixed(2), colsX[1], y);
-    doc.text("1 (estándar)", colsX[2], y);
-    doc.text(String(it.cantidad_planchas), colsX[3], y);
-    doc.text(Number(it.metros2).toFixed(2), colsX[4], y);
+    doc.text(String(it.color_nombre ?? c.color_nombre ?? "—").slice(0, 18), colsX[1], y);
+    doc.text(Number(it.largo_m).toFixed(2), colsX[2], y);
+    doc.text("1", colsX[3], y);
+    doc.text(String(it.cantidad_planchas), colsX[4], y);
+    doc.text(Number(it.metros2).toFixed(2), colsX[5], y);
     y += 6;
   });
   doc.setFont("helvetica", "bold");
-  doc.text("Total m²", colsX[3], y); doc.text(c.metros2.toFixed(2), colsX[4], y); y += 8;
+  doc.text("Total m²", colsX[4], y); doc.text(c.metros2.toFixed(2), colsX[5], y); y += 8;
 
   const totalPlanchas = items.reduce((s, it) => s + Number(it.cantidad_planchas || 0), 0);
   y = rows(doc, y, [

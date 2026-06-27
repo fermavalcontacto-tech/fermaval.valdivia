@@ -6,6 +6,7 @@ const ANCHO_FIJO_M = 1;
 const ItemSchema = z.object({
   largo_m: z.number().positive().max(1000),
   cantidad_planchas: z.number().int().positive().max(10000),
+  color_id: z.string().uuid().nullable().optional(),
 });
 
 const CreateQuoteSchema = z.object({
@@ -38,21 +39,45 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
     const precio = Number(cfg.precio_m2);
-    const itemsCalc = data.items.map((it) => ({
-      largo_m: it.largo_m,
-      ancho_m: ANCHO_FIJO_M,
-      cantidad_planchas: it.cantidad_planchas,
-      metros2: Number((it.largo_m * ANCHO_FIJO_M * it.cantidad_planchas).toFixed(2)),
-    }));
+    // resolve color names + stock validation
+    const colorIds = Array.from(new Set([
+      ...(data.color_id ? [data.color_id] : []),
+      ...data.items.map((i) => i.color_id).filter((x): x is string => !!x),
+    ]));
+    const colorMap = new Map<string, { nombre: string; stock_m: number }>();
+    if (colorIds.length) {
+      const { data: cols } = await supabaseAdmin
+        .from("colores").select("id, nombre, stock_m").in("id", colorIds);
+      for (const c of (cols ?? [])) colorMap.set(c.id, { nombre: c.nombre, stock_m: Number(c.stock_m) });
+    }
+    const itemsCalc = data.items.map((it) => {
+      const cid = it.color_id ?? data.color_id ?? null;
+      return {
+        largo_m: it.largo_m,
+        ancho_m: ANCHO_FIJO_M,
+        cantidad_planchas: it.cantidad_planchas,
+        metros2: Number((it.largo_m * ANCHO_FIJO_M * it.cantidad_planchas).toFixed(2)),
+        color_id: cid,
+        color_nombre: cid ? (colorMap.get(cid)?.nombre ?? null) : null,
+      };
+    });
+    // stock validation
+    const byColor = new Map<string, number>();
+    for (const it of itemsCalc) {
+      if (it.color_id) byColor.set(it.color_id, (byColor.get(it.color_id) ?? 0) + it.metros2);
+    }
+    for (const [cid, m] of byColor) {
+      const col = colorMap.get(cid);
+      if (!col) throw new Error("Color no disponible");
+      if (col.stock_m < m) {
+        throw new Error(`Stock insuficiente para "${col.nombre}" (disponible: ${col.stock_m} m, solicitado: ${m.toFixed(2)} m).`);
+      }
+    }
     const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.round(metros2Total * precio);
     const first = itemsCalc[0];
-
-    let color_nombre: string | null = null;
-    if (data.color_id) {
-      const { data: c } = await supabaseAdmin.from("colores").select("nombre").eq("id", data.color_id).maybeSingle();
-      color_nombre = c?.nombre ?? null;
-    }
+    const color_nombre = first.color_nombre ?? (data.color_id ? colorMap.get(data.color_id)?.nombre ?? null : null);
+    const color_id_cot = first.color_id ?? data.color_id ?? null;
 
     const { data: cliente, error: ceErr } = await supabaseAdmin
       .from("clientes")
@@ -80,7 +105,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         ancho_m: ANCHO_FIJO_M,
         cantidad_planchas: first.cantidad_planchas,
         metros2: metros2Total,
-        color_id: data.color_id ?? null,
+        color_id: color_id_cot,
         color_nombre,
         precio_m2: precio,
         total,
