@@ -383,7 +383,7 @@ function EditarCotizacionDialog({
   );
 }
 
-function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
+function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void; onPreview: (d: CotizacionPDF) => void }) {
   const { auth } = Route.useRouteContext();
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
