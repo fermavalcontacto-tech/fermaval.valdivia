@@ -1,6 +1,8 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
 
+export type LataItem = { descripcion: string; cantidad: number; color: string };
+
 export type ComprobanteEgreso = {
   id: string;
   tipo: keyof typeof TIPO_GASTO_LABEL;
@@ -13,6 +15,7 @@ export type ComprobanteEgreso = {
   decidido_at: string | null;
   aprobador_nombre: string;
   aprobador_email: string;
+  latas?: LataItem[] | null;
 };
 
 const BRAND = "FERMAVAL";
