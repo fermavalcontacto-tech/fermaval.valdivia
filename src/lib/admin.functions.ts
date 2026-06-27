@@ -466,14 +466,12 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { count: egresosPendientesCount } = await context.supabase.from("solicitudes_egreso").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
     // Boletas standalone (sin solicitud_id) — comprobantes que se cargan sueltos y deben sumar al balance
     const { data: boletasMesStandalone } = await context.supabase.from("boletas").select("monto, fecha, solicitud_id").is("solicitud_id", null).gte("fecha", inicioMesISO.slice(0, 10));
-    const { data: boletasMesTotal } = await context.supabase.from("boletas").select("monto").gte("fecha", inicioMesISO.slice(0, 10));
 
     const ventas = (cotMes ?? []).reduce((s, c) => s + Number(c.pago_recibido), 0);
     const totalCotizado = (cotMes ?? []).reduce((s, c) => s + Number(c.total), 0);
     const gastosSolicitudes = (gastosMes ?? []).reduce((s, g) => s + Number(g.monto), 0);
     const gastosBoletasStandalone = (boletasMesStandalone ?? []).reduce((s, b) => s + Number(b.monto), 0);
     const gastos = gastosSolicitudes + gastosBoletasStandalone;
-    const gastosConBoleta = (boletasMesTotal ?? []).reduce((s, b) => s + Number(b.monto), 0);
     const utilidades = ventas - gastos;
     const iva = Math.round(ventas * 0.19 / 1.19);
 
@@ -510,7 +508,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     }
 
     return {
-      ventas, totalCotizado, gastos, gastosConBoleta, utilidades, iva,
+      ventas, totalCotizado, gastos, utilidades, iva,
       cotPendientes: cotPendientes?.length ?? 0,
       pedidosConfirmados: pedidosConf?.length ?? 0,
       egresosPendientes: egresosPendientesCount ?? 0,
