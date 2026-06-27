@@ -6,6 +6,7 @@ import {
 } from "@/lib/admin.functions";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ function CotizacionesPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
   const [editing, setEditing] = useState<Cotizacion | null>(null);
+  const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
     const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
@@ -84,6 +86,13 @@ function CotizacionesPage() {
     const phone = (c.cliente?.telefono ?? "").replace(/[^\d]/g, "");
     const url = `${window.location.origin}/cotizacion/${c.numero}?t=${(c as { access_token?: string }).access_token ?? ""}`;
     const msg = `Hola ${c.cliente?.nombre ?? ""}, te comparto tu cotización FERMAVAL ${c.numero} por ${formatCLP(c.total)} (${c.metros2.toFixed(2)} m²). Detalles: ${url}`;
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(wa, "_blank");
+  }
+
+  function shareWhatsAppFromPdf(p: CotizacionPDF) {
+    const phone = (p.cliente.telefono ?? "").replace(/[^\d]/g, "");
+    const msg = `Hola ${p.cliente.nombre}, te comparto tu cotización FERMAVAL ${p.numero} por ${formatCLP(p.total)} (${p.metros2.toFixed(2)} m²). Adjunto el PDF.`;
     const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(wa, "_blank");
   }
@@ -135,7 +144,7 @@ function CotizacionesPage() {
           <h1 className="font-display text-4xl text-primary">COTIZACIONES</h1>
           <p className="text-sm text-muted-foreground">Gestiona todas las cotizaciones</p>
         </div>
-        <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} />
+        <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -176,7 +185,7 @@ function CotizacionesPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="sm" title="Descargar PDF" onClick={() => downloadCotizacionPDF(toPdfData(c))}>
+                      <Button variant="ghost" size="sm" title="Vista previa / Descargar PDF" onClick={() => setPreview({ data: toPdfData(c), cot: c })}>
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm" title="Compartir por WhatsApp" onClick={() => shareWhatsApp(c)}>
@@ -233,6 +242,12 @@ function CotizacionesPage() {
           onSaved={() => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); setEditing(null); }}
         />
       )}
+
+      <PdfPreviewDialog
+        data={preview?.data ?? null}
+        onOpenChange={(o) => { if (!o) setPreview(null); }}
+        onShareWhatsApp={(d) => preview?.cot ? shareWhatsApp(preview.cot) : shareWhatsAppFromPdf(d)}
+      />
     </div>
   );
 }
@@ -368,7 +383,7 @@ function EditarCotizacionDialog({
   );
 }
 
-function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
+function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void; onPreview: (d: CotizacionPDF) => void }) {
   const { auth } = Route.useRouteContext();
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
@@ -384,12 +399,12 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
     onSuccess: (r) => {
-      toast.success(`Creada ${r.numero} — generando PDF...`);
+      toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
       const total = Math.round(m2 * Number(form.precio_m2));
       const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
       const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
-      downloadCotizacionPDF({
+      const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
         cliente: { nombre: form.nombre, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
@@ -405,7 +420,8 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
         origen: "interno",
         creado_por_nombre: auth.email?.split("@")[0],
         creado_por_email: auth.email,
-      });
+      };
+      onPreview(pdfData);
       onCreated(); setOpen(false);
       setItems([{ largo: "", cantidad: "1" }]);
     },
