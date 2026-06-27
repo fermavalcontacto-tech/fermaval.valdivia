@@ -23,7 +23,7 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ExternalLink, Plus, Pencil, Trash2, Download, Mail } from "lucide-react";
+import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
@@ -55,6 +55,7 @@ function CotizacionesPage() {
         cantidad_planchas: Number(it.cantidad_planchas),
         metros2: Number(it.metros2),
       }));
+    const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
       numero: c.numero,
       fecha: c.created_at,
@@ -73,7 +74,18 @@ function CotizacionesPage() {
       aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
       aprobador_email: auth.email ?? "",
       aprobado_at: new Date().toISOString(),
+      origen,
+      creado_por_nombre: auth.email?.split("@")[0],
+      creado_por_email: auth.email,
     };
+  }
+
+  function shareWhatsApp(c: Cotizacion) {
+    const phone = (c.cliente?.telefono ?? "").replace(/[^\d]/g, "");
+    const url = `${window.location.origin}/cotizacion/${c.numero}?t=${(c as { access_token?: string }).access_token ?? ""}`;
+    const msg = `Hola ${c.cliente?.nombre ?? ""}, te comparto tu cotización FERMAVAL ${c.numero} por ${formatCLP(c.total)} (${c.metros2.toFixed(2)} m²). Detalles: ${url}`;
+    const wa = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(msg)}` : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(wa, "_blank");
   }
 
 
@@ -163,6 +175,12 @@ function CotizacionesPage() {
                         <Link to="/cotizacion/$numero" params={{ numero: c.numero }} search={{ t: (c as { access_token?: string }).access_token }} target="_blank">
                           <ExternalLink className="h-4 w-4" />
                         </Link>
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Descargar PDF" onClick={() => downloadCotizacionPDF(toPdfData(c))}>
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm" title="Compartir por WhatsApp" onClick={() => shareWhatsApp(c)}>
+                        <MessageCircle className="h-4 w-4 text-emerald-600" />
                       </Button>
                       {(c.estado === "pedido_confirmado" || c.estado === "pedido_terminado") && (
                         <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c)}>
@@ -366,7 +384,29 @@ function NuevaCotizacionDialog({ onCreated }: { onCreated: () => void }) {
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
     }}),
     onSuccess: (r) => {
-      toast.success(`Creada ${r.numero}`); onCreated(); setOpen(false);
+      toast.success(`Creada ${r.numero} — generando PDF...`);
+      const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
+      const total = Math.round(m2 * Number(form.precio_m2));
+      const its = itemsCalc.map((it) => ({ largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2 }));
+      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0 };
+      downloadCotizacionPDF({
+        numero: r.numero,
+        fecha: new Date().toISOString(),
+        cliente: { nombre: form.nombre, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
+        largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2,
+        items: its,
+        color_nombre: form.color || null,
+        precio_m2: Number(form.precio_m2),
+        descuento: 0, total, pago_recibido: 0, saldo: total,
+        estado: "Cotización creada",
+        aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
+        aprobador_email: auth.email ?? "",
+        aprobado_at: new Date().toISOString(),
+        origen: "interno",
+        creado_por_nombre: auth.email?.split("@")[0],
+        creado_por_email: auth.email,
+      });
+      onCreated(); setOpen(false);
       setItems([{ largo: "", cantidad: "1" }]);
     },
     onError: (e: Error) => toast.error(e.message),

@@ -27,6 +27,9 @@ export type CotizacionPDF = {
   aprobador_nombre: string;
   aprobador_email: string;
   aprobado_at: string;
+  creado_por_nombre?: string;
+  creado_por_email?: string;
+  origen?: string;
 };
 
 
@@ -122,10 +125,20 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFont("helvetica", "bold");
   doc.text("Total m²", colsX[3], y); doc.text(c.metros2.toFixed(2), colsX[4], y); y += 8;
 
-  rows(doc, y, [
+  const totalPlanchas = items.reduce((s, it) => s + Number(it.cantidad_planchas || 0), 0);
+  y = rows(doc, y, [
+    ["Total planchas", String(totalPlanchas)],
     ["Descuento", formatCLP(c.descuento)],
     ["Total", formatCLP(c.total)],
   ]);
+  y += 2;
+  doc.setDrawColor(220, 220, 220); doc.line(15, y, W - 15, y); y += 6;
+  doc.setFontSize(9); doc.setTextColor(...MUTED);
+  const origenTxt = c.origen === "interno" ? "Perfil interno" : c.origen === "cliente" ? "Cliente" : (c.origen ?? "—");
+  doc.text(`Origen: ${origenTxt}`, 15, y);
+  if (c.creado_por_email || c.creado_por_nombre) {
+    doc.text(`Creada por: ${c.creado_por_nombre ?? ""}${c.creado_por_email ? ` (${c.creado_por_email})` : ""}`, 15, y + 5);
+  }
   footer(doc);
   return doc;
 }
