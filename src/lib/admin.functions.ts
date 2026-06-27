@@ -851,14 +851,13 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
-    const updatePatch: Record<string, unknown> = {
+    const { error } = await context.supabase.from("cotizaciones").update({
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
       precio_m2: data.precio_m2, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_id: first.color_id, color_nombre: colorNombreCot, estado: data.estado,
-    };
-    if (data.responsable_nombre !== undefined) updatePatch.responsable_nombre = data.responsable_nombre;
-    const { error } = await context.supabase.from("cotizaciones").update(updatePatch).eq("id", data.id);
+      responsable_nombre: data.responsable_nombre ?? null,
+    }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("cotizacion_items").delete().eq("cotizacion_id", data.id);
     const { error: itErr } = await context.supabase
