@@ -216,10 +216,13 @@ export type Database = {
           color_nombre: string | null
           cotizacion_id: string
           created_at: string
+          espesor_mm: number
           id: string
           largo_m: number
           metros2: number
           position: number
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          variante_id: string | null
         }
         Insert: {
           ancho_m?: number
@@ -228,10 +231,13 @@ export type Database = {
           color_nombre?: string | null
           cotizacion_id: string
           created_at?: string
+          espesor_mm?: number
           id?: string
           largo_m: number
           metros2: number
           position?: number
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
+          variante_id?: string | null
         }
         Update: {
           ancho_m?: number
@@ -240,10 +246,13 @@ export type Database = {
           color_nombre?: string | null
           cotizacion_id?: string
           created_at?: string
+          espesor_mm?: number
           id?: string
           largo_m?: number
           metros2?: number
           position?: number
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
+          variante_id?: string | null
         }
         Relationships: [
           {
@@ -258,6 +267,13 @@ export type Database = {
             columns: ["cotizacion_id"]
             isOneToOne: false
             referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizacion_items_variante_id_fkey"
+            columns: ["variante_id"]
+            isOneToOne: false
+            referencedRelation: "producto_variantes"
             referencedColumns: ["id"]
           },
         ]
@@ -284,6 +300,7 @@ export type Database = {
           pago_recibido: number
           plazo_horas: number
           precio_m2: number
+          responsable_nombre: string | null
           saldo: number
           stock_descontado_at: string | null
           total: number
@@ -310,6 +327,7 @@ export type Database = {
           pago_recibido?: number
           plazo_horas?: number
           precio_m2: number
+          responsable_nombre?: string | null
           saldo?: number
           stock_descontado_at?: string | null
           total: number
@@ -336,6 +354,7 @@ export type Database = {
           pago_recibido?: number
           plazo_horas?: number
           precio_m2?: number
+          responsable_nombre?: string | null
           saldo?: number
           stock_descontado_at?: string | null
           total?: number
@@ -396,6 +415,47 @@ export type Database = {
           },
         ]
       }
+      producto_variantes: {
+        Row: {
+          activo: boolean
+          color_id: string
+          created_at: string
+          espesor_mm: number
+          id: string
+          stock_m: number
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at: string
+        }
+        Insert: {
+          activo?: boolean
+          color_id: string
+          created_at?: string
+          espesor_mm?: number
+          id?: string
+          stock_m?: number
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Update: {
+          activo?: boolean
+          color_id?: string
+          created_at?: string
+          espesor_mm?: number
+          id?: string
+          stock_m?: number
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producto_variantes_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       solicitudes_egreso: {
         Row: {
           boleta_subida_por: string | null
@@ -451,11 +511,14 @@ export type Database = {
           cotizacion_id: string | null
           cotizacion_numero: string | null
           created_at: string
+          espesor_mm: number | null
           id: string
           metros: number
           motivo: string
+          tipo: Database["public"]["Enums"]["tipo_producto"] | null
           user_email: string | null
           user_id: string | null
+          variante_id: string | null
         }
         Insert: {
           color_id?: string | null
@@ -463,11 +526,14 @@ export type Database = {
           cotizacion_id?: string | null
           cotizacion_numero?: string | null
           created_at?: string
+          espesor_mm?: number | null
           id?: string
           metros: number
           motivo: string
+          tipo?: Database["public"]["Enums"]["tipo_producto"] | null
           user_email?: string | null
           user_id?: string | null
+          variante_id?: string | null
         }
         Update: {
           color_id?: string | null
@@ -475,11 +541,14 @@ export type Database = {
           cotizacion_id?: string | null
           cotizacion_numero?: string | null
           created_at?: string
+          espesor_mm?: number | null
           id?: string
           metros?: number
           motivo?: string
+          tipo?: Database["public"]["Enums"]["tipo_producto"] | null
           user_email?: string | null
           user_id?: string | null
+          variante_id?: string | null
         }
         Relationships: [
           {
@@ -494,6 +563,13 @@ export type Database = {
             columns: ["cotizacion_id"]
             isOneToOne: false
             referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_variante_id_fkey"
+            columns: ["variante_id"]
+            isOneToOne: false
+            referencedRelation: "producto_variantes"
             referencedColumns: ["id"]
           },
         ]
@@ -555,6 +631,14 @@ export type Database = {
         | "pedido_confirmado"
         | "pedido_terminado"
         | "rechazada"
+      tipo_producto:
+        | "Ondulado"
+        | "PV8"
+        | "PV8 Invertido"
+        | "Microondulado"
+        | "6V"
+        | "PV4"
+        | "Lata Lisa"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -704,6 +788,15 @@ export const Constants = {
         "pedido_confirmado",
         "pedido_terminado",
         "rechazada",
+      ],
+      tipo_producto: [
+        "Ondulado",
+        "PV8",
+        "PV8 Invertido",
+        "Microondulado",
+        "6V",
+        "PV4",
+        "Lata Lisa",
       ],
     },
   },
