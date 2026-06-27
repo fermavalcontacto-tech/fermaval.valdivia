@@ -144,7 +144,7 @@ function CotizacionesPage() {
           <h1 className="font-display text-4xl text-primary">COTIZACIONES</h1>
           <p className="text-sm text-muted-foreground">Gestiona todas las cotizaciones</p>
         </div>
-        <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} />
+        <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
