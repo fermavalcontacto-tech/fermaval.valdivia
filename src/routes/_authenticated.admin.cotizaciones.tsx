@@ -379,7 +379,7 @@ function EditarCotizacionDialog({
           <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} />
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
