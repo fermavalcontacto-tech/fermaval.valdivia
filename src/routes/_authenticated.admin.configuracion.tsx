@@ -23,6 +23,15 @@ export const Route = createFileRoute("/_authenticated/admin/configuracion")({
   component: ConfiguracionPage,
 });
 
+type FieldCfg = { label: string; visible: boolean; required: boolean };
+type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
+const DEFAULT_FIELDS: FormFields = {
+  nombre: { label: "Nombre", visible: true, required: true },
+  telefono: { label: "Teléfono", visible: true, required: true },
+  correo: { label: "Correo", visible: true, required: true },
+  direccion: { label: "Dirección", visible: true, required: true },
+};
+
 type FormState = {
   precio_m2: string;
   hero_titulo: string; hero_subtitulo: string;
@@ -32,6 +41,7 @@ type FormState = {
   linktree_url: string; mapa_url: string; mapa_embed: string;
   telefono: string; direccion: string; instagram: string;
   logo_url: string; hero_url: string;
+  form_fields: FormFields;
 };
 
 function ConfiguracionPage() {
@@ -46,9 +56,11 @@ function ConfiguracionPage() {
     linktree_url: "", mapa_url: "", mapa_embed: "",
     telefono: "", direccion: "", instagram: "",
     logo_url: "", hero_url: "",
+    form_fields: DEFAULT_FIELDS,
   });
   useEffect(() => {
     if (data) {
+      const ff = (data.form_fields as Partial<FormFields> | null) ?? null;
       setForm({
         precio_m2: String(data.precio_m2),
         hero_titulo: data.hero_titulo, hero_subtitulo: data.hero_subtitulo,
@@ -58,6 +70,12 @@ function ConfiguracionPage() {
         linktree_url: data.linktree_url, mapa_url: data.mapa_url, mapa_embed: data.mapa_embed,
         telefono: data.telefono, direccion: data.direccion, instagram: data.instagram,
         logo_url: data.logo_url ?? "", hero_url: data.hero_url ?? "",
+        form_fields: {
+          nombre: { ...DEFAULT_FIELDS.nombre, ...(ff?.nombre ?? {}) },
+          telefono: { ...DEFAULT_FIELDS.telefono, ...(ff?.telefono ?? {}) },
+          correo: { ...DEFAULT_FIELDS.correo, ...(ff?.correo ?? {}) },
+          direccion: { ...DEFAULT_FIELDS.direccion, ...(ff?.direccion ?? {}) },
+        },
       });
     }
   }, [data]);
@@ -74,6 +92,7 @@ function ConfiguracionPage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   function f(k: keyof FormState) {
     return { value: form[k], onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm({ ...form, [k]: e.target.value }) };
