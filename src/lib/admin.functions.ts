@@ -66,7 +66,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2)")
+      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -78,7 +78,7 @@ export const getCotizacionItems = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: items, error } = await context.supabase
       .from("cotizacion_items")
-      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2")
+      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre")
       .eq("cotizacion_id", data.cotizacion_id)
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);
