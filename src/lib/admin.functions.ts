@@ -25,7 +25,41 @@ function enforceFecha(email: string | undefined, fecha: string | undefined): str
 const ItemSchema = z.object({
   largo_m: z.number().positive().max(1000),
   cantidad_planchas: z.number().int().positive().max(10000),
+  color_id: z.string().uuid().nullable().optional(),
 });
+
+async function buildItemsCalc(
+  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Array<{ id: string; nombre: string; stock_m: number }> | null }> } } },
+  items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null }>,
+) {
+  const ids = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
+  const colorMap = new Map<string, { nombre: string; stock_m: number }>();
+  if (ids.length) {
+    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
+    for (const c of (cols ?? [])) colorMap.set(c.id, { nombre: c.nombre, stock_m: Number(c.stock_m) });
+  }
+  const itemsCalc = items.map((it) => ({
+    largo_m: it.largo_m,
+    ancho_m: 1,
+    cantidad_planchas: it.cantidad_planchas,
+    metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
+    color_id: it.color_id ?? null,
+    color_nombre: it.color_id ? (colorMap.get(it.color_id)?.nombre ?? null) : null,
+  }));
+  // Stock validation per color
+  const byColor = new Map<string, number>();
+  for (const it of itemsCalc) {
+    if (it.color_id) byColor.set(it.color_id, (byColor.get(it.color_id) ?? 0) + it.metros2);
+  }
+  for (const [cid, m] of byColor) {
+    const col = colorMap.get(cid);
+    if (!col) throw new Error("Color no disponible");
+    if (col.stock_m < m) {
+      throw new Error(`Stock insuficiente para "${col.nombre}" (disponible: ${col.stock_m} m, solicitado: ${m.toFixed(2)} m).`);
+    }
+  }
+  return itemsCalc;
+}
 
 export const listCotizaciones = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
