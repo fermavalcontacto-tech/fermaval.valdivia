@@ -439,6 +439,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     fecha: z.string(),
     archivo_path: z.string(),
     archivo_nombre: z.string().optional().nullable(),
+    responsable: personaSchema,
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -446,11 +447,13 @@ export const createBoleta = createServerFn({ method: "POST" })
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha,
       archivo_path: data.archivo_path, archivo_nombre: data.archivo_nombre ?? null,
+      responsable: data.responsable,
       subido_por: context.userId,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
 
 export const getDashboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -780,6 +783,10 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     const { data: gastos } = await context.supabase
       .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por, latas")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
+    const { data: boletasStandalone } = await context.supabase
+      .from("boletas").select("tipo_gasto, descripcion, monto, fecha, responsable")
+      .is("solicitud_id", null)
+      .gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
@@ -806,12 +813,20 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       const arr = Array.isArray(latas) ? (latas as Lata[]) : [];
       return arr.map((l) => `${l.cantidad}× ${l.descripcion} [${l.tipo ?? "Ondulado"} · ${l.color} · ${l.espesor_mm ?? 0.4}mm]`).join(" | ");
     };
-    const gastosRows = (gastos ?? []).map((g) => ({
-      Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
-      "Solicitado Por": g.solicitado_por ?? "",
-      "Boleta Subida Por": g.boleta_subida_por ?? "",
-      "Latas (tipo · color · espesor)": fmtLatas(g.latas),
-    }));
+    const gastosRows = [
+      ...(gastos ?? []).map((g) => ({
+        Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
+        "Solicitado Por": g.solicitado_por ?? "",
+        "Boleta Subida Por": g.boleta_subida_por ?? "",
+        "Latas (tipo · color · espesor)": fmtLatas(g.latas),
+      })),
+      ...(boletasStandalone ?? []).map((b) => ({
+        Tipo: b.tipo_gasto, Descripcion: b.descripcion ?? "", Monto: Number(b.monto), Fecha: b.fecha,
+        "Solicitado Por": "",
+        "Boleta Subida Por": (b as { responsable?: string | null }).responsable ?? "",
+        "Latas (tipo · color · espesor)": "",
+      })),
+    ];
     const wsGastos = wb.addWorksheet("Gastos");
     wsGastos.columns = [
       { header: "Tipo", key: "Tipo" }, { header: "Descripcion", key: "Descripcion" },
@@ -821,6 +836,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       { header: "Latas (tipo · color · espesor)", key: "Latas (tipo · color · espesor)" },
     ];
     wsGastos.addRows(gastosRows);
+
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
     const totalGastos = gastosRows.reduce((s, r) => s + r.Monto, 0);
@@ -931,21 +947,23 @@ export const updateBoleta = createServerFn({ method: "POST" })
     descripcion: z.string().trim().max(300).nullable().optional(),
     monto: z.number().positive(),
     fecha: z.string(),
+    responsable: personaSchema.nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const { data: prev } = await context.supabase.from("boletas").select("monto, tipo_gasto, fecha").eq("id", data.id).single();
+    const { data: prev } = await context.supabase.from("boletas").select("monto, tipo_gasto, fecha, responsable").eq("id", data.id).single();
     const { error } = await context.supabase.from("boletas").update({
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha: data.fecha,
+      responsable: data.responsable ?? null,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "boletas", accion: "update",
       cambio: `Boleta editada`,
-      valor_antes: prev ? `${prev.tipo_gasto} ${prev.monto} ${prev.fecha}` : null,
-      valor_despues: `${data.tipo_gasto} ${data.monto} ${data.fecha}`,
+      valor_antes: prev ? `${prev.tipo_gasto} ${prev.monto} ${prev.fecha} resp=${(prev as { responsable?: string | null }).responsable ?? "—"}` : null,
+      valor_despues: `${data.tipo_gasto} ${data.monto} ${data.fecha} resp=${data.responsable ?? "—"}`,
     });
     return { ok: true };
   });
