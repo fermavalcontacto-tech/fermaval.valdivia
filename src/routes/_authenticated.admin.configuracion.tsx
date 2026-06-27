@@ -147,7 +147,39 @@ function ConfiguracionPage() {
         <div className="md:col-span-2"><Label>Mapa (embed URL)</Label><Input {...f("mapa_embed")} /></div>
       </Card>
 
+      {/* Editor del formulario de cotización */}
+      <Card className="p-6">
+        <h2 className="mb-1 font-display text-2xl text-primary">FORMULARIO DE COTIZACIÓN (PÚBLICO)</h2>
+        <p className="mb-4 text-sm text-muted-foreground">Renombra, oculta o haz opcional cada campo de datos del cliente. El campo Nombre siempre es obligatorio.</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="text-left text-xs uppercase text-muted-foreground">
+              <tr className="border-b"><th className="py-2 pr-3">Campo</th><th className="py-2 pr-3">Etiqueta visible</th><th className="py-2 pr-3 text-center">Visible</th><th className="py-2 pr-3 text-center">Obligatorio</th></tr>
+            </thead>
+            <tbody>
+              {(["nombre","telefono","correo","direccion"] as const).map((k) => {
+                const cfg = form.form_fields[k];
+                const lockedRequired = k === "nombre";
+                return (
+                  <tr key={k} className="border-b last:border-0">
+                    <td className="py-2 pr-3 font-mono text-xs uppercase text-muted-foreground">{k}</td>
+                    <td className="py-2 pr-3"><Input value={cfg.label} onChange={(e) => setField(k, { label: e.target.value })} /></td>
+                    <td className="py-2 pr-3 text-center">
+                      <Switch checked={cfg.visible} disabled={k === "nombre"} onCheckedChange={(v) => setField(k, { visible: v, required: v ? cfg.required : false })} />
+                    </td>
+                    <td className="py-2 pr-3 text-center">
+                      <Switch checked={cfg.required} disabled={lockedRequired || !cfg.visible} onCheckedChange={(v) => setField(k, { required: v })} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <div className="sticky bottom-4 z-10 flex justify-end">
+
         <Button onClick={() => save.mutate()} disabled={save.isPending} variant="hero" size="lg" className="shadow-2xl">
           {save.isPending ? "Guardando..." : "Guardar cambios"}
         </Button>
