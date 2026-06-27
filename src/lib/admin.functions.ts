@@ -991,6 +991,15 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
       pago_recibido: pago, saldo, estado: nuevoEstado,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
+    // Stock: descuento si quedó aceptada + con pago; reposición si volvió a "sin pago".
+    if (nuevoEstado === "pago_parcial" || nuevoEstado === "pedido_confirmado") {
+      await discountStockForCotizacion(context.supabase as never, data.id, context.userId, email);
+    } else {
+      await restoreStockForCotizacion(
+        context.supabase as never, data.id, context.userId, email,
+        "Reposición por pago revertido a sin pago",
+      );
+    }
     await context.supabase.from("config_audit_log").insert({
       user_id: context.userId, user_email: email, entidad: "cotizaciones", accion: "pago",
       cambio: `Pago de ${prev.numero} establecido en ${data.tier}`,
