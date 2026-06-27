@@ -97,6 +97,7 @@ export type Database = {
           imagen_url: string | null
           nombre: string
           orden: number
+          stock_m: number
         }
         Insert: {
           activo?: boolean
@@ -106,6 +107,7 @@ export type Database = {
           imagen_url?: string | null
           nombre: string
           orden?: number
+          stock_m?: number
         }
         Update: {
           activo?: boolean
@@ -115,6 +117,7 @@ export type Database = {
           imagen_url?: string | null
           nombre?: string
           orden?: number
+          stock_m?: number
         }
         Relationships: []
       }
@@ -209,6 +212,8 @@ export type Database = {
         Row: {
           ancho_m: number
           cantidad_planchas: number
+          color_id: string | null
+          color_nombre: string | null
           cotizacion_id: string
           created_at: string
           id: string
@@ -219,6 +224,8 @@ export type Database = {
         Insert: {
           ancho_m?: number
           cantidad_planchas?: number
+          color_id?: string | null
+          color_nombre?: string | null
           cotizacion_id: string
           created_at?: string
           id?: string
@@ -229,6 +236,8 @@ export type Database = {
         Update: {
           ancho_m?: number
           cantidad_planchas?: number
+          color_id?: string | null
+          color_nombre?: string | null
           cotizacion_id?: string
           created_at?: string
           id?: string
@@ -237,6 +246,13 @@ export type Database = {
           position?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
             columns: ["cotizacion_id"]
@@ -269,6 +285,7 @@ export type Database = {
           plazo_horas: number
           precio_m2: number
           saldo: number
+          stock_descontado_at: string | null
           total: number
           updated_at: string
         }
@@ -294,6 +311,7 @@ export type Database = {
           plazo_horas?: number
           precio_m2: number
           saldo?: number
+          stock_descontado_at?: string | null
           total: number
           updated_at?: string
         }
@@ -319,6 +337,7 @@ export type Database = {
           plazo_horas?: number
           precio_m2?: number
           saldo?: number
+          stock_descontado_at?: string | null
           total?: number
           updated_at?: string
         }
@@ -421,6 +440,60 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["expense_type"]
         }
         Relationships: []
+      }
+      stock_movimientos: {
+        Row: {
+          color_id: string | null
+          color_nombre: string | null
+          cotizacion_id: string | null
+          cotizacion_numero: string | null
+          created_at: string
+          id: string
+          metros: number
+          motivo: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          color_id?: string | null
+          color_nombre?: string | null
+          cotizacion_id?: string | null
+          cotizacion_numero?: string | null
+          created_at?: string
+          id?: string
+          metros: number
+          motivo: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          color_id?: string | null
+          color_nombre?: string | null
+          cotizacion_id?: string | null
+          cotizacion_numero?: string | null
+          created_at?: string
+          id?: string
+          metros?: number
+          motivo?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movimientos_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movimientos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
