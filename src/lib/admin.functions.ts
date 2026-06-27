@@ -408,34 +408,85 @@ export const upsertColor = createServerFn({ method: "POST" })
     imagen_url: z.string().url().nullable().optional(),
     activo: z.boolean(),
     orden: z.number().int().min(0).max(999),
+    stock_m: z.number().min(0).max(1_000_000),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
-    assertSuperadmin(email);
     if (data.id) {
       const { data: prev } = await context.supabase.from("colores").select("*").eq("id", data.id).single();
       const { error } = await context.supabase.from("colores").update({
-        nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null, activo: data.activo, orden: data.orden,
+        nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null,
+        activo: data.activo, orden: data.orden, stock_m: data.stock_m,
       }).eq("id", data.id);
       if (error) throw new Error(error.message);
+      // log stock movement if stock changed
+      if (prev && Number(prev.stock_m) !== data.stock_m) {
+        await context.supabase.from("stock_movimientos").insert({
+          color_id: data.id, color_nombre: data.nombre,
+          metros: data.stock_m - Number(prev.stock_m),
+          motivo: `Ajuste manual de stock (${prev.stock_m} → ${data.stock_m})`,
+          user_id: context.userId, user_email: email,
+        });
+      }
       await context.supabase.from("config_audit_log").insert({
         user_id: context.userId, user_email: email, entidad: "colores", accion: "update",
         cambio: `Color "${data.nombre}" actualizado`,
-        valor_antes: prev ? `${prev.nombre} ${prev.hex} activo=${prev.activo}` : null,
-        valor_despues: `${data.nombre} ${data.hex} activo=${data.activo}`,
+        valor_antes: prev ? `${prev.nombre} ${prev.hex} activo=${prev.activo} stock=${prev.stock_m}` : null,
+        valor_despues: `${data.nombre} ${data.hex} activo=${data.activo} stock=${data.stock_m}`,
       });
     } else {
-      const { error } = await context.supabase.from("colores").insert({
-        nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null, activo: data.activo, orden: data.orden,
-      });
+      const { data: nuevo, error } = await context.supabase.from("colores").insert({
+        nombre: data.nombre, hex: data.hex, imagen_url: data.imagen_url ?? null,
+        activo: data.activo, orden: data.orden, stock_m: data.stock_m,
+      }).select("id").single();
       if (error) throw new Error(error.message);
+      if (data.stock_m > 0 && nuevo) {
+        await context.supabase.from("stock_movimientos").insert({
+          color_id: nuevo.id, color_nombre: data.nombre,
+          metros: data.stock_m, motivo: "Stock inicial",
+          user_id: context.userId, user_email: email,
+        });
+      }
       await context.supabase.from("config_audit_log").insert({
         user_id: context.userId, user_email: email, entidad: "colores", accion: "create",
         cambio: `Color "${data.nombre}" creado`, valor_antes: null,
-        valor_despues: `${data.nombre} ${data.hex}`,
+        valor_despues: `${data.nombre} ${data.hex} stock=${data.stock_m}`,
       });
     }
     return { ok: true };
+  });
+
+export const adjustColorStock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    color_id: z.string().uuid(),
+    delta_m: z.number().refine((v) => v !== 0, "Ingresa un valor distinto de 0"),
+    motivo: z.string().trim().min(2).max(200),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    const { data: prev, error: pe } = await context.supabase
+      .from("colores").select("nombre, stock_m").eq("id", data.color_id).single();
+    if (pe || !prev) throw new Error("Color no encontrado");
+    const nuevo = Number(prev.stock_m) + data.delta_m;
+    if (nuevo < 0) throw new Error("El ajuste deja stock negativo.");
+    const { error } = await context.supabase.from("colores").update({ stock_m: nuevo }).eq("id", data.color_id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("stock_movimientos").insert({
+      color_id: data.color_id, color_nombre: prev.nombre,
+      metros: data.delta_m, motivo: data.motivo,
+      user_id: context.userId, user_email: email,
+    });
+    return { ok: true, stock_m: nuevo };
+  });
+
+export const listStockMovimientos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("stock_movimientos").select("*").order("created_at", { ascending: false }).limit(200);
+    if (error) throw new Error(error.message);
+    return data ?? [];
   });
 
 export const deleteColor = createServerFn({ method: "POST" })
@@ -443,7 +494,11 @@ export const deleteColor = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
-    assertSuperadmin(email);
+    const { count } = await context.supabase
+      .from("cotizacion_items").select("id", { count: "exact", head: true }).eq("color_id", data.id);
+    if ((count ?? 0) > 0) {
+      throw new Error(`No se puede eliminar: el color está usado en ${count} líneas de cotización. Desactívalo en su lugar.`);
+    }
     const { data: prev } = await context.supabase.from("colores").select("nombre, hex").eq("id", data.id).single();
     const { error } = await context.supabase.from("colores").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
