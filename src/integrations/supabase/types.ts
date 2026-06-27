@@ -406,6 +406,7 @@ export type Database = {
           estado: Database["public"]["Enums"]["expense_status"]
           fecha: string
           id: string
+          latas: Json
           monto: number
           solicitado_por: string
           solicitante_id: string
@@ -420,6 +421,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["expense_status"]
           fecha?: string
           id?: string
+          latas?: Json
           monto: number
           solicitado_por: string
           solicitante_id: string
@@ -434,6 +436,7 @@ export type Database = {
           estado?: Database["public"]["Enums"]["expense_status"]
           fecha?: string
           id?: string
+          latas?: Json
           monto?: number
           solicitado_por?: string
           solicitante_id?: string

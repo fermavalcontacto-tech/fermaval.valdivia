@@ -307,6 +307,40 @@ export const decideEgreso = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+// ============= LATAS (colores por lata) — visible y editable solo para admins =============
+export const COLORES_LATA = [
+  "Rojo","Azul","Verde","Amarillo","Blanco","Negro","Gris","Naranja","Café","Celeste",
+] as const;
+
+const LataSchema = z.object({
+  descripcion: z.string().trim().min(1).max(120),
+  cantidad: z.number().int().positive().max(10000),
+  color: z.enum(COLORES_LATA),
+});
+
+export const updateEgresoLatas = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    latas: z.array(LataSchema).max(50),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Solo los 4 perfiles administradores (rol 'admin') pueden actualizar.
+    const { data: roles } = await context.supabase
+      .from("user_roles").select("role").eq("user_id", context.userId);
+    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
+    if (!isAdmin) throw new Error("Solo los perfiles administradores pueden modificar el color por lata.");
+
+    const { error } = await context.supabase
+      .from("solicitudes_egreso")
+      .update({ latas: data.latas })
+      .eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
+
 export const listBoletas = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -589,7 +623,7 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       .from("cotizaciones").select("numero, total, pago_recibido, saldo, estado, fecha_solicitud, created_at, cliente:clientes(nombre)")
       .gte("fecha_solicitud", start.toISOString().slice(0,10)).lt("fecha_solicitud", end.toISOString().slice(0,10));
     const { data: gastos } = await context.supabase
-      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por")
+      .from("solicitudes_egreso").select("tipo, descripcion, monto, fecha, estado, solicitado_por, boleta_subida_por, latas")
       .eq("estado","aprobado").gte("fecha", start.toISOString().slice(0,10)).lt("fecha", end.toISOString().slice(0,10));
 
     const ExcelJS = (await import("exceljs")).default;
@@ -616,10 +650,16 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
     ];
     wsVentas.addRows(ventasRows);
 
+    type Lata = { descripcion: string; cantidad: number; color: string };
+    const fmtLatas = (latas: unknown): string => {
+      const arr = Array.isArray(latas) ? (latas as Lata[]) : [];
+      return arr.map((l) => `${l.cantidad}× ${l.descripcion} [${l.color}]`).join(" | ");
+    };
     const gastosRows = (gastos ?? []).map((g) => ({
       Tipo: g.tipo, Descripcion: g.descripcion, Monto: Number(g.monto), Fecha: g.fecha,
       "Solicitado Por": g.solicitado_por ?? "",
       "Boleta Subida Por": g.boleta_subida_por ?? "",
+      "Latas (color)": fmtLatas(g.latas),
     }));
     const wsGastos = wb.addWorksheet("Gastos");
     wsGastos.columns = [
@@ -629,8 +669,10 @@ export const generateMonthlyExcel = createServerFn({ method: "POST" })
       { header: "Fecha", key: "Fecha" },
       { header: "Solicitado Por", key: "Solicitado Por" },
       { header: "Boleta Subida Por", key: "Boleta Subida Por" },
+      { header: "Latas (color)", key: "Latas (color)" },
     ];
     wsGastos.addRows(gastosRows);
+
 
     const totalVendido = ventasRows.reduce((s, r) => s + r.Pagado, 0);
     const totalGastos = gastosRows.reduce((s, r) => s + r.Monto, 0);
