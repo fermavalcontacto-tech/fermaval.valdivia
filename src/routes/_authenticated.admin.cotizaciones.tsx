@@ -46,6 +46,7 @@ function CotizacionesPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
   const [editing, setEditing] = useState<Cotizacion | null>(null);
+  const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
     const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> }).items ?? [])
