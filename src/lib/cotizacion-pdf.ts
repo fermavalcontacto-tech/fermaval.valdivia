@@ -6,6 +6,7 @@ export type CotizacionItem = {
   ancho_m: number;
   cantidad_planchas: number;
   metros2: number;
+  color_nombre?: string | null;
 };
 
 export type CotizacionPDF = {
