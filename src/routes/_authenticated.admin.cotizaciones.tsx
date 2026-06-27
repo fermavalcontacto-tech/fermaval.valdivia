@@ -185,7 +185,7 @@ function CotizacionesPage() {
                           <ExternalLink className="h-4 w-4" />
                         </Link>
                       </Button>
-                      <Button variant="ghost" size="sm" title="Descargar PDF" onClick={() => downloadCotizacionPDF(toPdfData(c))}>
+                      <Button variant="ghost" size="sm" title="Vista previa / Descargar PDF" onClick={() => setPreview({ data: toPdfData(c), cot: c })}>
                         <Download className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="sm" title="Compartir por WhatsApp" onClick={() => shareWhatsApp(c)}>
