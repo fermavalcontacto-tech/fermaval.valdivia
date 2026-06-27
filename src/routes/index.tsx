@@ -117,7 +117,7 @@ function Home() {
         <div className="container mx-auto px-4">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Cotizador instantáneo</div>
-            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">CALCULA TU PEDIDO</h2>
+            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">{cfg.cotizador_titulo}</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Ingresa medidas, elige color y obtén tu cotización al instante. {cfg.info_comercial}
             </p>
