@@ -234,6 +234,15 @@ function QuotePage() {
             </div>
           </div>
 
+          <div className="border-t border-border p-6">
+            <div className="rounded-md border-2 border-accent/40 bg-accent/5 p-4">
+              <div className="text-xs font-bold uppercase tracking-wider text-accent">📌 Validez de la cotización</div>
+              <p className="mt-1 text-sm font-semibold text-foreground">
+                Esta cotización tiene una validez de <span className="text-accent">7 días corridos</span> desde la fecha de emisión.
+              </p>
+            </div>
+          </div>
+
           <div className="border-t border-border bg-muted/40 p-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4 text-accent" />

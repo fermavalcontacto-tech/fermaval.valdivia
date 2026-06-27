@@ -140,7 +140,17 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.text(`Origen: ${origenTxt}`, 15, y);
   if (c.creado_por_email || c.creado_por_nombre) {
     doc.text(`Creada por: ${c.creado_por_nombre ?? ""}${c.creado_por_email ? ` (${c.creado_por_email})` : ""}`, 15, y + 5);
+    y += 5;
   }
+  y += 10;
+  // Cláusula de validez (fija, no editable)
+  doc.setDrawColor(...PRIMARY); doc.setLineWidth(0.4);
+  doc.setFillColor(255, 247, 230);
+  doc.roundedRect(15, y, W - 30, 14, 2, 2, "FD");
+  doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+  doc.text("Validez de la cotización", 20, y + 5);
+  doc.setFont("helvetica", "normal"); doc.setFontSize(9);
+  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
   footer(doc);
   return doc;
 }
