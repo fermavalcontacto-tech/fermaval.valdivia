@@ -86,7 +86,7 @@ function Home() {
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Nuestros productos</div>
-            <h2 className="font-display text-4xl text-primary md:text-5xl">COLORES DISPONIBLES</h2>
+            <h2 className="font-display text-4xl text-primary md:text-5xl">{cfg.productos_titulo}</h2>
           </div>
           <p className="hidden max-w-sm text-sm text-muted-foreground md:block">
             Imágenes referenciales de color. Consulta por otros colores.
