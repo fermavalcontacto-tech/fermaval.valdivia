@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listEgresos, createEgreso, decideEgreso, deleteEgreso, PERSONAS_INTERNAS } from "@/lib/admin.functions";
+import { listEgresos, createEgreso, decideEgreso, deleteEgreso, updateEgresoLatas, COLORES_LATA, PERSONAS_INTERNAS } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2, Download } from "lucide-react";
-import { downloadComprobantePDF } from "@/lib/comprobante-pdf";
+import { Plus, Check, X, Trash2, Download, Palette } from "lucide-react";
+import { downloadComprobantePDF, type LataItem } from "@/lib/comprobante-pdf";
+
+const COLOR_SWATCH: Record<string, string> = {
+  Rojo: "#dc2626", Azul: "#2563eb", Verde: "#16a34a", Amarillo: "#eab308",
+  Blanco: "#f8fafc", Negro: "#111827", Gris: "#6b7280", Naranja: "#ea580c",
+  Café: "#78350f", Celeste: "#38bdf8",
+};
 
 export const Route = createFileRoute("/_authenticated/admin/egresos")({
   component: EgresosPage,
