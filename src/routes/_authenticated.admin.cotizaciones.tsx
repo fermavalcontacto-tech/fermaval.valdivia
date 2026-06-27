@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO,
 } from "@/lib/admin.functions";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
 } from "@/components/ui/dialog";
@@ -27,6 +28,7 @@ import { toast } from "sonner";
 import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
 
 type ColorOption = { id: string; nombre: string; hex: string; activo: boolean; stock_m: number };
+type Tipo = typeof TIPOS_PRODUCTO[number];
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
@@ -40,6 +42,7 @@ type Cotizacion = {
   largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; precio_m2: number;
   descuento: number; total: number; pago_recibido: number; saldo: number;
   color_nombre: string | null; estado: Estado; cliente_id: string;
+  responsable_nombre?: string | null;
   cliente: { id?: string; nombre?: string; correo?: string; telefono?: string; direccion?: string } | null;
 };
 
@@ -49,16 +52,18 @@ function CotizacionesPage() {
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
   const [editing, setEditing] = useState<Cotizacion | null>(null);
   const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
+  const [enviarCorreoAuto, setEnviarCorreoAuto] = useState(true);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
-        largo_m: Number(it.largo_m),
-        ancho_m: Number(it.ancho_m),
+        largo_m: Number(it.largo_m), ancho_m: Number(it.ancho_m),
         cantidad_planchas: Number(it.cantidad_planchas),
         metros2: Number(it.metros2),
         color_nombre: it.color_nombre ?? null,
+        tipo: it.tipo ?? "Ondulado",
+        espesor_mm: Number(it.espesor_mm ?? 0.4),
       }));
     const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
@@ -82,6 +87,7 @@ function CotizacionesPage() {
       origen,
       creado_por_nombre: auth.email?.split("@")[0],
       creado_por_email: auth.email,
+      responsable_nombre: c.responsable_nombre ?? null,
     };
   }
 
@@ -101,10 +107,14 @@ function CotizacionesPage() {
   }
 
 
-  async function dispatchAprobacion(c: Cotizacion) {
+  async function dispatchAprobacion(c: Cotizacion, sendEmail: boolean) {
     const pdfData = toPdfData(c);
     downloadCotizacionPDF(pdfData);
     downloadPagoPDF(pdfData);
+    if (!sendEmail) {
+      toast.info("Envío de correo desactivado — PDFs descargados.");
+      return;
+    }
     const correo = c.cliente?.correo;
     if (!correo) {
       toast.warning("Cliente sin correo: PDFs descargados, no se envió email.");
@@ -129,7 +139,7 @@ function CotizacionesPage() {
       qc.invalidateQueries({ queryKey: ["cotizaciones"] });
       toast.success("Estado actualizado");
       if (v.estado === "pedido_confirmado") {
-        await dispatchAprobacion({ ...v.cot, estado: v.estado });
+        await dispatchAprobacion({ ...v.cot, estado: v.estado }, enviarCorreoAuto);
       }
     },
     onError: (e: Error) => toast.error(e.message),
@@ -147,21 +157,28 @@ function CotizacionesPage() {
           <h1 className="font-display text-4xl text-primary">COTIZACIONES</h1>
           <p className="text-sm text-muted-foreground">Gestiona todas las cotizaciones</p>
         </div>
-        <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
+        <div className="flex items-center gap-3">
+          <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs font-medium">
+            <Switch checked={enviarCorreoAuto} onCheckedChange={setEnviarCorreoAuto} />
+            <span>Enviar correo al cliente al confirmar pedido</span>
+          </label>
+          <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
+        </div>
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="p-3">N°</th><th className="p-3">Cliente</th><th className="p-3">Origen</th><th className="p-3">Fecha</th>
+                <th className="p-3">N°</th><th className="p-3">Cliente</th>
+                <th className="p-3">Responsable</th>
+                <th className="p-3">Origen</th><th className="p-3">Fecha</th>
                 <th className="p-3">Total</th><th className="p-3">Pagado</th><th className="p-3">Saldo</th>
                 <th className="p-3">Estado</th><th className="p-3 text-right">Acciones</th>
               </tr>
-
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
+              {isLoading && <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
               {((data ?? []) as Cotizacion[]).map((c) => {
                 const cli = c.cliente as { nombre?: string } | null;
                 const origen = (c as { origen?: string }).origen ?? "cliente";
@@ -169,10 +186,10 @@ function CotizacionesPage() {
                 <tr key={c.id} className="border-b last:border-0">
                   <td className="p-3 font-mono">{c.numero}</td>
                   <td className="p-3">{cli?.nombre ?? "—"}</td>
+                  <td className="p-3 text-xs">{c.responsable_nombre ?? "—"}</td>
                   <td className="p-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${origen === "interno" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{origen}</span></td>
                   <td className="p-3">{formatDate(c.created_at)}</td>
                   <td className="p-3">{formatCLP(c.total)}</td>
-
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
                   <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
                   <td className="p-3">
@@ -195,7 +212,7 @@ function CotizacionesPage() {
                         <MessageCircle className="h-4 w-4 text-emerald-600" />
                       </Button>
                       {(c.estado === "pedido_confirmado" || c.estado === "pedido_terminado") && (
-                        <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c)}>
+                        <Button variant="ghost" size="sm" title="Descargar / reenviar comprobante" onClick={() => dispatchAprobacion(c, enviarCorreoAuto)}>
                           <Mail className="h-4 w-4" />
                         </Button>
                       )}
@@ -230,9 +247,8 @@ function CotizacionesPage() {
                 </tr>
               )})}
               {!isLoading && (data ?? []).length === 0 && (
-                <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Sin cotizaciones aún.</td></tr>
+                <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Sin cotizaciones aún.</td></tr>
               )}
-
             </tbody>
           </table>
         </div>
@@ -255,13 +271,13 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string; color_id: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
     const l = Number(it.largo) || 0;
     const n = Number(it.cantidad) || 0;
-    return { largo: l, cantidad: n, color_id: it.color_id, m2: Number((l * 1 * n).toFixed(2)) };
+    return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
   });
 }
 
@@ -270,10 +286,17 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
     <div className="sm:col-span-2 space-y-2">
-      <Label>Planchas (ancho fijo: 1 m)</Label>
+      <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
       {items.map((it, i) => (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
-          <div className="grid grid-cols-[1fr_1fr_70px_36px] items-end gap-2">
+          <div className="grid grid-cols-[1fr_1fr_1fr_70px_36px] items-end gap-2">
+            <div>
+              <Label className="text-[10px]">Tipo</Label>
+              <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
             <div>
               <Label className="text-[10px]">Largo (m)</Label>
               <Input type="number" step="0.01" value={it.largo}
@@ -302,7 +325,7 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
                   <SelectItem key={c.id} value={c.id}>
                     <span className="inline-flex items-center gap-2">
                       <span className="h-3 w-3 rounded" style={{ background: c.hex }} />
-                      {c.nombre} · stock {Number(c.stock_m).toFixed(2)} m
+                      {c.nombre}
                     </span>
                   </SelectItem>
                 ))}
@@ -312,7 +335,7 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
         </div>
       ))}
       <div className="flex items-center justify-between">
-        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "" }])}>
+        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
         <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
@@ -323,14 +346,14 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "",
-    color: "", precio_m2: "0",
+    color: "", precio_m2: "0", responsable: "",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "" }]);
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
   useEffect(() => {
     if (!cot) return;
     setForm({
@@ -339,12 +362,16 @@ function EditarCotizacionDialog({
       color: cot.color_nombre ?? "", precio_m2: String(cot.precio_m2),
       descuento: String(cot.descuento ?? 0), pago_recibido: String(cot.pago_recibido),
       estado: cot.estado,
+      responsable: cot.responsable_nombre ?? "",
     });
     const its = (cot.items ?? []).slice().sort((a, b) => a.position - b.position);
     if (its.length) {
-      setItems(its.map((it) => ({ largo: String(it.largo_m), cantidad: String(it.cantidad_planchas), color_id: it.color_id ?? "" })));
+      setItems(its.map((it) => ({
+        largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
+        color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
+      })));
     } else {
-      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "" }]);
+      setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "", tipo: "Ondulado" }]);
     }
   }, [cot]);
 
@@ -361,10 +388,11 @@ function EditarCotizacionDialog({
         nombre: form.nombre, telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       descuento: Number(form.descuento), pago_recibido: Number(form.pago_recibido),
       estado: form.estado,
+      responsable_nombre: form.responsable || null,
     } }),
     onSuccess: () => { toast.success("Cotización actualizada"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
@@ -384,6 +412,13 @@ function EditarCotizacionDialog({
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
           <div><Label>Pago recibido (CLP)</Label><Input type="number" value={form.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /></div>
+          <div className="sm:col-span-2">
+            <Label>Responsable interno</Label>
+            <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
+              <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
+              <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
           <div className="sm:col-span-2">
             <Label>Estado</Label>
             <Select value={form.estado} onValueChange={(v) => setForm({...form, estado: v as Estado})}>
@@ -410,12 +445,16 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ nombre: "", telefono: "", correo: "", direccion: "", color: "", precio_m2: "7990", fecha_solicitud: today });
+  const [form, setForm] = useState({
+    nombre: "", telefono: "", correo: "", direccion: "", color: "",
+    precio_m2: "7990", fecha_solicitud: today,
+    responsable: PERSONAS_INTERNAS[0] as string,
+  });
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
-  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "" }]);
+  const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
   useEffect(() => {
     if (open && colores.length && !items[0]?.color_id) {
-      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id }]);
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id, tipo: "Ondulado" }]);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, colores.length]);
@@ -423,9 +462,10 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
       color_nombre: form.color || null, precio_m2: Number(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
+      responsable_nombre: form.responsable,
     }}),
     onSuccess: (r) => {
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
@@ -433,9 +473,9 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       const total = Math.round(m2 * Number(form.precio_m2));
       const its = itemsCalc.map((it) => {
         const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
-        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null };
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4 };
       });
-      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null };
+      const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null, tipo: "Ondulado", espesor_mm: 0.4 };
       const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
@@ -446,16 +486,17 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         precio_m2: Number(form.precio_m2),
         descuento: 0, total, pago_recibido: 0, saldo: total,
         estado: "Cotización creada",
-        aprobador_nombre: auth.email?.split("@")[0] ?? "Administrador",
+        aprobador_nombre: form.responsable,
         aprobador_email: auth.email ?? "",
         aprobado_at: new Date().toISOString(),
         origen: "interno",
-        creado_por_nombre: auth.email?.split("@")[0],
+        creado_por_nombre: form.responsable,
         creado_por_email: auth.email,
+        responsable_nombre: form.responsable,
       };
       onPreview(pdfData);
       onCreated(); setOpen(false);
-      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "" }]);
+      setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "", tipo: "Ondulado" }]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -470,17 +511,21 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
           <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
           <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
           <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
-          <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
+          <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
           <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
           <div className="sm:col-span-2">
+            <Label>Responsable interno (aparece en el PDF y el panel)</Label>
+            <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="sm:col-span-2">
             <Label>Fecha de la solicitud {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
-            <Input
-              type="date"
-              value={form.fecha_solicitud}
+            <Input type="date" value={form.fecha_solicitud}
               max={isSuper ? undefined : today}
               disabled={!isSuper}
-              onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})}
-            />
+              onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})} />
             {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
           </div>
         </div>
@@ -491,4 +536,3 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     </Dialog>
   );
 }
-
