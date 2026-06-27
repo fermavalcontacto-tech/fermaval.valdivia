@@ -17,13 +17,14 @@ const ItemSchema = z.object({
 const CreateQuoteSchema = z.object({
   cliente: z.object({
     nombre: z.string().trim().min(2).max(120),
-    telefono: z.string().trim().min(6).max(40),
-    correo: z.string().trim().email().max(160),
-    direccion: z.string().trim().min(4).max(300),
+    telefono: z.string().trim().max(40).optional().default(""),
+    correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
+    direccion: z.string().trim().max(300).optional().default(""),
   }),
   items: z.array(ItemSchema).min(1).max(50),
   color_id: z.string().uuid().nullable().optional(),
 });
+
 
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
