@@ -12,6 +12,14 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
 type Color = { id: string; nombre: string; hex: string; imagen_url: string | null; stock_m?: number };
+type FieldCfg = { label: string; visible: boolean; required: boolean };
+type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
+const DEFAULT_FIELDS: FormFields = {
+  nombre: { label: "Nombre", visible: true, required: true },
+  telefono: { label: "Teléfono", visible: true, required: true },
+  correo: { label: "Correo", visible: true, required: true },
+  direccion: { label: "Dirección", visible: true, required: true },
+};
 
 const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
 type Tipo = typeof TIPOS_PRODUCTO[number];
@@ -19,7 +27,14 @@ const ESPESOR_MM = 0.4;
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
-export function CotizadorForm({ precio, colores }: { precio: number; colores: Color[] }) {
+export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
+  const ff: FormFields = {
+    nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
+    telefono: { ...DEFAULT_FIELDS.telefono, ...(formFields?.telefono ?? {}) },
+    correo: { ...DEFAULT_FIELDS.correo, ...(formFields?.correo ?? {}) },
+    direccion: { ...DEFAULT_FIELDS.direccion, ...(formFields?.direccion ?? {}) },
+  };
+
   const navigate = useNavigate();
   const colorMap = useMemo(() => new Map(colores.map((c) => [c.id, c])), [colores]);
   const [items, setItems] = useState<Item[]>([
