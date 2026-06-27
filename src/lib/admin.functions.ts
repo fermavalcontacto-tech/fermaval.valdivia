@@ -464,16 +464,23 @@ export const getDashboard = createServerFn({ method: "GET" })
     const { data: pedidosConf } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).eq("estado", "pedido_confirmado");
     const { data: gastosMes } = await context.supabase.from("solicitudes_egreso").select("monto, estado").eq("estado", "aprobado").gte("fecha", inicioMesISO.slice(0, 10));
     const { count: egresosPendientesCount } = await context.supabase.from("solicitudes_egreso").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
+    // Boletas standalone (sin solicitud_id) — comprobantes que se cargan sueltos y deben sumar al balance
+    const { data: boletasMesStandalone } = await context.supabase.from("boletas").select("monto, fecha, solicitud_id").is("solicitud_id", null).gte("fecha", inicioMesISO.slice(0, 10));
+    const { data: boletasMesTotal } = await context.supabase.from("boletas").select("monto").gte("fecha", inicioMesISO.slice(0, 10));
 
     const ventas = (cotMes ?? []).reduce((s, c) => s + Number(c.pago_recibido), 0);
     const totalCotizado = (cotMes ?? []).reduce((s, c) => s + Number(c.total), 0);
-    const gastos = (gastosMes ?? []).reduce((s, g) => s + Number(g.monto), 0);
+    const gastosSolicitudes = (gastosMes ?? []).reduce((s, g) => s + Number(g.monto), 0);
+    const gastosBoletasStandalone = (boletasMesStandalone ?? []).reduce((s, b) => s + Number(b.monto), 0);
+    const gastos = gastosSolicitudes + gastosBoletasStandalone;
+    const gastosConBoleta = (boletasMesTotal ?? []).reduce((s, b) => s + Number(b.monto), 0);
     const utilidades = ventas - gastos;
     const iva = Math.round(ventas * 0.19 / 1.19);
 
     const since = new Date(); since.setMonth(since.getMonth() - 5); since.setDate(1); since.setHours(0,0,0,0);
     const { data: all } = await context.supabase.from("cotizaciones").select("total, pago_recibido, created_at, estado").gte("created_at", since.toISOString());
     const { data: allGastos } = await context.supabase.from("solicitudes_egreso").select("monto, fecha, estado").eq("estado","aprobado").gte("fecha", since.toISOString().slice(0,10));
+    const { data: allBoletasStandalone } = await context.supabase.from("boletas").select("monto, fecha").is("solicitud_id", null).gte("fecha", since.toISOString().slice(0,10));
 
     const months: Array<{ key: string; label: string; ventas: number; gastos: number; aceptadas: number; rechazadas: number }> = [];
     for (let i = 0; i < 6; i++) {
@@ -495,9 +502,15 @@ export const getDashboard = createServerFn({ method: "GET" })
       const m = months.find(x => x.key === key); if (!m) continue;
       m.gastos += Number(g.monto);
     }
+    for (const b of allBoletasStandalone ?? []) {
+      const d = new Date(b.fecha as string);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const m = months.find(x => x.key === key); if (!m) continue;
+      m.gastos += Number(b.monto);
+    }
 
     return {
-      ventas, totalCotizado, gastos, utilidades, iva,
+      ventas, totalCotizado, gastos, gastosConBoleta, utilidades, iva,
       cotPendientes: cotPendientes?.length ?? 0,
       pedidosConfirmados: pedidosConf?.length ?? 0,
       egresosPendientes: egresosPendientesCount ?? 0,
