@@ -24,6 +24,7 @@ const DEFAULT_FIELDS: FormFields = {
 const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
 type Tipo = typeof TIPOS_PRODUCTO[number];
 const ESPESOR_MM = 0.4;
+const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
@@ -107,9 +108,9 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
 
   return (
-    <Card className="border-2 border-border bg-card p-6 md:p-8 shadow-xl">
-      <form onSubmit={submit} className="grid gap-6">
-        <div className="space-y-3">
+    <Card className="w-full min-w-0 overflow-hidden border-2 border-border bg-card p-4 shadow-xl md:p-8">
+      <form onSubmit={submit} className="grid w-full min-w-0 grid-cols-1 gap-6">
+        <div className="w-full min-w-0 space-y-3">
           <div>
             <Label>Planchas del pedido</Label>
             <p className="text-xs text-muted-foreground">
@@ -120,43 +121,43 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
           {items.map((it, i) => {
             const calc = itemsCalc[i];
             return (
-              <div key={i} className="rounded-md border bg-muted/20 p-3 space-y-3">
-                <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto_auto] md:items-end">
-                  <div>
+              <div key={i} className="w-full min-w-0 space-y-3 overflow-hidden rounded-md border bg-muted/20 p-3">
+                <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
+                  <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`tipo-${i}`}>Tipo</Label>
                     <Select value={it.tipo} onValueChange={(v) => updateItem(i, { tipo: v as Tipo })}>
-                      <SelectTrigger id={`tipo-${i}`} className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectTrigger id={`tipo-${i}`} className="h-9 w-full"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
+                  <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`largo-${i}`}>Largo (m)</Label>
                     <Input id={`largo-${i}`} type="number" step="0.01" min="0" value={it.largo}
                       onChange={(e) => updateItem(i, { largo: e.target.value })} placeholder="0,00" />
                   </div>
-                  <div>
+                  <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`cant-${i}`}>Cantidad</Label>
                     <Input id={`cant-${i}`} type="number" step="1" min="1" value={it.cantidad}
                       onChange={(e) => updateItem(i, { cantidad: e.target.value })} placeholder="1" />
                   </div>
-                  <div className="text-sm">
+                  <div className="flex w-full min-w-0 items-center justify-between rounded-md bg-background px-3 py-2 text-sm md:block md:bg-transparent md:px-0 md:py-0">
                     <div className="text-[10px] uppercase text-muted-foreground">m²</div>
                     <div className="font-mono text-base font-semibold text-primary">{calc.m2.toFixed(2)}</div>
                   </div>
-                  <Button type="button" variant="ghost" size="icon" onClick={() => removeItem(i)} disabled={items.length === 1} title="Quitar">
+                  <Button type="button" variant="ghost" size="icon" className="h-9 w-full md:w-9" onClick={() => removeItem(i)} disabled={items.length === 1} title="Quitar">
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <div>
+                <div className="w-full min-w-0">
                   <Label>Color (espesor fijo 0,4 mm)</Label>
-                  <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                  <div className="mt-2 grid w-full min-w-0 grid-cols-1 gap-2 sm:grid-cols-2 md:grid-cols-4">
                     {colores.map((c) => (
                       <button type="button" key={c.id} onClick={() => updateItem(i, { color_id: c.id })}
-                        className={`flex items-center gap-2 rounded-md border-2 p-2 text-left transition ${it.color_id === c.id ? "border-accent ring-2 ring-accent/30" : "border-border hover:border-accent/50"}`}>
-                        <span className="h-6 w-6 rounded shadow-inner" style={{ background: c.hex }} />
-                        <span className="flex-1 text-xs font-medium leading-tight">{c.nombre}</span>
+                        className={`flex w-full min-w-0 items-center gap-2 rounded-md border-2 p-2 text-left transition ${it.color_id === c.id ? "border-accent ring-2 ring-accent/30" : "border-border hover:border-accent/50"}`}>
+                        <span className="h-6 w-6 shrink-0 rounded shadow-inner" style={{ background: c.hex }} />
+                        <span className="min-w-0 flex-1 text-xs font-medium leading-tight">{c.nombre}</span>
                       </button>
                     ))}
                   </div>
@@ -165,14 +166,14 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
             );
           })}
 
-          <Button type="button" variant="outline" size="sm" onClick={addItem}>
+          <Button type="button" variant="outline" size="sm" className="w-full md:w-auto" onClick={addItem}>
             <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
           </Button>
 
           {itemsCalc.some((x) => x.m2 > 0) && (
-            <div className="rounded-md border bg-background p-3">
+            <div className="w-full min-w-0 rounded-md border bg-background p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalle del pedido</div>
-              <div className="overflow-x-auto">
+              <div className="w-full overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="text-xs text-muted-foreground">
                     <tr className="border-b">
@@ -203,35 +204,39 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
             </div>
           )}
 
-          <div className="rounded-md bg-muted p-3">
+          <div className="w-full min-w-0 rounded-md bg-muted p-3">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total metros cuadrados</div>
             <div className="font-display text-3xl text-primary">{m2Total.toFixed(2)} m²</div>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
           {ff.nombre.visible && (
-            <div><Label htmlFor="nombre">{ff.nombre.label}{ff.nombre.required && " *"}</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="nombre">{ff.nombre.label}{ff.nombre.required && " *"}</Label><Input className="w-full" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
           )}
           {ff.telefono.visible && (
-            <div><Label htmlFor="telefono">{ff.telefono.label}{ff.telefono.required && " *"}</Label><Input id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="telefono">{ff.telefono.label}{ff.telefono.required && " *"}</Label><Input className="w-full" id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
           )}
           {ff.correo.visible && (
-            <div><Label htmlFor="correo">{ff.correo.label}{ff.correo.required && " *"}</Label><Input id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="correo">{ff.correo.label}{ff.correo.required && " *"}</Label><Input className="w-full" id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
           )}
           {ff.direccion.visible && (
-            <div><Label htmlFor="direccion">{ff.direccion.label}{ff.direccion.required && " *"}</Label><Input id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="direccion">{ff.direccion.label}{ff.direccion.required && " *"}</Label><Input className="w-full" id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
           )}
         </div>
 
+        <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground">
+          📌 {PUBLIC_LEGAL_NOTICE}
+        </div>
 
-        <div className="flex flex-col items-start justify-between gap-4 rounded-md border-2 border-dashed border-accent/40 bg-accent/5 p-4 sm:flex-row sm:items-center">
-          <div>
+
+        <div className="flex w-full min-w-0 flex-col items-stretch justify-between gap-4 rounded-md border-2 border-dashed border-accent/40 bg-accent/5 p-4 sm:flex-row sm:items-center">
+          <div className="min-w-0">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total estimado</div>
             <div className="font-display text-4xl text-primary">{formatCLP(total)}</div>
             <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² × {formatCLP(precio)} / m²</div>
           </div>
-          <Button type="submit" variant="hero" size="lg" disabled={mut.isPending}>
+          <Button type="submit" variant="hero" size="lg" className="w-full sm:w-auto" disabled={mut.isPending}>
             {mut.isPending ? "Generando..." : "Generar cotización"}
           </Button>
         </div>
