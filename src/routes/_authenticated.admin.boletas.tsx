@@ -132,7 +132,7 @@ function BoletasPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {((data ?? []) as Boleta[]).map((b) => (
+              {filtered.map((b) => (
                 <tr key={b.id} className="border-b last:border-0">
                   <td className="p-3">{formatDate(b.fecha)}</td>
                   <td className="p-3">{TIPO_GASTO_LABEL[b.tipo_gasto]}</td>
@@ -177,7 +177,7 @@ function BoletasPage() {
                   </td>
                 </tr>
               ))}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Sin boletas aún.</td></tr>}
+              {!isLoading && filtered.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{(data ?? []).length === 0 ? "Sin boletas aún." : "Sin resultados para el filtro."}</td></tr>}
             </tbody>
           </table>
         </div>
