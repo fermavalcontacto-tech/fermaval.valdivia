@@ -272,6 +272,13 @@ function CotizacionesPage() {
 }
 
 type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
+type ItemErrors = { largo?: string; cantidad?: string; color_id?: string };
+type FormErrors = {
+  nombre?: string; telefono?: string; correo?: string; direccion?: string;
+  precio_m2?: string; descuento?: string; pago_recibido?: string;
+  responsable?: string; fecha_solicitud?: string;
+  items?: ItemErrors[]; itemsGeneral?: string;
+};
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
@@ -281,13 +288,73 @@ function calcItems(items: ItemForm[]) {
   });
 }
 
-function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[] }) {
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[+0-9\s()-]{6,20}$/;
+
+function validateCotizacion(
+  form: { nombre: string; telefono: string; correo: string; direccion?: string; precio_m2: string; descuento?: string; pago_recibido?: string; responsable?: string; fecha_solicitud?: string },
+  items: ItemForm[],
+  opts: { requireResponsable?: boolean; requireFecha?: boolean; today?: string; allowFuture?: boolean } = {},
+): { ok: boolean; errors: FormErrors } {
+  const errors: FormErrors = {};
+  const nombre = form.nombre.trim();
+  if (!nombre) errors.nombre = "El nombre es obligatorio";
+  else if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
+  const tel = form.telefono.trim();
+  if (tel && !PHONE_RE.test(tel)) errors.telefono = "Teléfono inválido (6-20 dígitos)";
+  const correo = form.correo.trim();
+  if (correo) {
+    if (correo.length > 255) errors.correo = "Máximo 255 caracteres";
+    else if (!EMAIL_RE.test(correo)) errors.correo = "Correo inválido";
+  }
+  if ((form.direccion ?? "").length > 200) errors.direccion = "Máximo 200 caracteres";
+  const precio = Number(form.precio_m2);
+  if (!form.precio_m2 || Number.isNaN(precio) || precio <= 0) errors.precio_m2 = "Debe ser mayor a 0";
+  else if (precio > 10_000_000) errors.precio_m2 = "Precio fuera de rango";
+  if (form.descuento !== undefined && form.descuento !== "") {
+    const d = Number(form.descuento);
+    if (Number.isNaN(d) || d < 0) errors.descuento = "No puede ser negativo";
+  }
+  if (form.pago_recibido !== undefined && form.pago_recibido !== "") {
+    const p = Number(form.pago_recibido);
+    if (Number.isNaN(p) || p < 0) errors.pago_recibido = "No puede ser negativo";
+  }
+  if (opts.requireResponsable && !(form.responsable ?? "").trim()) errors.responsable = "Selecciona un responsable";
+  if (opts.requireFecha) {
+    if (!form.fecha_solicitud) errors.fecha_solicitud = "La fecha es obligatoria";
+    else if (!opts.allowFuture && opts.today && form.fecha_solicitud > opts.today) errors.fecha_solicitud = "No puede ser futura";
+  }
+  if (!items.length) errors.itemsGeneral = "Agrega al menos una plancha";
+  const itemErrs: ItemErrors[] = items.map((it) => {
+    const e: ItemErrors = {};
+    const l = Number(it.largo);
+    if (!it.largo || Number.isNaN(l) || l <= 0) e.largo = "Largo > 0";
+    else if (l > 50) e.largo = "Máximo 50 m";
+    const n = Number(it.cantidad);
+    if (!it.cantidad || !Number.isInteger(n) || n < 1) e.cantidad = "Mínimo 1";
+    else if (n > 1000) e.cantidad = "Máximo 1000";
+    if (!it.color_id) e.color_id = "Selecciona color";
+    return e;
+  });
+  if (itemErrs.some((e) => Object.keys(e).length)) errors.items = itemErrs;
+  return { ok: !Object.keys(errors).length, errors };
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
+}
+
+function ItemsEditor({ items, setItems, colores, errors, generalError }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string }) {
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
     <div className="sm:col-span-2 space-y-2">
       <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
-      {items.map((it, i) => (
+      {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
+      {items.map((it, i) => {
+        const er = errors?.[i] ?? {};
+        return (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
           <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_70px_36px]">
             <div className="col-span-2 sm:col-span-1">
@@ -298,14 +365,16 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
               </Select>
             </div>
             <div>
-              <Label className="text-[10px]">Largo (m)</Label>
-              <Input type="number" inputMode="decimal" step="0.01" value={it.largo}
+              <Label className="text-[10px]">Largo (m) *</Label>
+              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+              <FieldError msg={er.largo} />
             </div>
             <div>
-              <Label className="text-[10px]">Cantidad</Label>
-              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad}
+              <Label className="text-[10px]">Cantidad *</Label>
+              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+              <FieldError msg={er.cantidad} />
             </div>
             <div className="text-sm">
               <div className="text-[10px] text-muted-foreground">m²</div>
@@ -318,9 +387,9 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
           </div>
 
           <div>
-            <Label className="text-[10px]">Color</Label>
+            <Label className="text-[10px]">Color *</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -332,9 +401,10 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
                 ))}
               </SelectContent>
             </Select>
+            <FieldError msg={er.color_id} />
           </div>
         </div>
-      ))}
+      );})}
       <div className="flex items-center justify-between">
         <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
@@ -355,6 +425,7 @@ function EditarCotizacionDialog({
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
   const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
+  const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
     if (!cot) return;
     setForm({
@@ -404,15 +475,15 @@ function EditarCotizacionDialog({
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
+          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
-          <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
-          <div><Label>Pago recibido (CLP)</Label><Input type="number" value={form.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /></div>
+          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+          <div><Label>Descuento (CLP)</Label><Input type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
+          <div><Label>Pago recibido (CLP)</Label><Input type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
           <div className="sm:col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
@@ -434,7 +505,12 @@ function EditarCotizacionDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Guardar cambios"}</Button>
+          <Button onClick={() => {
+            const v = validateCotizacion(form, items);
+            setErrors(v.errors);
+            if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
+            mut.mutate();
+          }} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Guardar cambios"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -453,6 +529,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   });
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
+  const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
     if (open && colores.length && !items[0]?.color_id) {
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id, tipo: "Ondulado" }]);
@@ -507,31 +584,39 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva cotización (interna)</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
+          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
           <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
+          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="sm:col-span-2">
-            <Label>Responsable interno (aparece en el PDF y el panel)</Label>
+            <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
+            <FieldError msg={errors.responsable} />
           </div>
           <div className="sm:col-span-2">
-            <Label>Fecha de la solicitud {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+            <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
             <Input type="date" value={form.fecha_solicitud}
               max={isSuper ? undefined : today}
               disabled={!isSuper}
+              aria-invalid={!!errors.fecha_solicitud}
               onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})} />
+            <FieldError msg={errors.fecha_solicitud} />
             {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
+          <Button onClick={() => {
+            const v = validateCotizacion(form, items, { requireResponsable: true, requireFecha: true, today, allowFuture: isSuper });
+            setErrors(v.errors);
+            if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
+            mut.mutate();
+          }} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
