@@ -696,7 +696,48 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
             </div>
             <DialogFooter className="flex-col gap-2 sm:flex-row">
               <Button variant="outline" onClick={() => setReviewing(false)} disabled={mut.isPending}>← Modificar / Volver</Button>
-              <Button variant="hero" onClick={() => mut.mutate()} disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="hero" disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="max-w-lg w-[95vw]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar guardado e impacto en stock</AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3 text-sm">
+                        <div className="rounded-md border bg-muted/40 p-2 text-xs">
+                          <div><span className="text-muted-foreground">Estado inicial:</span> <span className="font-medium">Cotización creada</span></div>
+                          <div><span className="text-muted-foreground">Estado de pago:</span> <span className="font-medium">Pendiente</span></div>
+                        </div>
+                        <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 p-2 text-xs text-amber-900 dark:text-amber-200">
+                          <strong>No se descontará stock todavía.</strong> El inventario solo se descuenta cuando la cotización pase a <em>Aceptada</em> con pago <em>Pagada Parcial</em> o <em>Pagada Completa</em>. Si se cancela o elimina, las planchas vuelven al stock.
+                        </div>
+                        <div>
+                          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planchas que se reservarán para descuento futuro</div>
+                          <table className="w-full text-xs">
+                            <thead className="border-b text-left text-muted-foreground">
+                              <tr><th className="py-1">Variante</th><th className="text-right">Cant.</th><th className="text-right">m a descontar</th></tr>
+                            </thead>
+                            <tbody>
+                              {itemsPreview.map((it, i) => (
+                                <tr key={i} className="border-b last:border-0">
+                                  <td className="py-1">{it.tipo} · {it.color_nombre} · 0,4mm</td>
+                                  <td className="text-right font-mono">{it.cantidad}</td>
+                                  <td className="text-right font-mono">{(it.largo * it.cantidad).toFixed(2)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={mut.isPending}>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={(e) => { e.preventDefault(); mut.mutate(); }} disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Sí, guardar"}</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </DialogFooter>
           </>
         )}
