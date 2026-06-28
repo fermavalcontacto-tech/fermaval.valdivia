@@ -478,7 +478,7 @@ function EditarCotizacionDialog({
     <Dialog open={!!cot} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
           <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
@@ -488,21 +488,21 @@ function EditarCotizacionDialog({
           <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
           <div><Label>Pago recibido (CLP)</Label><Input type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
-          <div className="sm:col-span-2">
+          <div className="md:col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
               <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2">
+          <div className="md:col-span-2">
             <Label>Estado</Label>
             <Select value={form.estado} onValueChange={(v) => setForm({...form, estado: v as Estado})}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="md:col-span-2 rounded-md border bg-muted/30 p-3 text-sm">
             <div className="flex justify-between"><span>Total m²:</span><span className="font-mono">{m2.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total:</span><span className="font-mono font-semibold">{formatCLP(total)}</span></div>
             <div className="flex justify-between"><span>Saldo:</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
@@ -606,7 +606,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
         {!reviewing && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
@@ -614,7 +614,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
               <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
               <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
                   <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
@@ -622,7 +622,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 </Select>
                 <FieldError msg={errors.responsable} />
               </div>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2">
                 <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
                 <Input type="date" value={form.fecha_solicitud}
                   max={isSuper ? undefined : today}
@@ -653,7 +653,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border p-3">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h4>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   <div><span className="text-muted-foreground">Nombre:</span> <span className="font-medium">{form.nombre || "—"}</span></div>
                   <div><span className="text-muted-foreground">Teléfono:</span> {form.telefono || "—"}</div>
                   <div><span className="text-muted-foreground">Correo:</span> {form.correo || "—"}</div>
@@ -689,7 +689,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 
-              <section className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+              <section className="grid gap-2 rounded-md border p-3 md:grid-cols-2">
                 <div><span className="text-muted-foreground">Responsable:</span> <span className="font-medium">{form.responsable}</span></div>
                 <div><span className="text-muted-foreground">Fecha solicitud:</span> {form.fecha_solicitud}</div>
               </section>
