@@ -289,22 +289,22 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
       <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
       {items.map((it, i) => (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
-          <div className="grid grid-cols-[1fr_1fr_1fr_70px_36px] items-end gap-2">
-            <div>
+          <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_70px_36px]">
+            <div className="col-span-2 sm:col-span-1">
               <Label className="text-[10px]">Tipo</Label>
               <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label className="text-[10px]">Largo (m)</Label>
-              <Input type="number" step="0.01" value={it.largo}
+              <Input type="number" inputMode="decimal" step="0.01" value={it.largo}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
             </div>
             <div>
               <Label className="text-[10px]">Cantidad</Label>
-              <Input type="number" step="1" min="1" value={it.cantidad}
+              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
             </div>
             <div className="text-sm">
@@ -312,10 +312,11 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
               <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
             </div>
             <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar">
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="justify-self-end">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
+
           <div>
             <Label className="text-[10px]">Color</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
