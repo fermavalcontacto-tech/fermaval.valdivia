@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
-import { useState } from "react";
+import { exportRowsToExcel } from "@/lib/export-excel";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2, Download, Palette } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, Palette, FileSpreadsheet } from "lucide-react";
 import { downloadComprobantePDF, type LataItem } from "@/lib/comprobante-pdf";
 
 const COLOR_SWATCH: Record<string, string> = {
