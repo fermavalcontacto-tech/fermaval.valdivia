@@ -345,13 +345,16 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
 }
 
-function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[] }) {
+function ItemsEditor({ items, setItems, colores, errors, generalError }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string }) {
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
     <div className="sm:col-span-2 space-y-2">
       <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
-      {items.map((it, i) => (
+      {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
+      {items.map((it, i) => {
+        const er = errors?.[i] ?? {};
+        return (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
           <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_70px_36px]">
             <div className="col-span-2 sm:col-span-1">
@@ -362,14 +365,16 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
               </Select>
             </div>
             <div>
-              <Label className="text-[10px]">Largo (m)</Label>
-              <Input type="number" inputMode="decimal" step="0.01" value={it.largo}
+              <Label className="text-[10px]">Largo (m) *</Label>
+              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+              <FieldError msg={er.largo} />
             </div>
             <div>
-              <Label className="text-[10px]">Cantidad</Label>
-              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad}
+              <Label className="text-[10px]">Cantidad *</Label>
+              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad}
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+              <FieldError msg={er.cantidad} />
             </div>
             <div className="text-sm">
               <div className="text-[10px] text-muted-foreground">m²</div>
@@ -382,9 +387,9 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
           </div>
 
           <div>
-            <Label className="text-[10px]">Color</Label>
+            <Label className="text-[10px]">Color *</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectTrigger className="h-8 text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -396,9 +401,10 @@ function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems
                 ))}
               </SelectContent>
             </Select>
+            <FieldError msg={er.color_id} />
           </div>
         </div>
-      ))}
+      );})}
       <div className="flex items-center justify-between">
         <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
