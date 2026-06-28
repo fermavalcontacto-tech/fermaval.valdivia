@@ -425,6 +425,7 @@ function EditarCotizacionDialog({
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
   const [items, setItems] = useState<ItemForm[]>([{ largo: "0", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
+  const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
     if (!cot) return;
     setForm({
