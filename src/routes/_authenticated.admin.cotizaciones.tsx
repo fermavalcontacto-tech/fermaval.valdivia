@@ -272,6 +272,13 @@ function CotizacionesPage() {
 }
 
 type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
+type ItemErrors = { largo?: string; cantidad?: string; color_id?: string };
+type FormErrors = {
+  nombre?: string; telefono?: string; correo?: string; direccion?: string;
+  precio_m2?: string; descuento?: string; pago_recibido?: string;
+  responsable?: string; fecha_solicitud?: string;
+  items?: ItemErrors[]; itemsGeneral?: string;
+};
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
@@ -279,6 +286,63 @@ function calcItems(items: ItemForm[]) {
     const n = Number(it.cantidad) || 0;
     return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
   });
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[+0-9\s()-]{6,20}$/;
+
+function validateCotizacion(
+  form: { nombre: string; telefono: string; correo: string; direccion?: string; precio_m2: string; descuento?: string; pago_recibido?: string; responsable?: string; fecha_solicitud?: string },
+  items: ItemForm[],
+  opts: { requireResponsable?: boolean; requireFecha?: boolean; today?: string; allowFuture?: boolean } = {},
+): { ok: boolean; errors: FormErrors } {
+  const errors: FormErrors = {};
+  const nombre = form.nombre.trim();
+  if (!nombre) errors.nombre = "El nombre es obligatorio";
+  else if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
+  const tel = form.telefono.trim();
+  if (tel && !PHONE_RE.test(tel)) errors.telefono = "Teléfono inválido (6-20 dígitos)";
+  const correo = form.correo.trim();
+  if (correo) {
+    if (correo.length > 255) errors.correo = "Máximo 255 caracteres";
+    else if (!EMAIL_RE.test(correo)) errors.correo = "Correo inválido";
+  }
+  if ((form.direccion ?? "").length > 200) errors.direccion = "Máximo 200 caracteres";
+  const precio = Number(form.precio_m2);
+  if (!form.precio_m2 || Number.isNaN(precio) || precio <= 0) errors.precio_m2 = "Debe ser mayor a 0";
+  else if (precio > 10_000_000) errors.precio_m2 = "Precio fuera de rango";
+  if (form.descuento !== undefined && form.descuento !== "") {
+    const d = Number(form.descuento);
+    if (Number.isNaN(d) || d < 0) errors.descuento = "No puede ser negativo";
+  }
+  if (form.pago_recibido !== undefined && form.pago_recibido !== "") {
+    const p = Number(form.pago_recibido);
+    if (Number.isNaN(p) || p < 0) errors.pago_recibido = "No puede ser negativo";
+  }
+  if (opts.requireResponsable && !(form.responsable ?? "").trim()) errors.responsable = "Selecciona un responsable";
+  if (opts.requireFecha) {
+    if (!form.fecha_solicitud) errors.fecha_solicitud = "La fecha es obligatoria";
+    else if (!opts.allowFuture && opts.today && form.fecha_solicitud > opts.today) errors.fecha_solicitud = "No puede ser futura";
+  }
+  if (!items.length) errors.itemsGeneral = "Agrega al menos una plancha";
+  const itemErrs: ItemErrors[] = items.map((it) => {
+    const e: ItemErrors = {};
+    const l = Number(it.largo);
+    if (!it.largo || Number.isNaN(l) || l <= 0) e.largo = "Largo > 0";
+    else if (l > 50) e.largo = "Máximo 50 m";
+    const n = Number(it.cantidad);
+    if (!it.cantidad || !Number.isInteger(n) || n < 1) e.cantidad = "Mínimo 1";
+    else if (n > 1000) e.cantidad = "Máximo 1000";
+    if (!it.color_id) e.color_id = "Selecciona color";
+    return e;
+  });
+  if (itemErrs.some((e) => Object.keys(e).length)) errors.items = itemErrs;
+  return { ok: !Object.keys(errors).length, errors };
+}
+
+function FieldError({ msg }: { msg?: string }) {
+  if (!msg) return null;
+  return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
 }
 
 function ItemsEditor({ items, setItems, colores }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[] }) {
