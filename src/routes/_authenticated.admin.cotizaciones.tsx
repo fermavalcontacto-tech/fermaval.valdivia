@@ -522,6 +522,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const isSuper = auth.isSuperadmin;
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [form, setForm] = useState({
     nombre: "", telefono: "", correo: "", direccion: "", color: "",
     precio_m2: "7990", fecha_solicitud: today,
@@ -537,6 +538,8 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, colores.length]);
   const itemsCalc = calcItems(items);
+  const m2Total = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
+  const totalCalc = Math.max(0, Math.round(m2Total * (Number(form.precio_m2) || 0)));
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
@@ -547,8 +550,6 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     }}),
     onSuccess: (r) => {
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
-      const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
-      const total = Math.round(m2 * Number(form.precio_m2));
       const its = itemsCalc.map((it) => {
         const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
         return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4 };
@@ -558,11 +559,11 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         numero: r.numero,
         fecha: new Date().toISOString(),
         cliente: { nombre: form.nombre, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
-        largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2,
+        largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2Total,
         items: its,
         color_nombre: form.color || null,
         precio_m2: Number(form.precio_m2),
-        descuento: 0, total, pago_recibido: 0, saldo: total,
+        descuento: 0, total: totalCalc, pago_recibido: 0, saldo: totalCalc,
         estado: "Cotización creada",
         aprobador_nombre: form.responsable,
         aprobador_email: auth.email ?? "",
@@ -573,51 +574,132 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         responsable_nombre: form.responsable,
       };
       onPreview(pdfData);
-      onCreated(); setOpen(false);
+      onCreated();
+      setOpen(false);
+      setReviewing(false);
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "", tipo: "Ondulado" }]);
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  function handleOpenChange(o: boolean) {
+    setOpen(o);
+    if (!o) setReviewing(false);
+  }
+
+  const itemsPreview = itemsCalc.map((it) => {
+    const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
+    return { ...it, color_nombre: col?.nombre ?? "—", color_hex: col?.hex ?? "#ccc" };
+  });
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild><Button variant="hero"><Plus className="mr-1 h-4 w-4" /> Nueva</Button></DialogTrigger>
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Nueva cotización (interna)</DialogTitle></DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-          <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-          <div className="sm:col-span-2">
-            <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
-            <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
-              <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
-              <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-            </Select>
-            <FieldError msg={errors.responsable} />
-          </div>
-          <div className="sm:col-span-2">
-            <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
-            <Input type="date" value={form.fecha_solicitud}
-              max={isSuper ? undefined : today}
-              disabled={!isSuper}
-              aria-invalid={!!errors.fecha_solicitud}
-              onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})} />
-            <FieldError msg={errors.fecha_solicitud} />
-            {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
-          </div>
-        </div>
-        <DialogFooter>
-          <Button onClick={() => {
-            const v = validateCotizacion(form, items, { requireResponsable: true, requireFecha: true, today, allowFuture: isSuper });
-            setErrors(v.errors);
-            if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
-            mut.mutate();
-          }} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
-        </DialogFooter>
+        <DialogHeader>
+          <DialogTitle>{reviewing ? "Vista previa — confirma antes de guardar" : "Nueva cotización (interna)"}</DialogTitle>
+        </DialogHeader>
+
+        {!reviewing && (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+              <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+              <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+              <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
+              <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
+              <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+              <div className="sm:col-span-2">
+                <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
+                <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
+                  <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
+                  <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                </Select>
+                <FieldError msg={errors.responsable} />
+              </div>
+              <div className="sm:col-span-2">
+                <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+                <Input type="date" value={form.fecha_solicitud}
+                  max={isSuper ? undefined : today}
+                  disabled={!isSuper}
+                  aria-invalid={!!errors.fecha_solicitud}
+                  onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})} />
+                <FieldError msg={errors.fecha_solicitud} />
+                {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button onClick={() => {
+                const v = validateCotizacion(form, items, { requireResponsable: true, requireFecha: true, today, allowFuture: isSuper });
+                setErrors(v.errors);
+                if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
+                setReviewing(true);
+              }} variant="hero">Crear</Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {reviewing && (
+          <>
+            <div className="space-y-4 text-sm">
+              <div className="rounded-md border bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+                Revisa los datos antes de confirmar. Si algo no está correcto, vuelve al formulario.
+              </div>
+
+              <section className="rounded-md border p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h4>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div><span className="text-muted-foreground">Nombre:</span> <span className="font-medium">{form.nombre || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Teléfono:</span> {form.telefono || "—"}</div>
+                  <div><span className="text-muted-foreground">Correo:</span> {form.correo || "—"}</div>
+                  <div><span className="text-muted-foreground">Dirección:</span> {form.direccion || "—"}</div>
+                </div>
+              </section>
+
+              <section className="rounded-md border p-3">
+                <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planchas</h4>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="border-b text-left text-muted-foreground">
+                      <tr><th className="py-1">Tipo</th><th>Color</th><th className="text-right">Largo (m)</th><th className="text-right">Cant.</th><th className="text-right">m²</th></tr>
+                    </thead>
+                    <tbody>
+                      {itemsPreview.map((it, i) => (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="py-1">{it.tipo}</td>
+                          <td><span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ background: it.color_hex }} />{it.color_nombre}</span></td>
+                          <td className="text-right font-mono">{it.largo.toFixed(2)}</td>
+                          <td className="text-right font-mono">{it.cantidad}</td>
+                          <td className="text-right font-mono">{it.m2.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+
+              <section className="rounded-md border bg-muted/30 p-3">
+                <div className="flex justify-between"><span>Total m²:</span><span className="font-mono font-semibold">{m2Total.toFixed(2)}</span></div>
+                <div className="flex justify-between"><span>Precio / m²:</span><span className="font-mono">{formatCLP(Number(form.precio_m2) || 0)}</span></div>
+                <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
+              </section>
+
+              <section className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+                <div><span className="text-muted-foreground">Responsable:</span> <span className="font-medium">{form.responsable}</span></div>
+                <div><span className="text-muted-foreground">Fecha solicitud:</span> {form.fecha_solicitud}</div>
+              </section>
+
+              <p className="text-[11px] text-muted-foreground">
+                Al confirmar se registrará la cotización, se descontará stock cuando corresponda según el estado de pago y se gatillará el envío de correos asociado.
+              </p>
+            </div>
+            <DialogFooter className="flex-col gap-2 sm:flex-row">
+              <Button variant="outline" onClick={() => setReviewing(false)} disabled={mut.isPending}>← Modificar / Volver</Button>
+              <Button variant="hero" onClick={() => mut.mutate()} disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
