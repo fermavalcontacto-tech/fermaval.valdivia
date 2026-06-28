@@ -584,31 +584,39 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva cotización (interna)</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
+          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
           <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
+          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="sm:col-span-2">
-            <Label>Responsable interno (aparece en el PDF y el panel)</Label>
+            <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
+            <FieldError msg={errors.responsable} />
           </div>
           <div className="sm:col-span-2">
-            <Label>Fecha de la solicitud {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
+            <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
             <Input type="date" value={form.fecha_solicitud}
               max={isSuper ? undefined : today}
               disabled={!isSuper}
+              aria-invalid={!!errors.fecha_solicitud}
               onChange={(e)=>setForm({...form, fecha_solicitud: e.target.value})} />
+            <FieldError msg={errors.fecha_solicitud} />
             {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
+          <Button onClick={() => {
+            const v = validateCotizacion(form, items, { requireResponsable: true, requireFecha: true, today, allowFuture: isSuper });
+            setErrors(v.errors);
+            if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
+            mut.mutate();
+          }} disabled={mut.isPending} variant="hero">{mut.isPending ? "Creando..." : "Crear"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
