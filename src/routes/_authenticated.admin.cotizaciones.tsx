@@ -37,6 +37,9 @@ export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
 const estados = ["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"] as const;
 type Estado = typeof estados[number];
 
+const QUOTE_DIALOG_CLASS = "quote-mobile-force left-0 top-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 overflow-y-auto overflow-x-hidden rounded-none border-0 p-3 pt-11 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90dvh] sm:w-[min(720px,calc(100vw-2rem))] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6";
+const QUOTE_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
+
 type Cotizacion = {
   id: string; numero: string; created_at: string;
   largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; precio_m2: number;
@@ -349,48 +352,51 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
-    <div className="md:col-span-2 space-y-2">
-      <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
+    <div className="w-full min-w-0 space-y-3 md:col-span-2">
+      <div className="space-y-1">
+        <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
+        <p className="text-xs text-muted-foreground">Agrega cada medida en una línea independiente.</p>
+      </div>
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
         return (
-        <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
-          <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_70px_36px] md:items-end">
-            <div className="min-w-0">
+        <div key={i} className="w-full min-w-0 space-y-3 overflow-hidden rounded-md border bg-muted/20 p-3">
+          <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
+            <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Tipo</Label>
               <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
                 <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="min-w-0">
+            <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Largo (m) *</Label>
               <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
               <FieldError msg={er.largo} />
             </div>
-            <div className="min-w-0">
+            <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Cantidad *</Label>
               <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
               <FieldError msg={er.cantidad} />
             </div>
-            <div className="flex items-center justify-between gap-2 md:block">
+            <div className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md bg-background px-3 py-2 md:block md:bg-transparent md:px-0 md:py-0">
               <div className="text-[10px] text-muted-foreground">m²</div>
               <div className="font-mono text-sm font-semibold">{calc[i].m2.toFixed(2)}</div>
               <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-                onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="md:hidden">
+                onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="h-9 w-9 shrink-0 md:hidden">
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
             </div>
             <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="hidden justify-self-end md:inline-flex">
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="hidden w-9 justify-self-end md:inline-flex">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
 
-          <div className="min-w-0">
+          <div className="w-full min-w-0 space-y-1">
             <Label className="text-[10px]">Color *</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
               <SelectTrigger className="h-9 w-full text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
@@ -409,8 +415,8 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
           </div>
         </div>
       );})}
-      <div className="flex flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
-        <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
+      <div className="flex w-full flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
+        <Button type="button" variant="outline" size="sm" className="quote-mobile-button" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
         <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
@@ -476,40 +482,39 @@ function EditarCotizacionDialog({
 
   return (
     <Dialog open={!!cot} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+      <DialogContent className={QUOTE_DIALOG_CLASS}>
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
-        <div className="grid gap-3 md:grid-cols-2">
-          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+        <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+          <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
           <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-          <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-          <div><Label>Descuento (CLP)</Label><Input type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
-          <div><Label>Pago recibido (CLP)</Label><Input type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
-          <div className="md:col-span-2">
+          <div className="w-full min-w-0 space-y-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Descuento (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
+          <div className="w-full min-w-0 space-y-1 md:col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
               <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2">
+          <div className="w-full min-w-0 space-y-1 md:col-span-2">
             <Label>Estado</Label>
             <Select value={form.estado} onValueChange={(v) => setForm({...form, estado: v as Estado})}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="md:col-span-2 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="w-full min-w-0 rounded-md border bg-muted/30 p-3 text-sm md:col-span-2">
             <div className="flex justify-between"><span>Total m²:</span><span className="font-mono">{m2.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total:</span><span className="font-mono font-semibold">{formatCLP(total)}</span></div>
             <div className="flex justify-between"><span>Saldo:</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
           </div>
         </div>
-        <DialogFooter>
-          <Button onClick={() => {
+        <DialogFooter className="w-full gap-2">
+          <Button className="quote-mobile-button" onClick={() => {
             const v = validateCotizacion(form, items);
             setErrors(v.errors);
             if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
@@ -598,23 +603,22 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild><Button variant="hero"><Plus className="mr-1 h-4 w-4" /> Nueva</Button></DialogTrigger>
-      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
+      <DialogTrigger asChild><Button variant="hero" className="w-full md:w-auto"><Plus className="mr-1 h-4 w-4" /> Nueva</Button></DialogTrigger>
+      <DialogContent className={QUOTE_DIALOG_CLASS}>
         <DialogHeader>
           <DialogTitle>{reviewing ? "Vista previa — confirma antes de guardar" : "Nueva cotización (interna)"}</DialogTitle>
         </DialogHeader>
 
         {!reviewing && (
           <>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
-              <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
-              <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
-              <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+            <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
               <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-              <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-              <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-              <div className="md:col-span-2">
+              <div className="w-full min-w-0 space-y-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+              <div className="w-full min-w-0 space-y-1 md:col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
                   <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
@@ -622,7 +626,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 </Select>
                 <FieldError msg={errors.responsable} />
               </div>
-              <div className="md:col-span-2">
+              <div className="w-full min-w-0 space-y-1 md:col-span-2">
                 <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
                 <Input type="date" value={form.fecha_solicitud}
                   max={isSuper ? undefined : today}
@@ -632,9 +636,12 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <FieldError msg={errors.fecha_solicitud} />
                 {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
               </div>
+              <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground md:col-span-2">
+                📌 {QUOTE_LEGAL_NOTICE}
+              </div>
             </div>
-            <DialogFooter>
-              <Button onClick={() => {
+            <DialogFooter className="w-full gap-2">
+              <Button className="quote-mobile-button" onClick={() => {
                 const v = validateCotizacion(form, items, { requireResponsable: true, requireFecha: true, today, allowFuture: isSuper });
                 setErrors(v.errors);
                 if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
@@ -646,14 +653,14 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
         {reviewing && (
           <>
-            <div className="space-y-4 text-sm">
+            <div className="w-full min-w-0 space-y-4 text-sm">
               <div className="rounded-md border bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
                 Revisa los datos antes de confirmar. Si algo no está correcto, vuelve al formulario.
               </div>
 
               <section className="rounded-md border p-3">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h4>
-                <div className="grid gap-2 md:grid-cols-2">
+                <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-2 md:grid-cols-2">
                   <div><span className="text-muted-foreground">Nombre:</span> <span className="font-medium">{form.nombre || "—"}</span></div>
                   <div><span className="text-muted-foreground">Teléfono:</span> {form.telefono || "—"}</div>
                   <div><span className="text-muted-foreground">Correo:</span> {form.correo || "—"}</div>
@@ -663,24 +670,21 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border p-3">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planchas</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs">
-                    <thead className="border-b text-left text-muted-foreground">
-                      <tr><th className="py-1">Tipo</th><th>Color</th><th className="text-right">Largo (m)</th><th className="text-right">Cant.</th><th className="text-right">m²</th></tr>
-                    </thead>
-                    <tbody>
-                      {itemsPreview.map((it, i) => (
-                        <tr key={i} className="border-b last:border-0">
-                          <td className="py-1">{it.tipo}</td>
-                          <td><span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded" style={{ background: it.color_hex }} />{it.color_nombre}</span></td>
-                          <td className="text-right font-mono">{it.largo.toFixed(2)}</td>
-                          <td className="text-right font-mono">{it.cantidad}</td>
-                          <td className="text-right font-mono">{it.m2.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="grid w-full min-w-0 grid-cols-1 gap-2">
+                  {itemsPreview.map((it, i) => (
+                    <div key={i} className="grid w-full min-w-0 grid-cols-2 gap-2 rounded-md bg-muted/30 p-2 text-xs">
+                      <div className="col-span-2 font-semibold">#{i + 1} · {it.tipo}</div>
+                      <div className="col-span-2 inline-flex min-w-0 items-center gap-1"><span className="h-3 w-3 shrink-0 rounded" style={{ background: it.color_hex }} /><span className="truncate">{it.color_nombre}</span></div>
+                      <div><span className="text-muted-foreground">Largo:</span> <span className="font-mono">{it.largo.toFixed(2)} m</span></div>
+                      <div><span className="text-muted-foreground">Cant.:</span> <span className="font-mono">{it.cantidad}</span></div>
+                      <div className="col-span-2"><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
+                    </div>
+                  ))}
                 </div>
+              </section>
+
+              <section className="quote-legal-notice rounded-md p-3 text-xs font-medium text-foreground">
+                📌 {QUOTE_LEGAL_NOTICE}
               </section>
 
               <section className="rounded-md border bg-muted/30 p-3">
@@ -689,7 +693,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 
-              <section className="grid gap-2 rounded-md border p-3 md:grid-cols-2">
+              <section className="quote-mobile-grid grid gap-2 rounded-md border p-3 md:grid-cols-2">
                 <div><span className="text-muted-foreground">Responsable:</span> <span className="font-medium">{form.responsable}</span></div>
                 <div><span className="text-muted-foreground">Fecha solicitud:</span> {form.fecha_solicitud}</div>
               </section>
@@ -698,13 +702,13 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 Al confirmar se registrará la cotización, se descontará stock cuando corresponda según el estado de pago y se gatillará el envío de correos asociado.
               </p>
             </div>
-            <DialogFooter className="flex-col gap-2 sm:flex-row">
-              <Button variant="outline" onClick={() => setReviewing(false)} disabled={mut.isPending}>← Modificar / Volver</Button>
+            <DialogFooter className="w-full flex-col gap-2 sm:flex-row">
+              <Button className="quote-mobile-button" variant="outline" onClick={() => setReviewing(false)} disabled={mut.isPending}>← Modificar / Volver</Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="hero" disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
+                  <Button className="quote-mobile-button" variant="hero" disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="max-w-lg w-[95vw]">
+                <AlertDialogContent className="quote-mobile-force left-0 top-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 overflow-y-auto overflow-x-hidden rounded-none border-0 p-3 pt-11 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90dvh] sm:w-[min(560px,calc(100vw-2rem))] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6">
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmar guardado e impacto en stock</AlertDialogTitle>
                     <AlertDialogDescription asChild>
@@ -718,20 +722,15 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                         </div>
                         <div>
                           <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Planchas que se reservarán para descuento futuro</div>
-                          <table className="w-full text-xs">
-                            <thead className="border-b text-left text-muted-foreground">
-                              <tr><th className="py-1">Variante</th><th className="text-right">Cant.</th><th className="text-right">m a descontar</th></tr>
-                            </thead>
-                            <tbody>
-                              {itemsPreview.map((it, i) => (
-                                <tr key={i} className="border-b last:border-0">
-                                  <td className="py-1">{it.tipo} · {it.color_nombre} · 0,4mm</td>
-                                  <td className="text-right font-mono">{it.cantidad}</td>
-                                  <td className="text-right font-mono">{(it.largo * it.cantidad).toFixed(2)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                          <div className="grid gap-2 text-xs">
+                            {itemsPreview.map((it, i) => (
+                              <div key={i} className="rounded-md border bg-background p-2">
+                                <div className="font-medium">{it.tipo} · {it.color_nombre} · 0,4mm</div>
+                                <div className="mt-1 flex justify-between gap-2"><span>Cantidad</span><span className="font-mono">{it.cantidad}</span></div>
+                                <div className="flex justify-between gap-2"><span>m a descontar</span><span className="font-mono">{(it.largo * it.cantidad).toFixed(2)}</span></div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </AlertDialogDescription>
