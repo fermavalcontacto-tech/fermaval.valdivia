@@ -152,21 +152,21 @@ function CotizacionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-4xl text-primary">COTIZACIONES</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl text-primary md:text-4xl">COTIZACIONES</h1>
           <p className="text-sm text-muted-foreground">Gestiona todas las cotizaciones</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
           <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs font-medium">
             <Switch checked={enviarCorreoAuto} onCheckedChange={setEnviarCorreoAuto} />
-            <span>Enviar correo al cliente al confirmar pedido</span>
+            <span className="leading-tight">Enviar correo al cliente al confirmar pedido</span>
           </label>
           <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
         </div>
       </div>
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
@@ -349,47 +349,51 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
-    <div className="sm:col-span-2 space-y-2">
+    <div className="md:col-span-2 space-y-2">
       <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
         return (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
-          <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_70px_36px]">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_70px_36px] md:items-end">
+            <div className="min-w-0">
               <Label className="text-[10px]">Tipo</Label>
               <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-[10px]">Largo (m) *</Label>
-              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo}
+              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
               <FieldError msg={er.largo} />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-[10px]">Cantidad *</Label>
-              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad}
+              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
               <FieldError msg={er.cantidad} />
             </div>
-            <div className="text-sm">
+            <div className="flex items-center justify-between gap-2 md:block">
               <div className="text-[10px] text-muted-foreground">m²</div>
-              <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
+              <div className="font-mono text-sm font-semibold">{calc[i].m2.toFixed(2)}</div>
+              <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
+                onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="md:hidden">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
             <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="justify-self-end">
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="hidden justify-self-end md:inline-flex">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label className="text-[10px]">Color *</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
-              <SelectTrigger className="h-8 text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-full text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -405,7 +409,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
           </div>
         </div>
       );})}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
         <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
@@ -474,7 +478,7 @@ function EditarCotizacionDialog({
     <Dialog open={!!cot} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 md:grid-cols-2">
           <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
           <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
@@ -484,21 +488,21 @@ function EditarCotizacionDialog({
           <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
           <div><Label>Descuento (CLP)</Label><Input type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
           <div><Label>Pago recibido (CLP)</Label><Input type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
-          <div className="sm:col-span-2">
+          <div className="md:col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
               <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2">
+          <div className="md:col-span-2">
             <Label>Estado</Label>
             <Select value={form.estado} onValueChange={(v) => setForm({...form, estado: v as Estado})}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="sm:col-span-2 rounded-md border bg-muted/30 p-3 text-sm">
+          <div className="md:col-span-2 rounded-md border bg-muted/30 p-3 text-sm">
             <div className="flex justify-between"><span>Total m²:</span><span className="font-mono">{m2.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total:</span><span className="font-mono font-semibold">{formatCLP(total)}</span></div>
             <div className="flex justify-between"><span>Saldo:</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
@@ -602,7 +606,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
         {!reviewing && (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-2">
               <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
@@ -610,7 +614,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
               <div><Label>Color (texto libre, opcional)</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
               <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
                   <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
@@ -618,7 +622,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 </Select>
                 <FieldError msg={errors.responsable} />
               </div>
-              <div className="sm:col-span-2">
+              <div className="md:col-span-2">
                 <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
                 <Input type="date" value={form.fecha_solicitud}
                   max={isSuper ? undefined : today}
@@ -649,7 +653,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border p-3">
                 <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cliente</h4>
-                <div className="grid gap-2 sm:grid-cols-2">
+                <div className="grid gap-2 md:grid-cols-2">
                   <div><span className="text-muted-foreground">Nombre:</span> <span className="font-medium">{form.nombre || "—"}</span></div>
                   <div><span className="text-muted-foreground">Teléfono:</span> {form.telefono || "—"}</div>
                   <div><span className="text-muted-foreground">Correo:</span> {form.correo || "—"}</div>
@@ -685,7 +689,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 
-              <section className="grid gap-2 rounded-md border p-3 sm:grid-cols-2">
+              <section className="grid gap-2 rounded-md border p-3 md:grid-cols-2">
                 <div><span className="text-muted-foreground">Responsable:</span> <span className="font-medium">{form.responsable}</span></div>
                 <div><span className="text-muted-foreground">Fecha solicitud:</span> {form.fecha_solicitud}</div>
               </section>
