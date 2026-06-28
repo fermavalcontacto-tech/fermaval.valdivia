@@ -401,7 +401,7 @@ function EditarCotizacionDialog({
 
   return (
     <Dialog open={!!cot} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
@@ -504,7 +504,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button variant="hero"><Plus className="mr-1 h-4 w-4" /> Nueva</Button></DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva cotización (interna)</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
           <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
