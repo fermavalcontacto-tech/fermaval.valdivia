@@ -156,7 +156,7 @@ function EgresosPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {(data ?? []).map((s) => {
+              {filtered.map((s) => {
                 const latas = (s.latas as LataItem[] | null) ?? [];
                 return (
                 <tr key={s.id} className="border-b last:border-0">
@@ -241,7 +241,7 @@ function EgresosPage() {
                 </tr>
                 );
               })}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Sin solicitudes.</td></tr>}
+              {!isLoading && filtered.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">{(data ?? []).length === 0 ? "Sin solicitudes." : "Sin resultados para el filtro."}</td></tr>}
 
             </tbody>
           </table>
