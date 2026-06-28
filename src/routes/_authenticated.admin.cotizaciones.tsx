@@ -349,47 +349,51 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
-    <div className="sm:col-span-2 space-y-2">
+    <div className="md:col-span-2 space-y-2">
       <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
         return (
         <div key={i} className="rounded-md border bg-muted/20 p-2 space-y-2">
-          <div className="grid grid-cols-2 items-end gap-2 sm:grid-cols-[1fr_1fr_1fr_70px_36px]">
-            <div className="col-span-2 sm:col-span-1">
+          <div className="grid w-full grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_1fr_70px_36px] md:items-end">
+            <div className="min-w-0">
               <Label className="text-[10px]">Tipo</Label>
               <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-[10px]">Largo (m) *</Label>
-              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo}
+              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
               <FieldError msg={er.largo} />
             </div>
-            <div>
+            <div className="min-w-0">
               <Label className="text-[10px]">Cantidad *</Label>
-              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad}
+              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad} className="w-full"
                 onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
               <FieldError msg={er.cantidad} />
             </div>
-            <div className="text-sm">
+            <div className="flex items-center justify-between gap-2 md:block">
               <div className="text-[10px] text-muted-foreground">m²</div>
-              <div className="font-mono font-semibold">{calc[i].m2.toFixed(2)}</div>
+              <div className="font-mono text-sm font-semibold">{calc[i].m2.toFixed(2)}</div>
+              <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
+                onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="md:hidden">
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
             </div>
             <Button type="button" variant="ghost" size="icon" disabled={items.length === 1}
-              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="justify-self-end">
+              onClick={() => setItems(items.filter((_, idx) => idx !== i))} title="Quitar" className="hidden justify-self-end md:inline-flex">
               <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <Label className="text-[10px]">Color *</Label>
             <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
-              <SelectTrigger className="h-8 text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-full text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -405,7 +409,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
           </div>
         </div>
       );})}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
         <Button type="button" variant="outline" size="sm" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
