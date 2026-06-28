@@ -14,6 +14,8 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
+const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-mobile-first-20260628`;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -83,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc8b3ed9-4915-48e9-a141-a3b042823a05/id-preview-da8e66ed--d621ae92-3d0e-4687-a7c9-dc98be710e2c.lovable.app-1782240655457.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bc8b3ed9-4915-48e9-a141-a3b042823a05/id-preview-da8e66ed--d621ae92-3d0e-4687-a7c9-dc98be710e2c.lovable.app-1782240655457.png" },
     ],
-    links: [{ rel: "stylesheet", href: `${appCss}?v=fermaval-mobile-first-20260628` }],
+    links: [{ rel: "stylesheet", href: cacheBustedAppCss }],
   }),
   shellComponent: RootShell,
   component: RootComponent,
