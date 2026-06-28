@@ -152,21 +152,21 @@ function CotizacionesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-4xl text-primary">COTIZACIONES</h1>
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl text-primary md:text-4xl">COTIZACIONES</h1>
           <p className="text-sm text-muted-foreground">Gestiona todas las cotizaciones</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
           <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs font-medium">
             <Switch checked={enviarCorreoAuto} onCheckedChange={setEnviarCorreoAuto} />
-            <span>Enviar correo al cliente al confirmar pedido</span>
+            <span className="leading-tight">Enviar correo al cliente al confirmar pedido</span>
           </label>
           <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
         </div>
       </div>
       <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
