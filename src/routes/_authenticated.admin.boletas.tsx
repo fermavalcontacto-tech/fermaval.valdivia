@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
-import { useEffect, useState } from "react";
+import { exportRowsToExcel } from "@/lib/export-excel";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, FileImage, Download, Pencil, Trash2 } from "lucide-react";
+import { Plus, FileImage, Download, Pencil, Trash2, FileSpreadsheet } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin/boletas")({
   component: BoletasPage,
@@ -41,6 +42,7 @@ function BoletasPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["boletas"], queryFn: () => listBoletas() });
   const [editing, setEditing] = useState<Boleta | null>(null);
+  const [filtroResp, setFiltroResp] = useState<Persona | "todos">("todos");
 
   const del = useMutation({
     mutationFn: (id: string) => deleteBoleta({ data: { id } }),
@@ -58,6 +60,38 @@ function BoletasPage() {
     a.click();
   }
 
+  const filtered = useMemo<Boleta[]>(() => {
+    const list = ((data ?? []) as Boleta[]);
+    if (filtroResp === "todos") return list;
+    return list.filter((b) => b.responsable === filtroResp);
+  }, [data, filtroResp]);
+
+  async function exportarFiltrado() {
+    if (filtered.length === 0) { toast.error("No hay boletas que exportar"); return; }
+    const sufijo = filtroResp === "todos" ? "todos" : filtroResp;
+    await exportRowsToExcel({
+      filename: `boletas-${sufijo}-${new Date().toISOString().slice(0,10)}.xlsx`,
+      sheetName: "Boletas",
+      columns: [
+        { header: "Fecha", key: "fecha", width: 14 },
+        { header: "Tipo", key: "tipo", width: 16 },
+        { header: "Descripción", key: "descripcion", width: 40 },
+        { header: "Monto (CLP)", key: "monto", width: 16 },
+        { header: "Boleta Subida Por", key: "responsable", width: 20 },
+        { header: "Archivo", key: "archivo", width: 30 },
+      ],
+      rows: filtered.map((b) => ({
+        fecha: formatDate(b.fecha),
+        tipo: TIPO_GASTO_LABEL[b.tipo_gasto] ?? b.tipo_gasto,
+        descripcion: b.descripcion ?? "",
+        monto: Number(b.monto),
+        responsable: b.responsable ?? "",
+        archivo: b.archivo_nombre ?? "",
+      })),
+    });
+    toast.success(`Exportadas ${filtered.length} boletas`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between">
@@ -66,6 +100,26 @@ function BoletasPage() {
           <p className="text-sm text-muted-foreground">Sube y clasifica tus gastos</p>
         </div>
         <NuevaBoleta onCreated={() => qc.invalidateQueries({ queryKey: ["boletas"] })} />
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[220px]">
+          <Label className="text-xs">Filtrar por “Boleta Subida Por”</Label>
+          <Select value={filtroResp} onValueChange={(v) => setFiltroResp(v as Persona | "todos")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {PERSONAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Mostrando <strong>{filtered.length}</strong> de {(data ?? []).length}
+        </div>
+        <div className="ml-auto">
+          <Button variant="outline" onClick={exportarFiltrado}>
+            <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar filtrados a Excel
+          </Button>
+        </div>
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -78,7 +132,7 @@ function BoletasPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {((data ?? []) as Boleta[]).map((b) => (
+              {filtered.map((b) => (
                 <tr key={b.id} className="border-b last:border-0">
                   <td className="p-3">{formatDate(b.fecha)}</td>
                   <td className="p-3">{TIPO_GASTO_LABEL[b.tipo_gasto]}</td>
@@ -123,7 +177,7 @@ function BoletasPage() {
                   </td>
                 </tr>
               ))}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">Sin boletas aún.</td></tr>}
+              {!isLoading && filtered.length === 0 && <tr><td colSpan={7} className="p-6 text-center text-muted-foreground">{(data ?? []).length === 0 ? "Sin boletas aún." : "Sin resultados para el filtro."}</td></tr>}
             </tbody>
           </table>
         </div>

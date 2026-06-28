@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP, formatDate, TIPO_GASTO_LABEL } from "@/lib/format";
-import { useState } from "react";
+import { exportRowsToExcel } from "@/lib/export-excel";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Plus, Check, X, Trash2, Download, Palette } from "lucide-react";
+import { Plus, Check, X, Trash2, Download, Palette, FileSpreadsheet } from "lucide-react";
 import { downloadComprobantePDF, type LataItem } from "@/lib/comprobante-pdf";
 
 const COLOR_SWATCH: Record<string, string> = {
@@ -65,6 +66,49 @@ function EgresosPage() {
 
   const isSuper = auth.email.toLowerCase() === "fermaval.contacto@gmail.com";
 
+  const PERSONAS_FILTRO = ["Freddy", "Bayron", "Oscar", "Fermaval"] as const;
+  type PersonaFiltro = typeof PERSONAS_FILTRO[number];
+  const [filtroResp, setFiltroResp] = useState<PersonaFiltro | "todos">("todos");
+
+  const filtered = useMemo(() => {
+    const list = data ?? [];
+    if (filtroResp === "todos") return list;
+    return list.filter((s) => s.boleta_subida_por === filtroResp);
+  }, [data, filtroResp]);
+
+  async function exportarFiltrado() {
+    if (filtered.length === 0) { toast.error("No hay egresos que exportar"); return; }
+    const sufijo = filtroResp === "todos" ? "todos" : filtroResp;
+    await exportRowsToExcel({
+      filename: `egresos-${sufijo}-${new Date().toISOString().slice(0,10)}.xlsx`,
+      sheetName: "Egresos",
+      columns: [
+        { header: "Fecha", key: "fecha", width: 14 },
+        { header: "Tipo", key: "tipo", width: 16 },
+        { header: "Descripción", key: "descripcion", width: 40 },
+        { header: "Monto (CLP)", key: "monto", width: 16 },
+        { header: "Solicitado Por", key: "solicitado", width: 18 },
+        { header: "Boleta Subida Por", key: "subida", width: 20 },
+        { header: "Estado", key: "estado", width: 14 },
+        { header: "Latas (color)", key: "latas", width: 40 },
+      ],
+      rows: filtered.map((s) => {
+        const latas = (s.latas as LataItem[] | null) ?? [];
+        return {
+          fecha: formatDate(s.fecha),
+          tipo: TIPO_GASTO_LABEL[s.tipo] ?? s.tipo,
+          descripcion: s.descripcion,
+          monto: Number(s.monto),
+          solicitado: s.solicitado_por ?? "",
+          subida: s.boleta_subida_por ?? "",
+          estado: s.estado,
+          latas: latas.map((l) => `${l.cantidad}× ${l.descripcion} (${l.color})`).join("; "),
+        };
+      }),
+    });
+    toast.success(`Exportados ${filtered.length} egresos`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-end justify-between">
@@ -73,6 +117,26 @@ function EgresosPage() {
           <p className="text-sm text-muted-foreground">Gastos solicitados por el equipo</p>
         </div>
         <NuevaSolicitud onCreated={() => qc.invalidateQueries({ queryKey: ["egresos"] })} />
+      </div>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-[220px]">
+          <Label className="text-xs">Filtrar por “Boleta Subida Por”</Label>
+          <Select value={filtroResp} onValueChange={(v) => setFiltroResp(v as PersonaFiltro | "todos")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todos</SelectItem>
+              {PERSONAS_FILTRO.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-xs text-muted-foreground">
+          Mostrando <strong>{filtered.length}</strong> de {(data ?? []).length}
+        </div>
+        <div className="ml-auto">
+          <Button variant="outline" onClick={exportarFiltrado}>
+            <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar filtrados a Excel
+          </Button>
+        </div>
       </div>
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
@@ -92,7 +156,7 @@ function EgresosPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {(data ?? []).map((s) => {
+              {filtered.map((s) => {
                 const latas = (s.latas as LataItem[] | null) ?? [];
                 return (
                 <tr key={s.id} className="border-b last:border-0">
@@ -177,7 +241,7 @@ function EgresosPage() {
                 </tr>
                 );
               })}
-              {!isLoading && (data ?? []).length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">Sin solicitudes.</td></tr>}
+              {!isLoading && filtered.length === 0 && <tr><td colSpan={9} className="p-6 text-center text-muted-foreground">{(data ?? []).length === 0 ? "Sin solicitudes." : "Sin resultados para el filtro."}</td></tr>}
 
             </tbody>
           </table>
