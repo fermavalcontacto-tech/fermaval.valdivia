@@ -529,6 +529,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   });
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
+  const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
     if (open && colores.length && !items[0]?.color_id) {
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption).id, tipo: "Ondulado" }]);
