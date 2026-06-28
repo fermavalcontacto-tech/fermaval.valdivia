@@ -475,15 +475,15 @@ function EditarCotizacionDialog({
       <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
         <div className="grid gap-3 sm:grid-cols-2">
-          <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /></div>
-          <div><Label>Teléfono</Label><Input value={form.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /></div>
-          <div><Label>Correo</Label><Input type="email" value={form.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /></div>
-          <div><Label>Dirección</Label><Input value={form.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} />
+          <div><Label>Nombre *</Label><Input value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div><Label>Teléfono</Label><Input value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
+          <div><Label>Correo</Label><Input type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
+          <div><Label>Dirección</Label><Input value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
           <div><Label>Color</Label><Input value={form.color} onChange={(e)=>setForm({...form, color: e.target.value})} /></div>
-          <div><Label>Precio / m²</Label><Input type="number" value={form.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /></div>
-          <div><Label>Descuento (CLP)</Label><Input type="number" value={form.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /></div>
-          <div><Label>Pago recibido (CLP)</Label><Input type="number" value={form.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /></div>
+          <div><Label>Precio / m² *</Label><Input type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+          <div><Label>Descuento (CLP)</Label><Input type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
+          <div><Label>Pago recibido (CLP)</Label><Input type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
           <div className="sm:col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
@@ -505,7 +505,12 @@ function EditarCotizacionDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Guardar cambios"}</Button>
+          <Button onClick={() => {
+            const v = validateCotizacion(form, items);
+            setErrors(v.errors);
+            if (!v.ok) { toast.error("Revisa los campos marcados"); return; }
+            mut.mutate();
+          }} disabled={mut.isPending} variant="hero">{mut.isPending ? "Guardando..." : "Guardar cambios"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
