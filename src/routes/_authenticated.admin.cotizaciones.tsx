@@ -37,7 +37,8 @@ export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
 const estados = ["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"] as const;
 type Estado = typeof estados[number];
 
-const QUOTE_DIALOG_CLASS = "quote-mobile-force left-0 top-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 overflow-y-auto overflow-x-hidden rounded-none border-0 p-3 pt-11 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90dvh] sm:w-[min(720px,calc(100vw-2rem))] sm:max-w-2xl sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6";
+const QUOTE_DIALOG_CLASS = "quote-mobile-force fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-xl border p-4 sm:w-[min(720px,calc(100vw-2rem))] sm:max-w-2xl sm:p-6";
+const ALERT_DIALOG_CLASS = "quote-mobile-force fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-xl border p-4 sm:w-[min(560px,calc(100vw-2rem))] sm:max-w-lg sm:p-6";
 const QUOTE_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
 
 type Cotizacion = {
@@ -708,7 +709,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <AlertDialogTrigger asChild>
                   <Button className="quote-mobile-button" variant="hero" disabled={mut.isPending}>{mut.isPending ? "Guardando..." : "Confirmar y Guardar"}</Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="quote-mobile-force left-0 top-0 h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 overflow-y-auto overflow-x-hidden rounded-none border-0 p-3 pt-11 sm:left-[50%] sm:top-[50%] sm:h-auto sm:max-h-[90dvh] sm:w-[min(560px,calc(100vw-2rem))] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-lg sm:border sm:p-6">
+                <AlertDialogContent className={ALERT_DIALOG_CLASS}>
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmar guardado e impacto en stock</AlertDialogTitle>
                     <AlertDialogDescription asChild>

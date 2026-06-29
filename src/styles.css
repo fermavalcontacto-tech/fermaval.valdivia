@@ -175,32 +175,21 @@
     max-width: 100%;
   }
 
+  /* iOS Safari: prevent auto-zoom on input focus by ensuring min 16px font */
+  @media (max-width: 639px) {
+    .quote-mobile-force input,
+    .quote-mobile-force textarea,
+    .quote-mobile-force select,
+    .quote-mobile-force [role="combobox"] {
+      font-size: 16px !important;
+    }
+    .quote-mobile-button {
+      width: 100% !important;
+    }
+  }
+
   .quote-legal-notice {
     border-left: 4px solid var(--accent);
     background: color-mix(in oklab, var(--accent) 10%, var(--background));
-  }
-
-  @media (max-width: 639px) {
-    .quote-mobile-force {
-      inset: 0 !important;
-      width: 100vw !important;
-      max-width: none !important;
-      height: 100dvh !important;
-      max-height: 100dvh !important;
-      transform: none !important;
-      overflow-x: hidden !important;
-      overflow-y: auto !important;
-      border-radius: 0 !important;
-      padding: 2.75rem 0.75rem 1rem !important;
-    }
-
-    .quote-mobile-force .quote-mobile-grid {
-      display: grid !important;
-      grid-template-columns: minmax(0, 1fr) !important;
-    }
-
-    .quote-mobile-force .quote-mobile-button {
-      width: 100% !important;
-    }
   }
 }
