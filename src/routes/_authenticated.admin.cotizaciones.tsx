@@ -612,14 +612,14 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
         {!reviewing && (
           <>
-            <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
               <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
               <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-              <div className="w-full min-w-0 space-y-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-              <div className="w-full min-w-0 space-y-1 md:col-span-2">
+              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+              <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
                   <SelectTrigger aria-invalid={!!errors.responsable}><SelectValue /></SelectTrigger>
@@ -627,7 +627,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 </Select>
                 <FieldError msg={errors.responsable} />
               </div>
-              <div className="w-full min-w-0 space-y-1 md:col-span-2">
+              <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Fecha de la solicitud * {isSuper && <span className="text-xs text-muted-foreground">(puede ser anterior)</span>}</Label>
                 <Input type="date" value={form.fecha_solicitud}
                   max={isSuper ? undefined : today}
@@ -637,7 +637,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                 <FieldError msg={errors.fecha_solicitud} />
                 {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas para archivar correctamente meses anteriores.</p>}
               </div>
-              <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground md:col-span-2">
+              <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground col-span-2">
                 📌 {QUOTE_LEGAL_NOTICE}
               </div>
             </div>
