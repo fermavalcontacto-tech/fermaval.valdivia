@@ -131,12 +131,18 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         responsable_nombre: null,
       })
       .select("id, numero, access_token").single();
-    if (cotErr) throw new Error("No se pudo crear la cotización: " + cotErr.message);
+    if (cotErr) {
+      console.error("[createPublicQuote] cotizaciones insert failed:", cotErr);
+      throw new Error("No se pudo crear la cotización. Por favor intenta de nuevo.");
+    }
 
     const { error: itErr } = await supabaseAdmin
       .from("cotizacion_items")
       .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: cot.id, position: idx })));
-    if (itErr) throw new Error("No se pudieron guardar las medidas: " + itErr.message);
+    if (itErr) {
+      console.error("[createPublicQuote] cotizacion_items insert failed:", itErr);
+      throw new Error("No se pudo guardar el detalle de la cotización. Por favor intenta de nuevo.");
+    }
 
     return { numero: cot.numero, access_token: cot.access_token };
   });
@@ -244,6 +250,9 @@ export const getPublicConfig = createServerFn({ method: "GET" }).handler(async (
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data: cfg } = await supabaseAdmin.from("configuracion_web").select("*").eq("id", 1).single();
   const { data: colores } = await supabaseAdmin
-    .from("colores").select("*").eq("activo", true).order("orden", { ascending: true });
+    .from("colores")
+    .select("id, nombre, hex, imagen_url, activo, orden")
+    .eq("activo", true)
+    .order("orden", { ascending: true });
   return { cfg, colores: colores ?? [] };
 });
