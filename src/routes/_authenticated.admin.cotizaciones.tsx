@@ -353,7 +353,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
   const calc = calcItems(items);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   return (
-    <div className="w-full min-w-0 space-y-3 md:col-span-2">
+    <div className="w-full min-w-0 space-y-3 col-span-2">
       <div className="space-y-1">
         <Label>Planchas (ancho 1 m · espesor fijo 0,4 mm)</Label>
         <p className="text-xs text-muted-foreground">Agrega cada medida en una línea independiente.</p>
@@ -485,30 +485,30 @@ function EditarCotizacionDialog({
     <Dialog open={!!cot} onOpenChange={onOpenChange}>
       <DialogContent className={QUOTE_DIALOG_CLASS}>
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
-        <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
+        <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
           <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
           <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-          <div className="w-full min-w-0 space-y-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
-          <div className="w-full min-w-0 space-y-1"><Label>Descuento (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
-          <div className="w-full min-w-0 space-y-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
-          <div className="w-full min-w-0 space-y-1 md:col-span-2">
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" type="number" inputMode="numeric" value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: e.target.value})} /><FieldError msg={errors.precio_m2} /></div>
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Descuento (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: e.target.value})} /><FieldError msg={errors.descuento} /></div>
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" type="number" inputMode="numeric" value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: e.target.value})} /><FieldError msg={errors.pago_recibido} /></div>
+          <div className="w-full min-w-0 space-y-1 col-span-2">
             <Label>Responsable interno</Label>
             <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
               <SelectTrigger><SelectValue placeholder="Selecciona responsable" /></SelectTrigger>
               <SelectContent>{PERSONAS_INTERNAS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="w-full min-w-0 space-y-1 md:col-span-2">
+          <div className="w-full min-w-0 space-y-1 col-span-2">
             <Label>Estado</Label>
             <Select value={form.estado} onValueChange={(v) => setForm({...form, estado: v as Estado})}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{estados.map((s) => <SelectItem key={s} value={s}>{ESTADO_LABEL[s]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="w-full min-w-0 rounded-md border bg-muted/30 p-3 text-sm md:col-span-2">
+          <div className="w-full min-w-0 rounded-md border bg-muted/30 p-3 text-sm col-span-2">
             <div className="flex justify-between"><span>Total m²:</span><span className="font-mono">{m2.toFixed(2)}</span></div>
             <div className="flex justify-between"><span>Total:</span><span className="font-mono font-semibold">{formatCLP(total)}</span></div>
             <div className="flex justify-between"><span>Saldo:</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
