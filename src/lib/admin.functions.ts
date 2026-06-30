@@ -542,6 +542,78 @@ export const getDashboard = createServerFn({ method: "GET" })
     };
   });
 
+// ===== ANALYTICS (Mensual / Anual) =====
+const ESTADOS_INGRESO_ANALYTICS = ["pago_parcial","pedido_confirmado","pedido_terminado"] as const;
+
+export const getAnalytics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { mode: "mensual" | "anual"; year: number; month?: number }) => d)
+  .handler(async ({ data, context }) => {
+    const { mode, year } = data;
+    const month = data.month ?? 1;
+    let start: Date, end: Date;
+    if (mode === "mensual") {
+      start = new Date(year, month - 1, 1);
+      end = new Date(year, month, 1);
+    } else {
+      start = new Date(year, 0, 1);
+      end = new Date(year + 1, 0, 1);
+    }
+    const startISO = start.toISOString();
+    const endISO = end.toISOString();
+    const startDate = startISO.slice(0, 10);
+    const endDate = endISO.slice(0, 10);
+
+    const [{ data: cot }, { data: gas }, { data: bol }, { data: hist }] = await Promise.all([
+      context.supabase.from("cotizaciones").select("pago_recibido, estado, created_at").gte("created_at", startISO).lt("created_at", endISO),
+      context.supabase.from("solicitudes_egreso").select("monto, fecha").eq("estado", "aprobado").gte("fecha", startDate).lt("fecha", endDate),
+      context.supabase.from("boletas").select("monto, fecha").is("solicitud_id", null).gte("fecha", startDate).lt("fecha", endDate),
+      context.supabase.from("movimientos_historicos").select("periodo, ventas, gastos").gte("periodo", startDate).lt("periodo", endDate),
+    ]);
+
+    // Build buckets
+    type Bucket = { key: string; label: string; ventas: number; gastos: number; iva: number };
+    const buckets: Bucket[] = [];
+    if (mode === "mensual") {
+      const days = new Date(year, month, 0).getDate();
+      for (let d = 1; d <= days; d++) {
+        buckets.push({ key: String(d).padStart(2, "0"), label: String(d), ventas: 0, gastos: 0, iva: 0 });
+      }
+    } else {
+      const names = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+      for (let m = 0; m < 12; m++) {
+        buckets.push({ key: String(m + 1).padStart(2, "0"), label: names[m], ventas: 0, gastos: 0, iva: 0 });
+      }
+    }
+    const idxFor = (d: Date) => mode === "mensual" ? d.getDate() - 1 : d.getMonth();
+
+    for (const c of cot ?? []) {
+      if (!ESTADOS_INGRESO_ANALYTICS.includes(c.estado as typeof ESTADOS_INGRESO_ANALYTICS[number])) continue;
+      const d = new Date(c.created_at as string);
+      const b = buckets[idxFor(d)]; if (b) b.ventas += Number(c.pago_recibido) || 0;
+    }
+    for (const g of gas ?? []) {
+      const d = new Date(g.fecha as string);
+      const b = buckets[idxFor(d)]; if (b) b.gastos += Number(g.monto) || 0;
+    }
+    for (const b0 of bol ?? []) {
+      const d = new Date(b0.fecha as string);
+      const b = buckets[idxFor(d)]; if (b) b.gastos += Number(b0.monto) || 0;
+    }
+    for (const h of hist ?? []) {
+      const d = new Date(h.periodo as string);
+      const b = buckets[idxFor(d)];
+      if (b) { b.ventas += Number(h.ventas) || 0; b.gastos += Number(h.gastos) || 0; }
+    }
+    for (const b of buckets) b.iva = Math.round(b.ventas * 0.19 / 1.19);
+
+    const ventas = buckets.reduce((s, b) => s + b.ventas, 0);
+    const gastos = buckets.reduce((s, b) => s + b.gastos, 0);
+    const iva = Math.round(ventas * 0.19 / 1.19);
+
+    return { mode, year, month, ventas, gastos, iva, balance: ventas - gastos, series: buckets };
+  });
+
 // ============================================================
 // Movimientos históricos (carga manual mensual — solo superadmin)
 // ============================================================
