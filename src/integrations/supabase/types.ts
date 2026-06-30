@@ -479,7 +479,6 @@ export type Database = {
           created_at: string
           espesor_mm: number
           id: string
-          stock_m: number
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at: string
         }
@@ -489,7 +488,6 @@ export type Database = {
           created_at?: string
           espesor_mm?: number
           id?: string
-          stock_m?: number
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
         }
@@ -499,7 +497,6 @@ export type Database = {
           created_at?: string
           espesor_mm?: number
           id?: string
-          stock_m?: number
           tipo?: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
         }
