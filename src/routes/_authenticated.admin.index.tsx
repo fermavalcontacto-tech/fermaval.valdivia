@@ -14,14 +14,18 @@ export const Route = createFileRoute("/_authenticated/admin/")({
   component: Dashboard,
 });
 
-function Stat({ icon: Icon, label, value, accent }: { icon: typeof TrendingUp; label: string; value: string; accent?: boolean }) {
+function Stat({ icon: Icon, label, value, accent, tone }: { icon: typeof TrendingUp; label: string; value: string; accent?: boolean; tone?: "pos" | "neg" }) {
+  const valueColor =
+    tone === "pos" ? "text-green-600 dark:text-green-400"
+    : tone === "neg" ? "text-destructive"
+    : "text-primary";
   return (
     <Card className={`p-5 ${accent ? "border-accent/40 bg-accent/5" : ""}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         <Icon className={`h-4 w-4 ${accent ? "text-accent" : "text-muted-foreground"}`} />
       </div>
-      <div className="mt-2 font-display text-3xl text-primary">{value}</div>
+      <div className={`mt-2 font-display text-3xl ${valueColor}`}>{value}</div>
     </Card>
   );
 }
@@ -73,8 +77,8 @@ function Dashboard() {
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
         <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} />
-        <Stat icon={Wallet} label="Ganancias / Utilidades" value={formatCLP(data.utilidades)} />
-        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} />
+        <Stat icon={Wallet} label="Balance neto (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} />
+        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

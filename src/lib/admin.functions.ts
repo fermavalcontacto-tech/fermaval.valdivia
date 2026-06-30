@@ -460,6 +460,7 @@ export const getDashboard = createServerFn({ method: "GET" })
     inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
     const inicioMesISO = inicioMes.toISOString();
 
+    const ESTADOS_INGRESO = ["pago_parcial","pedido_confirmado","pedido_terminado"] as const;
     const { data: cotMes } = await context.supabase.from("cotizaciones").select("total, estado, pago_recibido, created_at").gte("created_at", inicioMesISO);
     const { data: cotPendientes } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).in("estado", ["cotizacion_creada","esperando_pago"]);
     const { data: pedidosConf } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).eq("estado", "pedido_confirmado");
@@ -468,7 +469,10 @@ export const getDashboard = createServerFn({ method: "GET" })
     // Boletas standalone (sin solicitud_id) — comprobantes que se cargan sueltos y deben sumar al balance
     const { data: boletasMesStandalone } = await context.supabase.from("boletas").select("monto, fecha, solicitud_id").is("solicitud_id", null).gte("fecha", inicioMesISO.slice(0, 10));
 
-    const ventas = (cotMes ?? []).reduce((s, c) => s + Number(c.pago_recibido), 0);
+    // Ingresos = pago recibido en cotizaciones con estado pago_parcial / pedido_confirmado / pedido_terminado
+    const ventas = (cotMes ?? [])
+      .filter((c) => ESTADOS_INGRESO.includes(c.estado as typeof ESTADOS_INGRESO[number]))
+      .reduce((s, c) => s + Number(c.pago_recibido), 0);
     const totalCotizado = (cotMes ?? []).reduce((s, c) => s + Number(c.total), 0);
     const gastosSolicitudes = (gastosMes ?? []).reduce((s, g) => s + Number(g.monto), 0);
     const gastosBoletasStandalone = (boletasMesStandalone ?? []).reduce((s, b) => s + Number(b.monto), 0);
@@ -495,8 +499,10 @@ export const getDashboard = createServerFn({ method: "GET" })
       const d = new Date(c.created_at as string);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
       const m = months.find(x => x.key === key); if (!m) continue;
-      m.ventas += Number(c.pago_recibido);
-      if (["pago_parcial","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) m.aceptadas++;
+      if (["pago_parcial","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) {
+        m.ventas += Number(c.pago_recibido);
+        m.aceptadas++;
+      }
       if (c.estado === "rechazada") m.rechazadas++;
     }
     for (const g of allGastos ?? []) {
