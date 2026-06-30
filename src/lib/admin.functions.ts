@@ -435,7 +435,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     descripcion: z.string().trim().max(300).optional().nullable(),
     monto: z.number().positive(),
     fecha: z.string(),
-    archivo_path: z.string(),
+    archivo_path: z.string().optional().nullable(),
     archivo_nombre: z.string().optional().nullable(),
     responsable: personaSchema,
   }).parse(d))
