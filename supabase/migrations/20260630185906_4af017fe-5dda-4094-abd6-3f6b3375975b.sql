@@ -1,0 +1,1 @@
+ALTER TABLE public.boletas ALTER COLUMN archivo_path DROP NOT NULL;

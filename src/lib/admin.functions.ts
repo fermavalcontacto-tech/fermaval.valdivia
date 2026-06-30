@@ -435,7 +435,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     descripcion: z.string().trim().max(300).optional().nullable(),
     monto: z.number().positive(),
     fecha: z.string(),
-    archivo_path: z.string(),
+    archivo_path: z.string().optional().nullable(),
     archivo_nombre: z.string().optional().nullable(),
     responsable: personaSchema,
   }).parse(d))
@@ -444,7 +444,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("boletas").insert({
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha,
-      archivo_path: data.archivo_path, archivo_nombre: data.archivo_nombre ?? null,
+      archivo_path: data.archivo_path ?? null, archivo_nombre: data.archivo_nombre ?? null,
       responsable: data.responsable,
       subido_por: context.userId,
     });
@@ -1171,7 +1171,7 @@ export const limpiarDatosPrueba = createServerFn({ method: "POST" })
     }
     if (data.boletas) {
       const { data: rows } = await context.supabase.from("boletas").select("id, archivo_path");
-      const paths = (rows ?? []).map((r) => r.archivo_path).filter(Boolean);
+      const paths = (rows ?? []).map((r) => r.archivo_path).filter((p): p is string => !!p);
       if (paths.length) await context.supabase.storage.from("boletas").remove(paths);
       const { error, count } = await context.supabase.from("boletas").delete({ count: "exact" }).gt("monto", -1);
       if (error) throw new Error(error.message);

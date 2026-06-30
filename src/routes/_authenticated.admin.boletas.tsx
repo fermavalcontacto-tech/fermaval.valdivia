@@ -32,7 +32,7 @@ function detectPersona(email: string): Persona | "" {
 }
 type Boleta = {
   id: string; tipo_gasto: Tipo; descripcion: string | null;
-  monto: number; fecha: string; archivo_path: string; archivo_nombre: string | null;
+  monto: number; fecha: string; archivo_path: string | null; archivo_nombre: string | null;
   responsable: Persona | null;
 };
 
@@ -140,10 +140,13 @@ function BoletasPage() {
                   <td className="p-3 font-semibold">{formatCLP(b.monto)}</td>
                   <td className="p-3">{b.responsable ?? "—"}</td>
                   <td className="p-3">
-                    <Button size="sm" variant="outline" onClick={() => download(b.archivo_path, b.archivo_nombre)}>
-                      <Download className="mr-1 h-3 w-3" /> {b.archivo_nombre ?? "Archivo"}
-                    </Button>
-
+                    {b.archivo_path ? (
+                      <Button size="sm" variant="outline" onClick={() => download(b.archivo_path as string, b.archivo_nombre)}>
+                        <Download className="mr-1 h-3 w-3" /> {b.archivo_nombre ?? "Archivo"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs italic text-muted-foreground">Sin archivo</span>
+                    )}
                   </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
@@ -270,17 +273,23 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
 
   async function submit() {
-    if (!file) { toast.error("Selecciona un archivo"); return; }
+    if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
     if (!monto) { toast.error("Ingresa el monto"); return; }
     if (!responsable) { toast.error("Selecciona el responsable (Boleta subida por)"); return; }
     setUploading(true);
     try {
-      const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
-      if (upErr) throw upErr;
+      let archivo_path: string | null = null;
+      let archivo_nombre: string | null = null;
+      if (file) {
+        const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
+        if (upErr) throw upErr;
+        archivo_path = path;
+        archivo_nombre = file.name;
+      }
       const fechaFinal = isSuper ? fecha : today;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path: path, archivo_nombre: file.name, responsable } });
-      toast.success("Boleta subida");
+      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path, archivo_nombre, responsable } });
+      toast.success(file ? "Boleta subida" : "Gasto registrado sin archivo");
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
     } catch (e) {
@@ -322,9 +331,10 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
           <div>
-            <Label>Archivo</Label>
+            <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             {file && <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><FileImage className="h-3 w-3" /> {file.name}</div>}
+            {isSuper && !file && <p className="mt-1 text-[10px] text-muted-foreground">Puedes guardar el gasto sin archivo; igualmente sumará al Dashboard.</p>}
           </div>
         </div>
         <DialogFooter><Button onClick={submit} disabled={uploading} variant="hero">{uploading ? "Subiendo..." : "Guardar"}</Button></DialogFooter>

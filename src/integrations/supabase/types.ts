@@ -17,7 +17,7 @@ export type Database = {
       boletas: {
         Row: {
           archivo_nombre: string | null
-          archivo_path: string
+          archivo_path: string | null
           created_at: string
           descripcion: string | null
           fecha: string
@@ -30,7 +30,7 @@ export type Database = {
         }
         Insert: {
           archivo_nombre?: string | null
-          archivo_path: string
+          archivo_path?: string | null
           created_at?: string
           descripcion?: string | null
           fecha?: string
@@ -43,7 +43,7 @@ export type Database = {
         }
         Update: {
           archivo_nombre?: string | null
-          archivo_path?: string
+          archivo_path?: string | null
           created_at?: string
           descripcion?: string | null
           fecha?: string
