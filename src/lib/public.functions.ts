@@ -56,14 +56,14 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     // para no bloquear la generación; la validación real ocurre al descontar.
     const loadVariantes = async () => colorIds.length
       ? (await supabaseAdmin.from("producto_variantes")
-          .select("id, tipo, color_id, espesor_mm, stock_m").in("color_id", colorIds)).data ?? []
+          .select("id, tipo, color_id, espesor_mm").in("color_id", colorIds)).data ?? []
       : [];
     let variantes = await loadVariantes();
-    const varMap = new Map<string, { id: string; stock_m: number }>();
+    const varMap = new Map<string, { id: string }>();
     const rebuildMap = () => {
       varMap.clear();
       for (const v of variantes) {
-        varMap.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, { id: v.id, stock_m: Number(v.stock_m) });
+        varMap.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, { id: v.id });
       }
     };
     rebuildMap();
@@ -81,7 +81,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       await supabaseAdmin.from("producto_variantes").insert(
         Array.from(faltantes.values()).map((f) => ({
           tipo: f.tipo as "Ondulado" | "PV8" | "PV8 Invertido" | "Microondulado" | "6V" | "PV4" | "Lata Lisa",
-          color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
+          color_id: f.color_id, espesor_mm: f.espesor_mm,
         })),
       );
       variantes = await loadVariantes();
