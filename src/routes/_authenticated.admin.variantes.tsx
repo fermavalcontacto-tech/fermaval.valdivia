@@ -46,7 +46,11 @@ function VariantesPage() {
     return Array.from(map.entries()).sort((a, b) => a[1].color.nombre.localeCompare(b[1].color.nombre));
   }, [data]);
 
-  const totalStock = (data ?? []).reduce((acc, v) => acc + Number(v.stock_m), 0);
+  const totalStock = (() => {
+    const seen = new Map<string, number>();
+    for (const v of data ?? []) if (!seen.has(v.color_id)) seen.set(v.color_id, Number(v.stock_m));
+    return Array.from(seen.values()).reduce((a, b) => a + b, 0);
+  })();
 
   return (
     <div className="space-y-6">
