@@ -478,16 +478,20 @@ export const getDashboard = createServerFn({ method: "GET" })
     const utilidades = ventas - gastos;
     const iva = Math.round(ventas * 0.19 / 1.19);
 
-    const since = new Date(); since.setMonth(since.getMonth() - 5); since.setDate(1); since.setHours(0,0,0,0);
+    const since = new Date(); since.setMonth(since.getMonth() - 11); since.setDate(1); since.setHours(0,0,0,0);
     const { data: all } = await context.supabase.from("cotizaciones").select("total, pago_recibido, created_at, estado").gte("created_at", since.toISOString());
     const { data: allGastos } = await context.supabase.from("solicitudes_egreso").select("monto, fecha, estado").eq("estado","aprobado").gte("fecha", since.toISOString().slice(0,10));
     const { data: allBoletasStandalone } = await context.supabase.from("boletas").select("monto, fecha").is("solicitud_id", null).gte("fecha", since.toISOString().slice(0,10));
+    const { data: historicos } = await context.supabase
+      .from("movimientos_historicos")
+      .select("periodo, ventas, gastos")
+      .gte("periodo", since.toISOString().slice(0,10));
 
     const months: Array<{ key: string; label: string; ventas: number; gastos: number; aceptadas: number; rechazadas: number }> = [];
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const d = new Date(since); d.setMonth(d.getMonth() + i);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
-      months.push({ key, label: d.toLocaleDateString("es-CL", { month: "short" }), ventas: 0, gastos: 0, aceptadas: 0, rechazadas: 0 });
+      months.push({ key, label: d.toLocaleDateString("es-CL", { month: "short", year: "2-digit" }), ventas: 0, gastos: 0, aceptadas: 0, rechazadas: 0 });
     }
     for (const c of all ?? []) {
       const d = new Date(c.created_at as string);
@@ -509,14 +513,93 @@ export const getDashboard = createServerFn({ method: "GET" })
       const m = months.find(x => x.key === key); if (!m) continue;
       m.gastos += Number(b.monto);
     }
+    // Merge manual historical entries
+    const currentKey = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; })();
+    let ventasHistMes = 0, gastosHistMes = 0;
+    for (const h of historicos ?? []) {
+      const d = new Date(h.periodo as string);
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const m = months.find(x => x.key === key);
+      if (m) { m.ventas += Number(h.ventas); m.gastos += Number(h.gastos); }
+      if (key === currentKey) { ventasHistMes += Number(h.ventas); gastosHistMes += Number(h.gastos); }
+    }
+
+    const ventasTotal = ventas + ventasHistMes;
+    const gastosTotal = gastos + gastosHistMes;
+    const utilidadesTotal = ventasTotal - gastosTotal;
+    const ivaTotal = Math.round(ventasTotal * 0.19 / 1.19);
 
     return {
-      ventas, totalCotizado, gastos, utilidades, iva,
+      ventas: ventasTotal, totalCotizado, gastos: gastosTotal, utilidades: utilidadesTotal, iva: ivaTotal,
       cotPendientes: cotPendientes?.length ?? 0,
       pedidosConfirmados: pedidosConf?.length ?? 0,
       egresosPendientes: egresosPendientesCount ?? 0,
       months,
     };
+  });
+
+// ============================================================
+// Movimientos históricos (carga manual mensual — solo superadmin)
+// ============================================================
+
+export const listMovimientosHistoricos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("movimientos_historicos")
+      .select("*")
+      .order("periodo", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const upsertMovimientoHistorico = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    periodo: z.string().regex(/^\d{4}-\d{2}$/, "Formato debe ser YYYY-MM"),
+    ventas: z.number().min(0).max(1e12),
+    gastos: z.number().min(0).max(1e12),
+    descripcion: z.string().max(500).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email as string | undefined ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const periodoDate = `${data.periodo}-01`;
+    const { error } = await context.supabase
+      .from("movimientos_historicos")
+      .upsert({
+        periodo: periodoDate,
+        ventas: data.ventas,
+        gastos: data.gastos,
+        descripcion: data.descripcion ?? null,
+        created_by: context.userId,
+      }, { onConflict: "periodo" });
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email,
+      entidad: "movimientos_historicos", accion: "upsert",
+      cambio: `Carga manual ${data.periodo}`,
+      valor_antes: null,
+      valor_despues: `ventas=${data.ventas}, gastos=${data.gastos}`,
+    });
+    return { ok: true };
+  });
+
+export const deleteMovimientoHistorico = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email as string | undefined ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { error } = await context.supabase.from("movimientos_historicos").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    await context.supabase.from("config_audit_log").insert({
+      user_id: context.userId, user_email: email,
+      entidad: "movimientos_historicos", accion: "delete",
+      cambio: `Eliminó movimiento histórico ${data.id}`,
+      valor_antes: null, valor_despues: null,
+    });
+    return { ok: true };
   });
 
 export const getColores = createServerFn({ method: "GET" })
