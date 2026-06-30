@@ -504,6 +504,7 @@ export const getDashboard = createServerFn({ method: "GET" })
         m.aceptadas++;
       }
       if (c.estado === "rechazada") m.rechazadas++;
+    }
     for (const g of allGastos ?? []) {
       const d = new Date(g.fecha as string);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
