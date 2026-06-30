@@ -273,17 +273,23 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
 
   async function submit() {
-    if (!file) { toast.error("Selecciona un archivo"); return; }
+    if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
     if (!monto) { toast.error("Ingresa el monto"); return; }
     if (!responsable) { toast.error("Selecciona el responsable (Boleta subida por)"); return; }
     setUploading(true);
     try {
-      const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
-      const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
-      if (upErr) throw upErr;
+      let archivo_path: string | null = null;
+      let archivo_nombre: string | null = null;
+      if (file) {
+        const path = `${new Date().getFullYear()}/${tipo}/${Date.now()}-${file.name}`;
+        const { error: upErr } = await supabase.storage.from("boletas").upload(path, file);
+        if (upErr) throw upErr;
+        archivo_path = path;
+        archivo_nombre = file.name;
+      }
       const fechaFinal = isSuper ? fecha : today;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path: path, archivo_nombre: file.name, responsable } });
-      toast.success("Boleta subida");
+      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path, archivo_nombre, responsable } });
+      toast.success(file ? "Boleta subida" : "Gasto registrado sin archivo");
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
     } catch (e) {
