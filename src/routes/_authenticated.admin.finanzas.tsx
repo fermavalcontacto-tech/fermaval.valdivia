@@ -72,10 +72,10 @@ function FinanzasPage() {
           <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
           <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
         </Card>
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Utilidades</div>
-          <div className="mt-2 font-display text-3xl text-primary">{formatCLP(utilidadesSel)}</div>
-          <div className="text-xs text-muted-foreground">Ganancias − gastos</div>
+        <Card className={`p-5 border ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
+          <div className={`mt-2 font-display text-3xl ${utilidadesSel >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{formatCLP(utilidadesSel)}</div>
+          <div className="text-xs text-muted-foreground">Ventas − Gastos</div>
         </Card>
         <Card className="p-5">
           <div className="text-xs uppercase tracking-wider text-muted-foreground">IVA (19%)</div>
