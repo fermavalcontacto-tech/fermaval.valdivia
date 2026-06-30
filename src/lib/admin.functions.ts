@@ -810,12 +810,13 @@ export const listProductoVariantes = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("producto_variantes")
-      .select("id, tipo, color_id, espesor_mm, activo, color:colores(nombre, hex, stock_m)")
+      .select("id, tipo, color_id, espesor_mm, activo, fabricado_m, color:colores(nombre, hex, stock_m)")
       .order("tipo", { ascending: true });
     if (error) throw new Error(error.message);
-    // Stock is global per color; surface it through the variant for the UI matrix.
     return (data ?? []).map((v) => ({
       ...v,
+      fabricado_m: Number(v.fabricado_m ?? 0),
+      materia_prima_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
       stock_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
     }));
   });
