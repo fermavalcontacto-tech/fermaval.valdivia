@@ -1171,7 +1171,7 @@ export const limpiarDatosPrueba = createServerFn({ method: "POST" })
     }
     if (data.boletas) {
       const { data: rows } = await context.supabase.from("boletas").select("id, archivo_path");
-      const paths = (rows ?? []).map((r) => r.archivo_path).filter(Boolean);
+      const paths = (rows ?? []).map((r) => r.archivo_path).filter((p): p is string => !!p);
       if (paths.length) await context.supabase.storage.from("boletas").remove(paths);
       const { error, count } = await context.supabase.from("boletas").delete({ count: "exact" }).gt("monto", -1);
       if (error) throw new Error(error.message);
