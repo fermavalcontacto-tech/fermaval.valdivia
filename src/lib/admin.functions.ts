@@ -730,7 +730,7 @@ export const upsertColor = createServerFn({ method: "POST" })
       if (nuevo) {
         // Crear automáticamente las variantes (todos los tipos × espesor 0.4) con stock 0
         await context.supabase.from("producto_variantes").insert(
-          TIPOS_PRODUCTO.map((tipo) => ({ tipo, color_id: nuevo.id, espesor_mm: ESPESOR_FIJO_MM, stock_m: 0 })),
+          TIPOS_PRODUCTO.map((tipo) => ({ tipo, color_id: nuevo.id, espesor_mm: ESPESOR_FIJO_MM })),
         );
       }
       if (data.stock_m > 0 && nuevo) {
