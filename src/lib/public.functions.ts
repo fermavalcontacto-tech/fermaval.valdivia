@@ -80,7 +80,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (faltantes.size) {
       await supabaseAdmin.from("producto_variantes").insert(
         Array.from(faltantes.values()).map((f) => ({
-          tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
+          tipo: f.tipo as "Ondulado" | "PV8" | "PV8 Invertido" | "Microondulado" | "6V" | "PV4" | "Lata Lisa",
+          color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
         })),
       );
       variantes = await loadVariantes();
