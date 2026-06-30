@@ -77,8 +77,8 @@ function Dashboard() {
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
         <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} />
-        <Stat icon={Wallet} label="Ganancias / Utilidades" value={formatCLP(data.utilidades)} />
-        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} />
+        <Stat icon={Wallet} label="Balance neto (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} />
+        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
