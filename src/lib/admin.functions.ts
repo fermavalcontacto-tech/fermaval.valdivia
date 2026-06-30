@@ -165,19 +165,17 @@ async function discountStockForCotizacion(
   const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
   for (const c of cols ?? []) {
     const need = byColor.get(c.id)!;
-    if (Number(c.stock_m) < need.metros) {
-      throw new Error(`Stock insuficiente para color ${c.nombre} (disponible: ${Number(c.stock_m).toFixed(2)} m, requerido: ${need.metros.toFixed(2)} m).`);
-    }
-  }
-  for (const c of cols ?? []) {
-    const need = byColor.get(c.id)!;
     const nuevo = Number(c.stock_m) - need.metros;
+    // Venta flexible: nunca bloqueamos. Si el pool queda en negativo, el ítem
+    // queda "a pedido / por fabricar" y se repondrá al recibir bobina nueva.
     await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
+    const aPedido = nuevo < 0;
     await supabase.from("stock_movimientos").insert({
       color_id: c.id, color_nombre: c.nombre,
       variante_id: need.variante_id, tipo: need.tipo, espesor_mm: need.espesor,
       cotizacion_id: cotId, cotizacion_numero: cot.numero,
-      metros: -need.metros, motivo: `Descuento por pago (parcial/total) de ${cot.numero}`,
+      metros: -need.metros,
+      motivo: `Descuento por pago de ${cot.numero}${aPedido ? " · A PEDIDO (stock negativo)" : ""}`,
       user_id: userId, user_email: userEmail,
     });
   }
