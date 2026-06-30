@@ -54,14 +54,15 @@ function VariantesPage() {
         <div>
           <h1 className="font-display text-4xl text-primary">VARIANTES DE PRODUCTO</h1>
           <p className="text-sm text-muted-foreground">
-            Matriz de stock por combinación <strong>Tipo · Color · Espesor</strong> (fijo {ESPESOR_FIJO} mm). El stock se descuenta automáticamente al confirmar pagos.
+            El stock se administra <strong>por color</strong> (la materia prima es la bobina de acero). El "Tipo" se fabrica cambiando rodillos, así que todas las celdas de una misma fila comparten el mismo stock disponible. Cualquier ajuste con + / − modifica el pool global de ese color.
           </p>
         </div>
         <Card className="px-4 py-2 text-right">
-          <div className="text-[10px] uppercase text-muted-foreground">Stock total</div>
+          <div className="text-[10px] uppercase text-muted-foreground">Stock total (todos los colores)</div>
           <div className="font-display text-2xl text-primary">{totalStock.toFixed(2)} m</div>
         </Card>
       </div>
+
 
       {isLoading ? (
         <Card className="p-6 text-sm text-muted-foreground">Cargando matriz...</Card>
