@@ -65,7 +65,26 @@ async function buildItemsCalc(
     const { data: cols } = await supabase.from("colores").select("id, nombre").in("id", colorIds);
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
-  const variantes = await resolveVariantes(supabase, items);
+  let variantes = await resolveVariantes(supabase, items);
+
+  // Auto-crear variantes faltantes (stock 0) para no bloquear la generación
+  // de cotizaciones. La validación de stock real se hace al descontar (pago).
+  const faltantes = new Map<string, { tipo: string; color_id: string; espesor_mm: number }>();
+  for (const it of items) {
+    if (!it.color_id) continue;
+    const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
+    const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
+    const key = variantKey(tipo, it.color_id, espesor);
+    if (!variantes.get(key)) faltantes.set(key, { tipo, color_id: it.color_id, espesor_mm: espesor });
+  }
+  if (faltantes.size) {
+    const rows = Array.from(faltantes.values()).map((f) => ({
+      tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
+    }));
+    const sb = supabase as unknown as { from: (t: string) => { insert: (rows: unknown[]) => Promise<unknown> } };
+    await sb.from("producto_variantes").insert(rows);
+    variantes = await resolveVariantes(supabase, items);
+  }
 
   const itemsCalc = items.map((it) => {
     const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
@@ -83,27 +102,6 @@ async function buildItemsCalc(
       variante_id: variante?.id ?? null,
     };
   });
-
-  // Validación de stock por variante (tipo+color+espesor)
-  const byVariant = new Map<string, { variante: Variante; metros: number; nombre: string }>();
-  for (const it of itemsCalc) {
-    if (!it.color_id) continue;
-    const v = variantes.get(variantKey(it.tipo, it.color_id, it.espesor_mm));
-    if (!v) {
-      throw new Error(`No existe variante de stock para ${it.tipo} · ${it.color_nombre ?? "color"} · ${it.espesor_mm} mm. Créala en Administración.`);
-    }
-    const prev = byVariant.get(v.id);
-    byVariant.set(v.id, {
-      variante: v,
-      metros: (prev?.metros ?? 0) + it.metros2,
-      nombre: `${it.tipo} ${it.color_nombre ?? ""} ${it.espesor_mm}mm`.trim(),
-    });
-  }
-  for (const [, info] of byVariant) {
-    if (Number(info.variante.stock_m) < info.metros) {
-      throw new Error(`Stock insuficiente para "${info.nombre}" (disponible: ${info.variante.stock_m} m, solicitado: ${info.metros.toFixed(2)} m).`);
-    }
-  }
   return itemsCalc;
 }
 
