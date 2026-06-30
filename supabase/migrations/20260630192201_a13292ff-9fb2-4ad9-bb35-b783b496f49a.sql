@@ -1,0 +1,1 @@
+ALTER TABLE public.producto_variantes DROP COLUMN IF EXISTS stock_m;
