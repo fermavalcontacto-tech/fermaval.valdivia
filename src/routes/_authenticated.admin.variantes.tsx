@@ -46,7 +46,11 @@ function VariantesPage() {
     return Array.from(map.entries()).sort((a, b) => a[1].color.nombre.localeCompare(b[1].color.nombre));
   }, [data]);
 
-  const totalStock = (data ?? []).reduce((acc, v) => acc + Number(v.stock_m), 0);
+  const totalStock = (() => {
+    const seen = new Map<string, number>();
+    for (const v of data ?? []) if (!seen.has(v.color_id)) seen.set(v.color_id, Number(v.stock_m));
+    return Array.from(seen.values()).reduce((a, b) => a + b, 0);
+  })();
 
   return (
     <div className="space-y-6">
@@ -54,14 +58,15 @@ function VariantesPage() {
         <div>
           <h1 className="font-display text-4xl text-primary">VARIANTES DE PRODUCTO</h1>
           <p className="text-sm text-muted-foreground">
-            Matriz de stock por combinación <strong>Tipo · Color · Espesor</strong> (fijo {ESPESOR_FIJO} mm). El stock se descuenta automáticamente al confirmar pagos.
+            El stock se administra <strong>por color</strong> (la materia prima es la bobina de acero). El "Tipo" se fabrica cambiando rodillos, así que todas las celdas de una misma fila comparten el mismo stock disponible. Cualquier ajuste con + / − modifica el pool global de ese color.
           </p>
         </div>
         <Card className="px-4 py-2 text-right">
-          <div className="text-[10px] uppercase text-muted-foreground">Stock total</div>
+          <div className="text-[10px] uppercase text-muted-foreground">Stock total (todos los colores)</div>
           <div className="font-display text-2xl text-primary">{totalStock.toFixed(2)} m</div>
         </Card>
       </div>
+
 
       {isLoading ? (
         <Card className="p-6 text-sm text-muted-foreground">Cargando matriz...</Card>
