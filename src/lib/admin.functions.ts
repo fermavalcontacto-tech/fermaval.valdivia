@@ -35,7 +35,7 @@ const ItemSchema = z.object({
   espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
 });
 
-type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number; stock_m: number };
+type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number };
 
 async function resolveVariantes(
   supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Variante[] | null }> } } },
@@ -43,7 +43,7 @@ async function resolveVariantes(
 ): Promise<Map<string, Variante>> {
   const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
   if (!colorIds.length) return new Map();
-  const { data: vars } = await supabase.from("producto_variantes").select("id, tipo, color_id, espesor_mm, stock_m").in("color_id", colorIds);
+  const { data: vars } = await supabase.from("producto_variantes").select("id, tipo, color_id, espesor_mm").in("color_id", colorIds);
   const map = new Map<string, Variante>();
   for (const v of (vars ?? [])) {
     map.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, v);
