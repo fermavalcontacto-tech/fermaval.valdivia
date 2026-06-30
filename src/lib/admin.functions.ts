@@ -144,7 +144,10 @@ async function discountStockForCotizacion(
     .from("cotizacion_items")
     .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
+  // (a) Pool global por color (materia prima)
   const byColor = new Map<string, { color_id: string; color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
+  // (b) Contador acumulado por variante (tipo × color × espesor)
+  const byVariante = new Map<string, number>();
   for (const it of items ?? []) {
     if (!it.color_id) continue;
     const prev = byColor.get(it.color_id);
@@ -156,6 +159,9 @@ async function discountStockForCotizacion(
       variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
+    if (it.variante_id) {
+      byVariante.set(it.variante_id, (byVariante.get(it.variante_id) ?? 0) + Number(it.metros2));
+    }
   }
   if (!byColor.size) {
     await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
@@ -166,8 +172,6 @@ async function discountStockForCotizacion(
   for (const c of cols ?? []) {
     const need = byColor.get(c.id)!;
     const nuevo = Number(c.stock_m) - need.metros;
-    // Venta flexible: nunca bloqueamos. Si el pool queda en negativo, el ítem
-    // queda "a pedido / por fabricar" y se repondrá al recibir bobina nueva.
     await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
     const aPedido = nuevo < 0;
     await supabase.from("stock_movimientos").insert({
@@ -178,6 +182,18 @@ async function discountStockForCotizacion(
       motivo: `Descuento por pago de ${cot.numero}${aPedido ? " · A PEDIDO (stock negativo)" : ""}`,
       user_id: userId, user_email: userEmail,
     });
+  }
+  // Acumular contador de fabricación por variante
+  if (byVariante.size) {
+    const vids = Array.from(byVariante.keys());
+    const { data: vars } = await supabase
+      .from("producto_variantes").select("id, fabricado_m").in("id", vids);
+    for (const v of vars ?? []) {
+      const add = byVariante.get(v.id) ?? 0;
+      await supabase.from("producto_variantes")
+        .update({ fabricado_m: Number(v.fabricado_m ?? 0) + add })
+        .eq("id", v.id);
+    }
   }
   await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
 }
@@ -193,6 +209,7 @@ async function restoreStockForCotizacion(
     .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
   const byColor = new Map<string, { color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
+  const byVariante = new Map<string, number>();
   for (const it of items ?? []) {
     if (!it.color_id) continue;
     const prev = byColor.get(it.color_id);
@@ -203,6 +220,9 @@ async function restoreStockForCotizacion(
       variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
+    if (it.variante_id) {
+      byVariante.set(it.variante_id, (byVariante.get(it.variante_id) ?? 0) + Number(it.metros2));
+    }
   }
   if (byColor.size) {
     const ids = Array.from(byColor.keys());
@@ -218,6 +238,16 @@ async function restoreStockForCotizacion(
         metros: need.metros, motivo: `${motivo} (${cot.numero})`,
         user_id: userId, user_email: userEmail,
       });
+    }
+  }
+  if (byVariante.size) {
+    const vids = Array.from(byVariante.keys());
+    const { data: vars } = await supabase
+      .from("producto_variantes").select("id, fabricado_m").in("id", vids);
+    for (const v of vars ?? []) {
+      const sub = byVariante.get(v.id) ?? 0;
+      const nuevo = Math.max(0, Number(v.fabricado_m ?? 0) - sub);
+      await supabase.from("producto_variantes").update({ fabricado_m: nuevo }).eq("id", v.id);
     }
   }
   await supabase.from("cotizaciones").update({ stock_descontado_at: null }).eq("id", cotId);
@@ -780,12 +810,13 @@ export const listProductoVariantes = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("producto_variantes")
-      .select("id, tipo, color_id, espesor_mm, activo, color:colores(nombre, hex, stock_m)")
+      .select("id, tipo, color_id, espesor_mm, activo, fabricado_m, color:colores(nombre, hex, stock_m)")
       .order("tipo", { ascending: true });
     if (error) throw new Error(error.message);
-    // Stock is global per color; surface it through the variant for the UI matrix.
     return (data ?? []).map((v) => ({
       ...v,
+      fabricado_m: Number(v.fabricado_m ?? 0),
+      materia_prima_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
       stock_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
     }));
   });

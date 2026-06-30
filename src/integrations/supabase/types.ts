@@ -478,6 +478,7 @@ export type Database = {
           color_id: string
           created_at: string
           espesor_mm: number
+          fabricado_m: number
           id: string
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at: string
@@ -487,6 +488,7 @@ export type Database = {
           color_id: string
           created_at?: string
           espesor_mm?: number
+          fabricado_m?: number
           id?: string
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
@@ -496,6 +498,7 @@ export type Database = {
           color_id?: string
           created_at?: string
           espesor_mm?: number
+          fabricado_m?: number
           id?: string
           tipo?: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
