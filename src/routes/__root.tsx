@@ -14,7 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
-const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-mobile-modal-20260629`;
+const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-cotizador-responsive-20260630`;
 
 function NotFoundComponent() {
   return (
