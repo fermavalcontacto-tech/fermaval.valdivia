@@ -444,7 +444,7 @@ export const createBoleta = createServerFn({ method: "POST" })
     const { error } = await context.supabase.from("boletas").insert({
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha,
-      archivo_path: data.archivo_path, archivo_nombre: data.archivo_nombre ?? null,
+      archivo_path: data.archivo_path ?? null, archivo_nombre: data.archivo_nombre ?? null,
       responsable: data.responsable,
       subido_por: context.userId,
     });
