@@ -131,6 +131,9 @@ export const getCotizacionItems = createServerFn({ method: "POST" })
 
 type SupabaseLike = typeof import("@supabase/supabase-js").SupabaseClient.prototype;
 
+// Stock is tracked GLOBALLY per color (the raw steel coil). The "tipo" is
+// produced on-demand by changing rollers, so all tipos of the same color
+// share the same stock pool stored in colores.stock_m.
 async function discountStockForCotizacion(
   supabase: SupabaseLike, cotId: string, userId: string, userEmail: string,
 ) {
@@ -141,38 +144,38 @@ async function discountStockForCotizacion(
     .from("cotizacion_items")
     .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
-  const byVariant = new Map<string, { variante_id: string; tipo: string | null; espesor: number; color_id: string | null; color_nombre: string | null; metros: number }>();
+  const byColor = new Map<string, { color_id: string; color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
   for (const it of items ?? []) {
-    if (!it.variante_id) continue;
-    const prev = byVariant.get(it.variante_id);
-    byVariant.set(it.variante_id, {
-      variante_id: it.variante_id,
-      tipo: it.tipo ?? prev?.tipo ?? null,
-      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
-      color_id: it.color_id ?? prev?.color_id ?? null,
+    if (!it.color_id) continue;
+    const prev = byColor.get(it.color_id);
+    byColor.set(it.color_id, {
+      color_id: it.color_id,
       color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
+      tipo: prev?.tipo ?? it.tipo ?? null,
+      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
+      variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
   }
-  if (!byVariant.size) {
+  if (!byColor.size) {
     await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
     return;
   }
-  const ids = Array.from(byVariant.keys());
-  const { data: vars } = await supabase.from("producto_variantes").select("id, stock_m, tipo, color_id, espesor_mm").in("id", ids);
-  for (const v of vars ?? []) {
-    const need = byVariant.get(v.id)!;
-    if (Number(v.stock_m) < need.metros) {
-      throw new Error(`Stock insuficiente para ${need.tipo ?? ""} ${need.color_nombre ?? ""} ${need.espesor}mm (disponible: ${v.stock_m} m).`);
+  const ids = Array.from(byColor.keys());
+  const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
+  for (const c of cols ?? []) {
+    const need = byColor.get(c.id)!;
+    if (Number(c.stock_m) < need.metros) {
+      throw new Error(`Stock insuficiente para color ${c.nombre} (disponible: ${Number(c.stock_m).toFixed(2)} m, requerido: ${need.metros.toFixed(2)} m).`);
     }
   }
-  for (const v of vars ?? []) {
-    const need = byVariant.get(v.id)!;
-    const nuevo = Number(v.stock_m) - need.metros;
-    await supabase.from("producto_variantes").update({ stock_m: nuevo }).eq("id", v.id);
+  for (const c of cols ?? []) {
+    const need = byColor.get(c.id)!;
+    const nuevo = Number(c.stock_m) - need.metros;
+    await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
     await supabase.from("stock_movimientos").insert({
-      color_id: need.color_id, color_nombre: need.color_nombre,
-      variante_id: v.id, tipo: need.tipo, espesor_mm: need.espesor,
+      color_id: c.id, color_nombre: c.nombre,
+      variante_id: need.variante_id, tipo: need.tipo, espesor_mm: need.espesor,
       cotizacion_id: cotId, cotizacion_numero: cot.numero,
       metros: -need.metros, motivo: `Descuento por pago (parcial/total) de ${cot.numero}`,
       user_id: userId, user_email: userEmail,
@@ -191,28 +194,28 @@ async function restoreStockForCotizacion(
     .from("cotizacion_items")
     .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
     .eq("cotizacion_id", cotId);
-  const byVariant = new Map<string, { tipo: string | null; espesor: number; color_id: string | null; color_nombre: string | null; metros: number }>();
+  const byColor = new Map<string, { color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
   for (const it of items ?? []) {
-    if (!it.variante_id) continue;
-    const prev = byVariant.get(it.variante_id);
-    byVariant.set(it.variante_id, {
-      tipo: it.tipo ?? prev?.tipo ?? null,
-      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
-      color_id: it.color_id ?? prev?.color_id ?? null,
+    if (!it.color_id) continue;
+    const prev = byColor.get(it.color_id);
+    byColor.set(it.color_id, {
       color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
+      tipo: prev?.tipo ?? it.tipo ?? null,
+      espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
+      variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
   }
-  if (byVariant.size) {
-    const ids = Array.from(byVariant.keys());
-    const { data: vars } = await supabase.from("producto_variantes").select("id, stock_m").in("id", ids);
-    for (const v of vars ?? []) {
-      const need = byVariant.get(v.id)!;
-      const nuevo = Number(v.stock_m) + need.metros;
-      await supabase.from("producto_variantes").update({ stock_m: nuevo }).eq("id", v.id);
+  if (byColor.size) {
+    const ids = Array.from(byColor.keys());
+    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", ids);
+    for (const c of cols ?? []) {
+      const need = byColor.get(c.id)!;
+      const nuevo = Number(c.stock_m) + need.metros;
+      await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
       await supabase.from("stock_movimientos").insert({
-        color_id: need.color_id, color_nombre: need.color_nombre,
-        variante_id: v.id, tipo: need.tipo, espesor_mm: need.espesor,
+        color_id: c.id, color_nombre: c.nombre,
+        variante_id: need.variante_id, tipo: need.tipo, espesor_mm: need.espesor,
         cotizacion_id: cotId, cotizacion_numero: cot.numero,
         metros: need.metros, motivo: `${motivo} (${cot.numero})`,
         user_id: userId, user_email: userEmail,
