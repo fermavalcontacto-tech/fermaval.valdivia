@@ -401,6 +401,39 @@ export type Database = {
           },
         ]
       }
+      movimientos_historicos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          gastos: number
+          id: string
+          periodo: string
+          updated_at: string
+          ventas: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          gastos?: number
+          id?: string
+          periodo: string
+          updated_at?: string
+          ventas?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          gastos?: number
+          id?: string
+          periodo?: string
+          updated_at?: string
+          ventas?: number
+        }
+        Relationships: []
+      }
       pagos: {
         Row: {
           cotizacion_id: string
