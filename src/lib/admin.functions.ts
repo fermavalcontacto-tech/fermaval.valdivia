@@ -499,10 +499,11 @@ export const getDashboard = createServerFn({ method: "GET" })
       const d = new Date(c.created_at as string);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
       const m = months.find(x => x.key === key); if (!m) continue;
-      m.ventas += Number(c.pago_recibido);
-      if (["pago_parcial","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) m.aceptadas++;
+      if (["pago_parcial","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) {
+        m.ventas += Number(c.pago_recibido);
+        m.aceptadas++;
+      }
       if (c.estado === "rechazada") m.rechazadas++;
-    }
     for (const g of allGastos ?? []) {
       const d = new Date(g.fecha as string);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
