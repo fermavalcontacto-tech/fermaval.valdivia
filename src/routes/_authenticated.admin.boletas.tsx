@@ -140,10 +140,13 @@ function BoletasPage() {
                   <td className="p-3 font-semibold">{formatCLP(b.monto)}</td>
                   <td className="p-3">{b.responsable ?? "—"}</td>
                   <td className="p-3">
-                    <Button size="sm" variant="outline" onClick={() => download(b.archivo_path, b.archivo_nombre)}>
-                      <Download className="mr-1 h-3 w-3" /> {b.archivo_nombre ?? "Archivo"}
-                    </Button>
-
+                    {b.archivo_path ? (
+                      <Button size="sm" variant="outline" onClick={() => download(b.archivo_path as string, b.archivo_nombre)}>
+                        <Download className="mr-1 h-3 w-3" /> {b.archivo_nombre ?? "Archivo"}
+                      </Button>
+                    ) : (
+                      <span className="text-xs italic text-muted-foreground">Sin archivo</span>
+                    )}
                   </td>
                   <td className="p-3">
                     <div className="flex justify-end gap-1">
