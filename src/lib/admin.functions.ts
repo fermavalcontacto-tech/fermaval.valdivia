@@ -79,7 +79,7 @@ async function buildItemsCalc(
   }
   if (faltantes.size) {
     const rows = Array.from(faltantes.values()).map((f) => ({
-      tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
+      tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm,
     }));
     const sb = supabase as unknown as { from: (t: string) => { insert: (rows: unknown[]) => Promise<unknown> } };
     await sb.from("producto_variantes").insert(rows);
