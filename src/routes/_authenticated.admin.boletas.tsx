@@ -331,9 +331,10 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
             </div>
           </div>
           <div>
-            <Label>Archivo</Label>
+            <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
             {file && <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><FileImage className="h-3 w-3" /> {file.name}</div>}
+            {isSuper && !file && <p className="mt-1 text-[10px] text-muted-foreground">Puedes guardar el gasto sin archivo; igualmente sumará al Dashboard.</p>}
           </div>
         </div>
         <DialogFooter><Button onClick={submit} disabled={uploading} variant="hero">{uploading ? "Subiendo..." : "Guardar"}</Button></DialogFooter>
