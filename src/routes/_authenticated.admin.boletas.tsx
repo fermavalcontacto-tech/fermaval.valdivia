@@ -32,7 +32,7 @@ function detectPersona(email: string): Persona | "" {
 }
 type Boleta = {
   id: string; tipo_gasto: Tipo; descripcion: string | null;
-  monto: number; fecha: string; archivo_path: string; archivo_nombre: string | null;
+  monto: number; fecha: string; archivo_path: string | null; archivo_nombre: string | null;
   responsable: Persona | null;
 };
 
