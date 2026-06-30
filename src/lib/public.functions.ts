@@ -52,14 +52,39 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
     }
 
-    // Variantes (tipo+color+espesor)
-    const { data: variantes } = colorIds.length
-      ? await supabaseAdmin.from("producto_variantes")
-          .select("id, tipo, color_id, espesor_mm, stock_m").in("color_id", colorIds)
-      : { data: [] as Array<{ id: string; tipo: string; color_id: string; espesor_mm: number; stock_m: number }> };
+    // Variantes (tipo+color+espesor) — auto-creamos las faltantes con stock 0
+    // para no bloquear la generación; la validación real ocurre al descontar.
+    const loadVariantes = async () => colorIds.length
+      ? (await supabaseAdmin.from("producto_variantes")
+          .select("id, tipo, color_id, espesor_mm, stock_m").in("color_id", colorIds)).data ?? []
+      : [];
+    let variantes = await loadVariantes();
     const varMap = new Map<string, { id: string; stock_m: number }>();
-    for (const v of variantes ?? []) {
-      varMap.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, { id: v.id, stock_m: Number(v.stock_m) });
+    const rebuildMap = () => {
+      varMap.clear();
+      for (const v of variantes) {
+        varMap.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, { id: v.id, stock_m: Number(v.stock_m) });
+      }
+    };
+    rebuildMap();
+
+    const faltantes = new Map<string, { tipo: string; color_id: string; espesor_mm: number }>();
+    for (const it of data.items) {
+      const cid = it.color_id ?? data.color_id ?? null;
+      if (!cid) continue;
+      const tipo = it.tipo ?? "Ondulado";
+      const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
+      const key = `${tipo}|${cid}|${espesor.toFixed(2)}`;
+      if (!varMap.get(key)) faltantes.set(key, { tipo, color_id: cid, espesor_mm: espesor });
+    }
+    if (faltantes.size) {
+      await supabaseAdmin.from("producto_variantes").insert(
+        Array.from(faltantes.values()).map((f) => ({
+          tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm, stock_m: 0,
+        })),
+      );
+      variantes = await loadVariantes();
+      rebuildMap();
     }
 
     const itemsCalc = data.items.map((it) => {
@@ -80,26 +105,6 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       };
     });
 
-    // Validación de stock por variante
-    const byVar = new Map<string, { stock: number; need: number; nombre: string }>();
-    for (const it of itemsCalc) {
-      if (!it.variante_id) {
-        if (it.color_id) throw new Error(`No existe variante de stock para ${it.tipo} · ${it.color_nombre ?? "color"} · ${it.espesor_mm}mm.`);
-        continue;
-      }
-      const v = varMap.get(`${it.tipo}|${it.color_id}|${(it.espesor_mm).toFixed(2)}`)!;
-      const prev = byVar.get(it.variante_id);
-      byVar.set(it.variante_id, {
-        stock: v.stock_m,
-        need: (prev?.need ?? 0) + it.metros2,
-        nombre: `${it.tipo} ${it.color_nombre ?? ""} ${it.espesor_mm}mm`.trim(),
-      });
-    }
-    for (const [, info] of byVar) {
-      if (info.stock < info.need) {
-        throw new Error(`Stock insuficiente para "${info.nombre}" (disponible: ${info.stock} m, solicitado: ${info.need.toFixed(2)} m).`);
-      }
-    }
 
     const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.round(metros2Total * precio);
