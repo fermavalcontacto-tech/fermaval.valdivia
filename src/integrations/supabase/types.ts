@@ -650,6 +650,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fetch_or_create_variant: {
+        Args: { _color_id: string; _espesor_mm?: number; _tipo: string }
+        Returns: {
+          activo: boolean
+          color_id: string
+          espesor_mm: number
+          fabricado_m: number
+          id: string
+          stock_m: number
+          tipo: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
