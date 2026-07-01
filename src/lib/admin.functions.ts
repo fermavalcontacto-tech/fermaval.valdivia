@@ -111,10 +111,9 @@ async function buildItemsCalc(
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
 
-  const itemsCalc = await Promise.all(items.map(async (it) => {
+  const itemsCalc = items.map((it) => {
     const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
     const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
-    const variant = await fetchOrCreateVariant(supabase, tipo, it.color_id ?? null, espesor);
     return {
       largo_m: it.largo_m,
       ancho_m: 1,
@@ -124,9 +123,11 @@ async function buildItemsCalc(
       color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
       tipo,
       espesor_mm: espesor,
-      variante_id: variant.is_mock ? null : variant.id,
+      // El stock real se controla por color. No exigimos una variante exacta
+      // para crear cotizaciones; la variante es solo un contador administrativo.
+      variante_id: null,
     };
-  }));
+  });
   return itemsCalc;
 }
 
