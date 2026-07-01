@@ -293,13 +293,6 @@ export type Database = {
             referencedRelation: "cotizaciones"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "cotizacion_items_variante_id_fkey"
-            columns: ["variante_id"]
-            isOneToOne: false
-            referencedRelation: "producto_variantes"
-            referencedColumns: ["id"]
-          },
         ]
       }
       cotizaciones: {
