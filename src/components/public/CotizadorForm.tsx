@@ -25,7 +25,7 @@ const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","P
 type Tipo = typeof TIPOS_PRODUCTO[number];
 const ESPESOR_MM = 0.4;
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
-const VARIANT_STOCK_ERROR = "No existe variante de stock para";
+const VARIANT_STOCK_ERROR = "No existe variante";
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
