@@ -133,11 +133,10 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
     }
 
-    const itemsCalc = await Promise.all(data.items.map(async (it) => {
+    const itemsCalc = data.items.map((it) => {
       const cid = it.color_id ?? data.color_id ?? null;
       const tipo = it.tipo ?? "Ondulado";
       const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
-      const variant = await fetchOrCreateVariant(supabaseAdmin as unknown as DbClientLike, tipo, cid, espesor);
       return {
         largo_m: it.largo_m,
         ancho_m: ANCHO_FIJO_M,
@@ -146,9 +145,11 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_id: cid,
         color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
         tipo, espesor_mm: espesor,
-        variante_id: variant.is_mock ? null : variant.id,
+        // El stock real se controla por color; no bloqueamos la cotización
+        // por falta de una variante exacta tipo/color/espesor.
+        variante_id: null,
       };
-    }));
+    });
 
 
     const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
