@@ -25,6 +25,8 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+const VARIANT_STOCK_REGEX = /variante/i;
+const toastErrorFiltered = (e: Error) => { if (VARIANT_STOCK_REGEX.test(e.message)) return; toast.error(e.message); };
 import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
 
 type ColorOption = { id: string; nombre: string; hex: string; activo: boolean; stock_m: number };
@@ -146,12 +148,12 @@ function CotizacionesPage() {
         await dispatchAprobacion({ ...v.cot, estado: v.estado }, enviarCorreoAuto);
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteCotizacion({ data: { id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); toast.success("Cotización eliminada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   return (
@@ -478,7 +480,7 @@ function EditarCotizacionDialog({
       responsable_nombre: form.responsable || null,
     } }),
     onSuccess: () => { toast.success("Cotización actualizada"); onSaved(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   return (
@@ -589,7 +591,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       setReviewing(false);
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "", tipo: "Ondulado" }]);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   function handleOpenChange(o: boolean) {
