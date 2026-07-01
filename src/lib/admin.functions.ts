@@ -38,33 +38,16 @@ const ItemSchema = z.object({
 type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number };
 type DbClientLike = { from: (table: string) => any };
 
-async function resolveVariantes(
-  supabase: DbClientLike,
-  items: Array<{ color_id?: string | null; tipo?: string; espesor_mm?: number }>,
-): Promise<Map<string, Variante>> {
-  const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
-  if (!colorIds.length) return new Map();
-  const { data: vars } = await supabase.from("producto_variantes").select("id, tipo, color_id, espesor_mm").in("color_id", colorIds);
-  const map = new Map<string, Variante>();
-  for (const v of (vars ?? [])) {
-    map.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, v);
-  }
-  return map;
-}
-
-function variantKey(tipo: string, colorId: string, espesor: number) {
-  return `${tipo}|${colorId}|${Number(espesor).toFixed(2)}`;
-}
-
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
-  _variantClient?: DbClientLike,
 ) {
   const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
   const colorNames = new Map<string, string>();
   if (colorIds.length) {
-    const { data: cols } = await supabase.from("colores").select("id, nombre").in("id", colorIds);
+    // Inventario real: bobina global por color, con espesor fijo de 0,4 mm.
+    // El tipo de lata no participa en la búsqueda ni en la validación.
+    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", colorIds);
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
 
@@ -125,12 +108,9 @@ async function discountStockForCotizacion(
   if (!cot || cot.stock_descontado_at) return;
   const { data: items } = await supabase
     .from("cotizacion_items")
-    .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
+    .select("color_id, color_nombre, tipo, espesor_mm, metros2")
     .eq("cotizacion_id", cotId);
-  // (a) Pool global por color (materia prima)
-  const byColor = new Map<string, { color_id: string; color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
-  // (b) Contador acumulado por variante (tipo × color × espesor)
-  const byVariante = new Map<string, number>();
+  const byColor = new Map<string, { color_id: string; color_nombre: string | null; tipo: string | null; espesor: number; metros: number }>();
   for (const it of items ?? []) {
     if (!it.color_id) continue;
     const prev = byColor.get(it.color_id);
@@ -139,12 +119,8 @@ async function discountStockForCotizacion(
       color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
       tipo: prev?.tipo ?? it.tipo ?? null,
       espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
-      variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
-    if (it.variante_id) {
-      byVariante.set(it.variante_id, (byVariante.get(it.variante_id) ?? 0) + Number(it.metros2));
-    }
   }
   if (!byColor.size) {
     await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
@@ -159,24 +135,12 @@ async function discountStockForCotizacion(
     const aPedido = nuevo < 0;
     await supabase.from("stock_movimientos").insert({
       color_id: c.id, color_nombre: c.nombre,
-      variante_id: need.variante_id, tipo: need.tipo, espesor_mm: need.espesor,
+      tipo: need.tipo, espesor_mm: need.espesor,
       cotizacion_id: cotId, cotizacion_numero: cot.numero,
       metros: -need.metros,
       motivo: `Descuento por pago de ${cot.numero}${aPedido ? " · A PEDIDO (stock negativo)" : ""}`,
       user_id: userId, user_email: userEmail,
     });
-  }
-  // Acumular contador de fabricación por variante
-  if (byVariante.size) {
-    const vids = Array.from(byVariante.keys());
-    const { data: vars } = await supabase
-      .from("producto_variantes").select("id, fabricado_m").in("id", vids);
-    for (const v of vars ?? []) {
-      const add = byVariante.get(v.id) ?? 0;
-      await supabase.from("producto_variantes")
-        .update({ fabricado_m: Number(v.fabricado_m ?? 0) + add })
-        .eq("id", v.id);
-    }
   }
   await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
 }
@@ -189,10 +153,9 @@ async function restoreStockForCotizacion(
   if (!cot || !cot.stock_descontado_at) return;
   const { data: items } = await supabase
     .from("cotizacion_items")
-    .select("color_id, color_nombre, tipo, espesor_mm, variante_id, metros2")
+    .select("color_id, color_nombre, tipo, espesor_mm, metros2")
     .eq("cotizacion_id", cotId);
-  const byColor = new Map<string, { color_nombre: string | null; tipo: string | null; espesor: number; variante_id: string | null; metros: number }>();
-  const byVariante = new Map<string, number>();
+  const byColor = new Map<string, { color_nombre: string | null; tipo: string | null; espesor: number; metros: number }>();
   for (const it of items ?? []) {
     if (!it.color_id) continue;
     const prev = byColor.get(it.color_id);
@@ -200,12 +163,8 @@ async function restoreStockForCotizacion(
       color_nombre: it.color_nombre ?? prev?.color_nombre ?? null,
       tipo: prev?.tipo ?? it.tipo ?? null,
       espesor: Number(it.espesor_mm ?? prev?.espesor ?? 0.4),
-      variante_id: prev?.variante_id ?? it.variante_id ?? null,
       metros: (prev?.metros ?? 0) + Number(it.metros2),
     });
-    if (it.variante_id) {
-      byVariante.set(it.variante_id, (byVariante.get(it.variante_id) ?? 0) + Number(it.metros2));
-    }
   }
   if (byColor.size) {
     const ids = Array.from(byColor.keys());
@@ -216,21 +175,11 @@ async function restoreStockForCotizacion(
       await supabase.from("colores").update({ stock_m: nuevo }).eq("id", c.id);
       await supabase.from("stock_movimientos").insert({
         color_id: c.id, color_nombre: c.nombre,
-        variante_id: need.variante_id, tipo: need.tipo, espesor_mm: need.espesor,
+        tipo: need.tipo, espesor_mm: need.espesor,
         cotizacion_id: cotId, cotizacion_numero: cot.numero,
         metros: need.metros, motivo: `${motivo} (${cot.numero})`,
         user_id: userId, user_email: userEmail,
       });
-    }
-  }
-  if (byVariante.size) {
-    const vids = Array.from(byVariante.keys());
-    const { data: vars } = await supabase
-      .from("producto_variantes").select("id, fabricado_m").in("id", vids);
-    for (const v of vars ?? []) {
-      const sub = byVariante.get(v.id) ?? 0;
-      const nuevo = Math.max(0, Number(v.fabricado_m ?? 0) - sub);
-      await supabase.from("producto_variantes").update({ fabricado_m: nuevo }).eq("id", v.id);
     }
   }
   await supabase.from("cotizaciones").update({ stock_descontado_at: null }).eq("id", cotId);
@@ -277,8 +226,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, supabaseAdmin as never);
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
     if (cErr) throw new Error(cErr.message);
     const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
@@ -1067,8 +1015,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, supabaseAdmin as never);
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
     const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
     const saldo = Math.max(0, total - data.pago_recibido);
