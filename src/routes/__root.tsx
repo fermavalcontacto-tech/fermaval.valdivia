@@ -100,6 +100,7 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="es">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: EARLY_SUPPRESS_SCRIPT }} />
       </head>
       <body>
         {children}
