@@ -52,50 +52,13 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
     }
 
-    // Variantes (tipo+color+espesor) — auto-creamos las faltantes con stock 0
-    // para no bloquear la generación; la validación real ocurre al descontar.
-    const loadVariantes = async () => colorIds.length
-      ? (await supabaseAdmin.from("producto_variantes")
-          .select("id, tipo, color_id, espesor_mm").in("color_id", colorIds)).data ?? []
-      : [];
-    let variantes = await loadVariantes();
-    const varMap = new Map<string, { id: string }>();
-    const rebuildMap = () => {
-      varMap.clear();
-      for (const v of variantes) {
-        varMap.set(`${v.tipo}|${v.color_id}|${Number(v.espesor_mm).toFixed(2)}`, { id: v.id });
-      }
-    };
-    rebuildMap();
-
-    const faltantes = new Map<string, { tipo: string; color_id: string; espesor_mm: number }>();
-    for (const it of data.items) {
-      const cid = it.color_id ?? data.color_id ?? null;
-      if (!cid) continue;
-      const tipo = it.tipo ?? "Ondulado";
-      const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
-      const key = `${tipo}|${cid}|${espesor.toFixed(2)}`;
-      if (!varMap.get(key)) faltantes.set(key, { tipo, color_id: cid, espesor_mm: espesor });
-    }
-    if (faltantes.size) {
-      const { error: varErr } = await supabaseAdmin.from("producto_variantes").upsert(
-        Array.from(faltantes.values()).map((f) => ({
-          tipo: f.tipo as "Ondulado" | "PV8" | "PV8 Invertido" | "Microondulado" | "6V" | "PV4" | "Lata Lisa",
-          color_id: f.color_id, espesor_mm: f.espesor_mm,
-        })),
-        { onConflict: "tipo,color_id,espesor_mm", ignoreDuplicates: true },
-      );
-      if (varErr) throw new Error("No se pudieron preparar las variantes de stock para esta cotización.");
-      variantes = await loadVariantes();
-      rebuildMap();
-    }
-
+    // Stock se maneja únicamente por Color + Espesor (bobina). El tipo de lata
+    // se fabrica bajo pedido cambiando la bobina, por lo que no se valida ni se
+    // exige una variante rígida en la base de datos.
     const itemsCalc = data.items.map((it) => {
       const cid = it.color_id ?? data.color_id ?? null;
       const tipo = it.tipo ?? "Ondulado";
       const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
-      const key = cid ? `${tipo}|${cid}|${espesor.toFixed(2)}` : null;
-      const variante = key ? varMap.get(key) : undefined;
       return {
         largo_m: it.largo_m,
         ancho_m: ANCHO_FIJO_M,
@@ -104,7 +67,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_id: cid,
         color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
         tipo, espesor_mm: espesor,
-        variante_id: variante?.id ?? null,
+        variante_id: null as string | null,
       };
     });
 

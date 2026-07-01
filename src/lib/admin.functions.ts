@@ -59,42 +59,20 @@ function variantKey(tipo: string, colorId: string, espesor: number) {
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
-  variantClient?: DbClientLike,
+  _variantClient?: DbClientLike,
 ) {
-  const variantDb = variantClient ?? supabase;
   const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
   const colorNames = new Map<string, string>();
   if (colorIds.length) {
     const { data: cols } = await supabase.from("colores").select("id, nombre").in("id", colorIds);
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
-  let variantes = await resolveVariantes(variantDb, items);
 
-  // Auto-crear variantes faltantes (stock 0) para no bloquear la generación
-  // de cotizaciones. La validación de stock real se hace al descontar (pago).
-  const faltantes = new Map<string, { tipo: string; color_id: string; espesor_mm: number }>();
-  for (const it of items) {
-    if (!it.color_id) continue;
-    const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
-    const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
-    const key = variantKey(tipo, it.color_id, espesor);
-    if (!variantes.get(key)) faltantes.set(key, { tipo, color_id: it.color_id, espesor_mm: espesor });
-  }
-  if (faltantes.size) {
-    const rows = Array.from(faltantes.values()).map((f) => ({
-      tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm,
-    }));
-    const { error } = await variantDb
-      .from("producto_variantes")
-      .upsert(rows, { onConflict: "tipo,color_id,espesor_mm", ignoreDuplicates: true });
-    if (error) throw new Error("No se pudieron preparar las variantes de stock para esta cotización.");
-    variantes = await resolveVariantes(variantDb, items);
-  }
-
+  // Stock se gestiona sólo por Color + Espesor (bobina). El tipo de lata se
+  // fabrica bajo pedido, así que no exigimos ni creamos variantes rígidas.
   const itemsCalc = items.map((it) => {
     const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
     const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
-    const variante = it.color_id ? variantes.get(variantKey(tipo, it.color_id, espesor)) : undefined;
     return {
       largo_m: it.largo_m,
       ancho_m: 1,
@@ -104,7 +82,7 @@ async function buildItemsCalc(
       color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
       tipo,
       espesor_mm: espesor,
-      variante_id: variante?.id ?? null,
+      variante_id: null as string | null,
     };
   });
   return itemsCalc;
