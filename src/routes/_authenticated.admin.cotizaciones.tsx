@@ -148,12 +148,12 @@ function CotizacionesPage() {
         await dispatchAprobacion({ ...v.cot, estado: v.estado }, enviarCorreoAuto);
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteCotizacion({ data: { id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); toast.success("Cotización eliminada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   return (
@@ -480,7 +480,7 @@ function EditarCotizacionDialog({
       responsable_nombre: form.responsable || null,
     } }),
     onSuccess: () => { toast.success("Cotización actualizada"); onSaved(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   return (
@@ -591,7 +591,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       setReviewing(false);
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "", tipo: "Ondulado" }]);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: toastErrorFiltered,
   });
 
   function handleOpenChange(o: boolean) {
