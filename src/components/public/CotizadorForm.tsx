@@ -18,7 +18,7 @@ const DEFAULT_FIELDS: FormFields = {
   nombre: { label: "Nombre", visible: true, required: true },
   telefono: { label: "Teléfono", visible: true, required: true },
   correo: { label: "Correo", visible: true, required: true },
-  direccion: { label: "Dirección", visible: true, required: true },
+  direccion: { label: "Dirección (opcional)", visible: true, required: false },
 };
 
 const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
