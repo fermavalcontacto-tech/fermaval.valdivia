@@ -287,6 +287,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cotizacion_items_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cotizacion_items_cotizacion_id_fkey"
             columns: ["cotizacion_id"]
             isOneToOne: false
@@ -390,6 +397,13 @@ export type Database = {
             columns: ["color_id"]
             isOneToOne: false
             referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
             referencedColumns: ["id"]
           },
         ]
@@ -504,6 +518,13 @@ export type Database = {
             referencedRelation: "colores"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "producto_variantes_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       solicitudes_egreso: {
@@ -609,6 +630,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_movimientos_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "stock_movimientos_cotizacion_id_fkey"
             columns: ["cotizacion_id"]
             isOneToOne: false
@@ -647,7 +675,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      colores_publicos: {
+        Row: {
+          activo: boolean | null
+          created_at: string | null
+          hex: string | null
+          id: string | null
+          imagen_url: string | null
+          nombre: string | null
+          orden: number | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string | null
+          hex?: string | null
+          id?: string | null
+          imagen_url?: string | null
+          nombre?: string | null
+          orden?: number | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string | null
+          hex?: string | null
+          id?: string | null
+          imagen_url?: string | null
+          nombre?: string | null
+          orden?: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       fetch_or_create_variant: {
