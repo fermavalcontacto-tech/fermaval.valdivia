@@ -36,9 +36,10 @@ const ItemSchema = z.object({
 });
 
 type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number };
+type DbClientLike = { from: (table: string) => any };
 
 async function resolveVariantes(
-  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Variante[] | null }> } } },
+  supabase: DbClientLike,
   items: Array<{ color_id?: string | null; tipo?: string; espesor_mm?: number }>,
 ): Promise<Map<string, Variante>> {
   const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
@@ -56,16 +57,18 @@ function variantKey(tipo: string, colorId: string, espesor: number) {
 }
 
 async function buildItemsCalc(
-  supabase: { from: (t: string) => { select: (s: string) => { in: (col: string, vals: string[]) => Promise<{ data: Array<{ id: string; nombre: string }> | null }> } } } & Parameters<typeof resolveVariantes>[0],
+  supabase: DbClientLike,
   items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
+  variantClient?: DbClientLike,
 ) {
+  const variantDb = variantClient ?? supabase;
   const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
   const colorNames = new Map<string, string>();
   if (colorIds.length) {
     const { data: cols } = await supabase.from("colores").select("id, nombre").in("id", colorIds);
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
-  let variantes = await resolveVariantes(supabase, items);
+  let variantes = await resolveVariantes(variantDb, items);
 
   // Auto-crear variantes faltantes (stock 0) para no bloquear la generación
   // de cotizaciones. La validación de stock real se hace al descontar (pago).
@@ -81,9 +84,11 @@ async function buildItemsCalc(
     const rows = Array.from(faltantes.values()).map((f) => ({
       tipo: f.tipo, color_id: f.color_id, espesor_mm: f.espesor_mm,
     }));
-    const sb = supabase as unknown as { from: (t: string) => { insert: (rows: unknown[]) => Promise<unknown> } };
-    await sb.from("producto_variantes").insert(rows);
-    variantes = await resolveVariantes(supabase, items);
+    const { error } = await variantDb
+      .from("producto_variantes")
+      .upsert(rows, { onConflict: "tipo,color_id,espesor_mm", ignoreDuplicates: true });
+    if (error) throw new Error("No se pudieron preparar las variantes de stock para esta cotización.");
+    variantes = await resolveVariantes(variantDb, items);
   }
 
   const itemsCalc = items.map((it) => {
@@ -294,7 +299,8 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, supabaseAdmin as never);
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
     if (cErr) throw new Error(cErr.message);
     const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
@@ -1083,7 +1089,8 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, supabaseAdmin as never);
     const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
     const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
     const saldo = Math.max(0, total - data.pago_recibido);
