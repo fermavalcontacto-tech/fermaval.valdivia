@@ -14,8 +14,9 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
-const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-cotizador-responsive-20260630`;
+const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-variant-suppress-20260701`;
 const BLOCKED_TOAST_TEXT = /no existe variante|variante de stock|stock para/i;
+const EARLY_SUPPRESS_SCRIPT = `(()=>{try{var R=/no existe variante|variante de stock|stock para/i;var clean=function(){document.querySelectorAll('[data-sonner-toast],[role="alert"],[role="status"],li').forEach(function(n){var t=(n.innerText||n.textContent||"");if(R.test(t))n.remove();});};clean();new MutationObserver(clean).observe(document.documentElement,{childList:true,subtree:true,characterData:true});}catch(e){}})();`;
 
 function NotFoundComponent() {
   return (
