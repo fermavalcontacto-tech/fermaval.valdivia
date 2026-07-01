@@ -334,7 +334,7 @@ export const listEgresos = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
-export const PERSONAS_INTERNAS = ["Freddy", "Bayron", "Oscar"] as const;
+export const PERSONAS_INTERNAS = ["Freddy", "Bayron", "Oscar", "Fermaval"] as const;
 const personaSchema = z.enum(PERSONAS_INTERNAS);
 
 export const createEgreso = createServerFn({ method: "POST" })
