@@ -25,6 +25,88 @@ const CreateQuoteSchema = z.object({
   color_id: z.string().uuid().nullable().optional(),
 });
 
+type DbClientLike = {
+  rpc?: (fn: string, args: Record<string, unknown>) => any;
+  from: (table: string) => any;
+};
+
+type SafeVariant = {
+  id: string | null;
+  tipo: string;
+  color_id: string | null;
+  espesor_mm: number;
+  activo: boolean;
+  fabricado_m: number;
+  stock_m: number;
+  is_mock?: boolean;
+};
+
+function mockVariant(tipo: string, colorId: string | null, espesor: number): SafeVariant {
+  return {
+    id: null,
+    tipo: tipo || "Ondulado",
+    color_id: colorId,
+    espesor_mm: espesor || ESPESOR_FIJO_MM,
+    activo: true,
+    fabricado_m: 0,
+    stock_m: 0,
+    is_mock: true,
+  };
+}
+
+async function fetchOrCreateVariant(
+  supabase: DbClientLike,
+  tipo: string,
+  colorId: string | null,
+  espesor: number,
+): Promise<SafeVariant> {
+  if (!colorId) return mockVariant(tipo, null, espesor);
+
+  try {
+    if (supabase.rpc) {
+      const { data, error } = await supabase.rpc("fetch_or_create_variant", {
+        _tipo: tipo,
+        _color_id: colorId,
+        _espesor_mm: espesor,
+      });
+      if (!error) {
+        const row = Array.isArray(data) ? data[0] : data;
+        if (row?.id) return { ...row, id: row.id, is_mock: false };
+      }
+    }
+  } catch (error) {
+    console.warn("[fetchOrCreateVariant] RPC fallback:", (error as Error).message);
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("producto_variantes")
+      .upsert(
+        { tipo, color_id: colorId, espesor_mm: espesor || ESPESOR_FIJO_MM, activo: true, fabricado_m: 0 },
+        { onConflict: "tipo,color_id,espesor_mm" },
+      )
+      .select("id, tipo, color_id, espesor_mm, activo, fabricado_m")
+      .maybeSingle();
+
+    if (!error && data?.id) {
+      return {
+        id: data.id,
+        tipo: String(data.tipo ?? tipo),
+        color_id: data.color_id ?? colorId,
+        espesor_mm: Number(data.espesor_mm ?? espesor ?? ESPESOR_FIJO_MM),
+        activo: Boolean(data.activo ?? true),
+        fabricado_m: Number(data.fabricado_m ?? 0),
+        stock_m: 0,
+        is_mock: false,
+      };
+    }
+  } catch (error) {
+    console.warn("[fetchOrCreateVariant] table fallback:", (error as Error).message);
+  }
+
+  return mockVariant(tipo, colorId, espesor);
+}
+
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
   porcentaje: z.union([z.literal(20), z.literal(50)]),
@@ -51,12 +133,11 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
     }
 
-    // Bypass definitivo: el cotizador público nunca valida ni busca
-    // producto_variantes. El stock real se controla sólo por Color + 0,4 mm.
-    const itemsCalc = data.items.map((it) => {
+    const itemsCalc = await Promise.all(data.items.map(async (it) => {
       const cid = it.color_id ?? data.color_id ?? null;
       const tipo = it.tipo ?? "Ondulado";
       const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
+      const variant = await fetchOrCreateVariant(supabaseAdmin as unknown as DbClientLike, tipo, cid, espesor);
       return {
         largo_m: it.largo_m,
         ancho_m: ANCHO_FIJO_M,
@@ -65,9 +146,9 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_id: cid,
         color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
         tipo, espesor_mm: espesor,
-        variante_id: null,
+        variante_id: variant.is_mock ? null : variant.id,
       };
-    });
+    }));
 
 
     const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
