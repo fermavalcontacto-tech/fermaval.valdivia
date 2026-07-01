@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "@/components/ui/sonner";
 
 const cacheBustedAppCss = `${appCss}${appCss.includes("?") ? "&" : "?"}v=fermaval-cotizador-responsive-20260630`;
+const BLOCKED_TOAST_TEXT = /no existe variante|variante de stock|stock para/i;
 
 function NotFoundComponent() {
   return (
@@ -119,6 +120,20 @@ function RootComponent() {
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
+
+  useEffect(() => {
+    const removeBlockedToasts = () => {
+      document
+        .querySelectorAll<HTMLElement>('[data-sonner-toast], [role="alert"], [role="status"]')
+        .forEach((node) => {
+          if (BLOCKED_TOAST_TEXT.test(node.innerText ?? node.textContent ?? "")) node.remove();
+        });
+    };
+    removeBlockedToasts();
+    const observer = new MutationObserver(removeBlockedToasts);
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

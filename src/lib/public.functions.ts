@@ -25,23 +25,6 @@ const CreateQuoteSchema = z.object({
   color_id: z.string().uuid().nullable().optional(),
 });
 
-async function getGenericVariantBypassId(supabaseAdmin: { from: (table: string) => any }) {
-  const { data } = await supabaseAdmin
-    .from("producto_variantes")
-    .select("id, tipo, espesor_mm, color:colores(nombre)")
-    .eq("espesor_mm", ESPESOR_FIJO_MM)
-    .limit(100);
-
-  const rows = (data ?? []) as Array<{ id: string; tipo?: string | null; color?: { nombre?: string | null } | null }>;
-  return (
-    rows.find((v) => (v.color?.nombre ?? "").toLowerCase() === "terracota")?.id ??
-    rows.find((v) => v.tipo === "Ondulado")?.id ??
-    rows[0]?.id ??
-    null
-  );
-}
-
-
 const AcceptSchema = z.object({
   numero: z.string().min(1).max(40),
   porcentaje: z.union([z.literal(20), z.literal(50)]),
@@ -68,10 +51,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
     }
 
-    // Bypass directo: algunas versiones antiguas del backend todavía esperan un
-    // variante_id. Usamos un ID genérico sólo para dejar avanzar la cotización;
-    // el stock real se sigue controlando por Color + 0,4 mm, no por tipo de lata.
-    const genericVariantId = await getGenericVariantBypassId(supabaseAdmin);
+    // Bypass definitivo: el cotizador público nunca valida ni busca
+    // producto_variantes. El stock real se controla sólo por Color + 0,4 mm.
     const itemsCalc = data.items.map((it) => {
       const cid = it.color_id ?? data.color_id ?? null;
       const tipo = it.tipo ?? "Ondulado";
@@ -84,7 +65,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_id: cid,
         color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
         tipo, espesor_mm: espesor,
-        variante_id: genericVariantId as string | null,
+        variante_id: null,
       };
     });
 
