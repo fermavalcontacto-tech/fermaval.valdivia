@@ -35,7 +35,6 @@ const ItemSchema = z.object({
   espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
 });
 
-type Variante = { id: string; tipo: string; color_id: string; espesor_mm: number };
 type DbClientLike = { from: (table: string) => any };
 
 async function buildItemsCalc(
