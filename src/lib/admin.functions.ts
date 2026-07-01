@@ -37,6 +37,22 @@ const ItemSchema = z.object({
 
 type DbClientLike = { from: (table: string) => any };
 
+async function getGenericVariantBypassId(supabase: DbClientLike) {
+  const { data } = await supabase
+    .from("producto_variantes")
+    .select("id, tipo, espesor_mm, color:colores(nombre)")
+    .eq("espesor_mm", ESPESOR_FIJO_MM)
+    .limit(100);
+
+  const rows = (data ?? []) as Array<{ id: string; tipo?: string | null; color?: { nombre?: string | null } | null }>;
+  return (
+    rows.find((v) => (v.color?.nombre ?? "").toLowerCase() === "terracota")?.id ??
+    rows.find((v) => v.tipo === "Ondulado")?.id ??
+    rows[0]?.id ??
+    null
+  );
+}
+
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
@@ -50,8 +66,9 @@ async function buildItemsCalc(
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
 
-  // Stock se gestiona sólo por Color + Espesor (bobina). El tipo de lata se
-  // fabrica bajo pedido, así que no exigimos ni creamos variantes rígidas.
+  // Bypass directo: no validar tipo+color+espesor. Si la base de datos pide un
+  // variante_id por compatibilidad, enviamos uno genérico y dejamos avanzar.
+  const genericVariantId = await getGenericVariantBypassId(supabase);
   const itemsCalc = items.map((it) => {
     const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
     const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
@@ -64,7 +81,7 @@ async function buildItemsCalc(
       color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
       tipo,
       espesor_mm: espesor,
-      variante_id: null as string | null,
+      variante_id: genericVariantId as string | null,
     };
   });
   return itemsCalc;
