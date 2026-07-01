@@ -25,6 +25,8 @@ import {
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+const VARIANT_STOCK_REGEX = /variante/i;
+const toastErrorFiltered = (e: Error) => { if (VARIANT_STOCK_REGEX.test(e.message)) return; toast.error(e.message); };
 import { ExternalLink, Plus, Pencil, Trash2, Download, Mail, MessageCircle } from "lucide-react";
 
 type ColorOption = { id: string; nombre: string; hex: string; activo: boolean; stock_m: number };
