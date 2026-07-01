@@ -37,6 +37,67 @@ const ItemSchema = z.object({
 
 type DbClientLike = { from: (table: string) => any };
 
+type SafeVariant = {
+  id: string | null;
+  tipo: string;
+  color_id: string | null;
+  espesor_mm: number;
+  activo: boolean;
+  fabricado_m: number;
+  stock_m: number;
+  is_mock?: boolean;
+};
+
+function mockVariant(tipo: string, colorId: string | null, espesor: number): SafeVariant {
+  return {
+    id: null,
+    tipo: tipo || "Ondulado",
+    color_id: colorId,
+    espesor_mm: espesor || ESPESOR_FIJO_MM,
+    activo: true,
+    fabricado_m: 0,
+    stock_m: 0,
+    is_mock: true,
+  };
+}
+
+async function fetchOrCreateVariant(
+  supabase: DbClientLike,
+  tipo: string,
+  colorId: string | null,
+  espesor: number,
+): Promise<SafeVariant> {
+  if (!colorId) return mockVariant(tipo, null, espesor);
+
+  try {
+    const { data, error } = await supabase
+      .from("producto_variantes")
+      .upsert(
+        { tipo, color_id: colorId, espesor_mm: espesor || ESPESOR_FIJO_MM, activo: true, fabricado_m: 0 },
+        { onConflict: "tipo,color_id,espesor_mm" },
+      )
+      .select("id, tipo, color_id, espesor_mm, activo, fabricado_m, color:colores(stock_m)")
+      .maybeSingle();
+
+    if (!error && data?.id) {
+      return {
+        id: data.id,
+        tipo: String(data.tipo ?? tipo),
+        color_id: data.color_id ?? colorId,
+        espesor_mm: Number(data.espesor_mm ?? espesor ?? ESPESOR_FIJO_MM),
+        activo: Boolean(data.activo ?? true),
+        fabricado_m: Number(data.fabricado_m ?? 0),
+        stock_m: Number((data.color as { stock_m?: number } | null)?.stock_m ?? 0),
+        is_mock: false,
+      };
+    }
+  } catch (error) {
+    console.warn("[fetchOrCreateVariant] table fallback:", (error as Error).message);
+  }
+
+  return mockVariant(tipo, colorId, espesor);
+}
+
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
@@ -50,11 +111,10 @@ async function buildItemsCalc(
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
 
-  // Bypass definitivo: no validar ni consultar producto_variantes. El tipo de
-  // lata no participa en stock; sólo se registra para imprimir la cotización.
-  const itemsCalc = items.map((it) => {
+  const itemsCalc = await Promise.all(items.map(async (it) => {
     const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
     const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
+    const variant = await fetchOrCreateVariant(supabase, tipo, it.color_id ?? null, espesor);
     return {
       largo_m: it.largo_m,
       ancho_m: 1,
@@ -64,9 +124,9 @@ async function buildItemsCalc(
       color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
       tipo,
       espesor_mm: espesor,
-      variante_id: null,
+      variante_id: variant.is_mock ? null : variant.id,
     };
-  });
+  }));
   return itemsCalc;
 }
 
