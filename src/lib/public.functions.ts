@@ -78,12 +78,14 @@ export const createPublicQuote = createServerFn({ method: "POST" })
       if (!varMap.get(key)) faltantes.set(key, { tipo, color_id: cid, espesor_mm: espesor });
     }
     if (faltantes.size) {
-      await supabaseAdmin.from("producto_variantes").insert(
+      const { error: varErr } = await supabaseAdmin.from("producto_variantes").upsert(
         Array.from(faltantes.values()).map((f) => ({
           tipo: f.tipo as "Ondulado" | "PV8" | "PV8 Invertido" | "Microondulado" | "6V" | "PV4" | "Lata Lisa",
           color_id: f.color_id, espesor_mm: f.espesor_mm,
         })),
+        { onConflict: "tipo,color_id,espesor_mm", ignoreDuplicates: true },
       );
+      if (varErr) throw new Error("No se pudieron preparar las variantes de stock para esta cotización.");
       variantes = await loadVariantes();
       rebuildMap();
     }
