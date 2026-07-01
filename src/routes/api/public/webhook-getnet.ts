@@ -76,13 +76,13 @@ export const Route = createFileRoute("/api/public/webhook-getnet")({
               await supabaseAdmin.from("pagos").insert({
                 cotizacion_id: cot.id,
                 monto: Number(cot.total),
-                metodo: "getnet",
-                referencia: String(requestId),
+                metodo: `getnet:${requestId}`,
+                estado: "aprobado",
               });
               await supabaseAdmin
                 .from("cotizaciones")
                 .update({
-                  estado: "pagada_completa",
+                  estado: "pedido_confirmado",
                   pago_recibido: Number(cot.total),
                   saldo: 0,
                 })
