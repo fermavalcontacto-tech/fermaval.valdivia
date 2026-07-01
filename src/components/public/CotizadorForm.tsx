@@ -25,7 +25,7 @@ const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","P
 type Tipo = typeof TIPOS_PRODUCTO[number];
 const ESPESOR_MM = 0.4;
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
-const VARIANT_STOCK_REGEX = /variante/i;
+const VARIANT_STOCK_REGEX = /variante|stock\s+para/i;
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
@@ -85,7 +85,10 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
     onError: (e: Error) => {
       // Bypass: silenciar cualquier mensaje relacionado con variantes de stock;
       // el inventario real se controla por Color + 0,4 mm, no por tipo de lata.
-      if (VARIANT_STOCK_REGEX.test(e.message)) return;
+      if (VARIANT_STOCK_REGEX.test(e.message)) {
+        toast.dismiss();
+        return;
+      }
       toast.error(e.message);
     },
   });
