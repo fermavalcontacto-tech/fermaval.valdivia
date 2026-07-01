@@ -289,6 +289,41 @@ function QuotePage() {
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.50))}</span>
                     </Button>
                   </div>
+                  <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4">
+                    <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">
+                      💳 Pagar el saldo total con Getnet
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      Serás redirigido al checkout seguro de Getnet Chile (sandbox de pruebas).
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const monto = Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total)));
+                          const res = await fetch("/api/public/create-getnet-payment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              numero,
+                              token: token ?? "",
+                              monto,
+                              descripcion: `Cotización ${numero} FERMAVAL`,
+                            }),
+                          });
+                          const j = await res.json();
+                          if (!res.ok || !j.processUrl) throw new Error(j.error ?? "Error iniciando pago");
+                          window.location.href = j.processUrl;
+                        } catch (e) {
+                          toast.error(e instanceof Error ? e.message : "No se pudo iniciar el pago");
+                        }
+                      }}
+                      variant="hero"
+                      size="lg"
+                      className="w-full"
+                    >
+                      Pagar {formatCLP(Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total))))} con Getnet
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
                     Al aceptar, registramos tu intención de pago. El equipo te contactará para coordinar la transferencia.
                   </p>
