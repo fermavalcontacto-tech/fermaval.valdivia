@@ -37,12 +37,32 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   });
 }
 
+function withCacheHeaders(request: Request, response: Response): Response {
+  const url = new URL(request.url);
+  const headers = new Headers(response.headers);
+  const contentType = headers.get("content-type") ?? "";
+
+  if (url.pathname.startsWith("/assets/") || /\.(?:js|css|woff2?|png|jpe?g|webp|svg|ico)$/i.test(url.pathname)) {
+    headers.set("cache-control", "public, max-age=31536000, immutable");
+  } else if (contentType.includes("text/html") || url.pathname.includes("_serverFn")) {
+    headers.set("cache-control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+    headers.set("pragma", "no-cache");
+    headers.set("expires", "0");
+  }
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withCacheHeaders(request, await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {
