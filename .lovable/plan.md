@@ -1,22 +1,41 @@
-## Verificación exhaustiva para TODAS las variantes
+## Alinear tipos de plancha con la imagen y publicar
 
-El blindaje ya está aplicado a nivel global (regex + interceptor de `toast.error` + MutationObserver), así que aplica a cualquier combinación tipo+color+espesor. Falta confirmarlo empíricamente.
+### 1. Reemplazar la lista de tipos
 
-### Plan
+En `src/lib/domain/quotes.core.ts`, reemplazar `TIPOS_PRODUCTO` por el listado exacto de la imagen (en este orden):
 
-1. Recorrer con Playwright el cotizador probando una matriz representativa de variantes:
-   - PV4 × {Gris, Rojo, Verde, Blanco} × {0.35, 0.4, 0.5 mm}
-   - PV5 × mismos colores × mismos espesores
-   - PV6 (o el resto de tipos disponibles) × mismos colores × mismos espesores
-2. Para cada combinación: ingresar largo y cantidad, generar cotización, capturar screenshot y volcar `document.querySelectorAll('[data-sonner-toast]')` para verificar que no aparece ningún toast rojo con texto tipo "No existe variante".
-3. Registrar cualquier combinación que aún dispare el toast rojo, con el mensaje exacto y el stack del error en consola/red.
-4. Si alguna combinación falla:
-   - Ampliar `LEGACY_VARIANT_ERROR_PATTERN` en `quotes.core.ts`, `public.functions.ts` y `sonner.tsx` para cubrir el nuevo texto.
-   - Revisar si viene de Postgres (constraint/trigger residual) o de código cliente y eliminar la fuente.
-5. Repetir hasta que la matriz completa pase limpia.
+```
+Ondulado
+PV8
+PV8 Invertido
+Microondulado
+6V
+PV4
+Lata Lisa
+```
+
+Esto se propaga automáticamente al `<select>` del cotizador (`CotizadorForm.tsx`) y al enum de validación Zod (`TipoEnum`), sin cambios adicionales.
+
+### 2. Compatibilidad con cotizaciones históricas
+
+Las cotizaciones antiguas guardadas con `tipo` en {Trapezoidal, Minionda, PV6, Teja Continua, Teja Colonial, Teja Española} seguirán mostrándose tal cual en el admin (son solo texto en `cotizacion_items.tipo`). No se migran ni se borran; solo dejan de ofrecerse al crear nuevas.
+
+- Ajustar el comentario del bloque `TIPOS_PRODUCTO` para reflejar la lista vigente.
+- Si el schema Zod rechaza los tipos históricos al releer, relajar `TipoEnum` para lectura (aceptar string en items ya guardados) manteniendo el enum estricto solo en el input público. Verificaré esto tras el cambio.
+
+### 3. Verificación
+
+- Recorrer con Playwright el cotizador con los 7 tipos nuevos × 3 colores y confirmar que:
+  - El `<select>` muestra exactamente los 7 tipos de la imagen.
+  - Se genera cotización sin toast rojo.
+- Revisar `/admin/cotizaciones` para asegurar que cotizaciones antiguas con tipos legacy siguen renderizando.
+
+### 4. Publicar a producción
+
+- Correr `security--get_scan_results` para descartar hallazgos críticos pendientes.
+- Publicar con `preview_ui--publish`. La actualización se propaga a `fermaval.lovable.app` y al dominio custom `fermaval.com` / `www.fermaval.com` automáticamente (mismo deploy).
 
 ### Detalles técnicos
 
-- La detección hoy cubre: `no existe variante`, `variante de stock`, `producto_variantes`, `variante_id`, `ensure_variant`, `fetch_or_create_variant`, `stock para`. Si aparece otro texto se agrega al regex en los 3 archivos a la vez.
-- No se tocará lógica de negocio (cálculo m²/total) ni validaciones legítimas de stock actuales; solo se silencian/traducen mensajes legacy de variantes.
-- Entregable: tabla de resultados por combinación + screenshots + parche (si hace falta).
+- Único archivo de código a editar: `src/lib/domain/quotes.core.ts` (constante `TIPOS_PRODUCTO`). Posiblemente un mínimo ajuste al schema si el enum estricto rompe cotizaciones legacy al releer.
+- No se toca la base de datos, ni migraciones, ni RLS.
