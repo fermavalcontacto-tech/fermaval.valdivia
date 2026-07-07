@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { getDashboard, getAnalytics } from "@/lib/admin.functions";
+import { getDashboard, getAnalytics, listAlertas } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCLP } from "@/lib/format";
