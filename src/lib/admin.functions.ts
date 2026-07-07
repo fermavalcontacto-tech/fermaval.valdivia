@@ -57,7 +57,7 @@ export const getCotizacionItems = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: items, error } = await context.supabase
       .from("cotizacion_items")
-      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, variante_id")
+      .select("id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm")
       .eq("cotizacion_id", data.cotizacion_id)
       .order("position", { ascending: true });
     if (error) throw new Error(error.message);
