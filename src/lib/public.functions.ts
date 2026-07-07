@@ -7,6 +7,7 @@ import {
   buildItemsCalc,
   sumMetros2,
   calcTotal,
+  publicQuoteErrorMessage,
 } from "@/lib/domain/quotes.core";
 
 
@@ -31,6 +32,7 @@ const AcceptSchema = z.object({
 export const createPublicQuote = createServerFn({ method: "POST" })
   .inputValidator((data) => CreateQuoteSchema.parse(data))
   .handler(async ({ data }) => {
+    try {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: cfg, error: cfgErr } = await supabaseAdmin
       .from("configuracion_web").select("precio_m2").eq("id", 1).single();
@@ -91,6 +93,11 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     }
 
     return { numero: cot.numero, access_token: cot.access_token };
+    } catch (error) {
+      const message = publicQuoteErrorMessage(error);
+      console.error("[createPublicQuote] failed:", error);
+      throw new Error(message);
+    }
   });
 
 export const acceptQuoteAndPay = createServerFn({ method: "POST" })
