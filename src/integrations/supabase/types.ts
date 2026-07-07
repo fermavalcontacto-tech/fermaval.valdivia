@@ -441,6 +441,80 @@ export type Database = {
           },
         ]
       }
+      email_verify_codes: {
+        Row: {
+          attempts: number
+          code_hash: string
+          consumed_at: string | null
+          correo: string
+          created_at: string
+          expires_at: string
+          id: string
+          purpose: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          consumed_at?: string | null
+          correo: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          purpose?: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          consumed_at?: string | null
+          correo?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          purpose?: string
+        }
+        Relationships: []
+      }
+      getnet_sessions: {
+        Row: {
+          cotizacion_id: string
+          created_at: string
+          monto_aprobado: number | null
+          monto_esperado: number
+          reference: string
+          request_id: number
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          cotizacion_id: string
+          created_at?: string
+          monto_aprobado?: number | null
+          monto_esperado: number
+          reference: string
+          request_id: number
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cotizacion_id?: string
+          created_at?: string
+          monto_aprobado?: number | null
+          monto_esperado?: number
+          reference?: string
+          request_id?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "getnet_sessions_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimientos_historicos: {
         Row: {
           created_at: string

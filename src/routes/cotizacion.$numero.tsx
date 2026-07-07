@@ -299,14 +299,12 @@ function QuotePage() {
                     <Button
                       onClick={async () => {
                         try {
-                          const monto = Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total)));
                           const res = await fetch("/api/public/create-getnet-payment", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                               numero,
                               token: token ?? "",
-                              monto,
                               descripcion: `Cotización ${numero} FERMAVAL`,
                             }),
                           });
