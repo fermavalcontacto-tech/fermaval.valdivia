@@ -5,7 +5,7 @@ import { PublicHeader, PublicFooter } from "@/components/public/Header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
-import { listMyQuotesByEmail } from "@/lib/public.functions";
+import { listMyQuotesByEmail, requestQuoteHistoryCode } from "@/lib/public.functions";
 import { toast } from "sonner";
 import { Search, FileText, ArrowLeft } from "lucide-react";
 
