@@ -1385,3 +1385,34 @@ export const resetPasswordEmpleado = createServerFn({ method: "POST" })
     });
     return { ok: true };
   });
+
+// ============================================================
+// AUDIT LOG (fase 5)
+// ============================================================
+export const listAuditLog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      tabla: z.string().optional(),
+      accion: z.enum(["INSERT", "UPDATE", "DELETE"]).optional(),
+      email: z.string().optional(),
+      desde: z.string().optional(),
+      hasta: z.string().optional(),
+      limit: z.number().int().min(1).max(500).optional(),
+    }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    let q = context.supabase
+      .from("audit_log")
+      .select("id, created_at, user_email, rol, accion, tabla, registro_id, payload")
+      .order("created_at", { ascending: false })
+      .limit(data.limit ?? 200);
+    if (data.tabla) q = q.eq("tabla", data.tabla);
+    if (data.accion) q = q.eq("accion", data.accion);
+    if (data.email) q = q.ilike("user_email", `%${data.email}%`);
+    if (data.desde) q = q.gte("created_at", data.desde);
+    if (data.hasta) q = q.lte("created_at", data.hasta);
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
