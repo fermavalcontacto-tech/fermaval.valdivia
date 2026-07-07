@@ -1,18 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+  ANCHO_FIJO_M,
+  ESPESOR_FIJO_MM,
+  ItemInputSchema as ItemSchema,
+  buildItemsCalc,
+  sumMetros2,
+  calcTotal,
+} from "@/lib/domain/quotes.core";
 
-const ANCHO_FIJO_M = 1;
-const ESPESOR_FIJO_MM = 0.4;
-const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
-const TipoEnum = z.enum(TIPOS_PRODUCTO);
-
-const ItemSchema = z.object({
-  largo_m: z.number().positive().max(1000),
-  cantidad_planchas: z.number().int().positive().max(10000),
-  color_id: z.string().uuid().nullable().optional(),
-  tipo: TipoEnum.optional().default("Ondulado"),
-  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
-});
 
 const CreateQuoteSchema = z.object({
   cliente: z.object({
