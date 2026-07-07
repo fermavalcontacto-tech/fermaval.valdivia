@@ -174,30 +174,7 @@ function AuditSection() {
             </TableHeader>
             <TableBody>
               {(data ?? []).map((r) => (
-                <>
-                  <TableRow key={r.id}>
-                    <TableCell className="text-xs">{new Date(r.created_at).toLocaleString("es-CL")}</TableCell>
-                    <TableCell className="text-xs">{r.user_email ?? "—"}</TableCell>
-                    <TableCell className="text-xs">{r.rol ?? "—"}</TableCell>
-                    <TableCell><Badge variant={badge(r.accion)}>{r.accion}</Badge></TableCell>
-                    <TableCell className="text-xs font-mono">{r.tabla}</TableCell>
-                    <TableCell className="text-[10px] font-mono text-muted-foreground truncate max-w-[160px]">{r.registro_id ?? "—"}</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => setOpen(open === r.id ? null : r.id)}>
-                        {open === r.id ? "Ocultar" : "Ver"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                  {open === r.id && (
-                    <TableRow key={r.id + "-p"}>
-                      <TableCell colSpan={7} className="bg-muted/30">
-                        <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-[10px]">
-                          {JSON.stringify(r.payload, null, 2)}
-                        </pre>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
+                <FragmentRow key={r.id} r={r} open={open === r.id} onToggle={() => setOpen(open === r.id ? null : r.id)} badge={badge} />
               ))}
             </TableBody>
           </Table>
