@@ -87,7 +87,7 @@ function ExcelSection() {
   );
 }
 
-const TABLAS = ["", "cotizaciones", "cotizacion_items", "pagos", "boletas", "colores", "producto_variantes", "stock_movimientos", "solicitudes_egreso", "configuracion_web", "user_roles"];
+const TABLAS = ["", "cotizaciones", "cotizacion_items", "pagos", "boletas", "colores", "stock_movimientos", "solicitudes_egreso", "configuracion_web", "user_roles"];
 
 type AuditRow = {
   id: string; created_at: string; user_email: string | null; rol: string | null;

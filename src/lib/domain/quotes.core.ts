@@ -7,8 +7,19 @@ import { z } from "zod";
 export const ANCHO_FIJO_M = 1;
 export const ESPESOR_FIJO_MM = 0.4;
 
+// Tipos de fabricación oficiales. El color NO es una variante del tipo:
+// las bobinas de acero se administran por color y se usan en cualquier
+// máquina según el pedido. Los tipos históricos siguen existiendo en la
+// base para no romper cotizaciones antiguas, pero no aparecen en UI.
 export const TIPOS_PRODUCTO = [
-  "Ondulado", "PV8", "PV8 Invertido", "Microondulado", "6V", "PV4", "Lata Lisa",
+  "Ondulado",
+  "Trapezoidal",
+  "Minionda",
+  "PV4",
+  "PV6",
+  "Teja Continua",
+  "Teja Colonial",
+  "Teja Española",
 ] as const;
 export type TipoProducto = (typeof TIPOS_PRODUCTO)[number];
 
@@ -32,11 +43,6 @@ export type ItemCalc = {
   color_nombre: string | null;
   tipo: TipoProducto;
   espesor_mm: number;
-  // El trigger `trg_cotizacion_item_variant` en la base de datos
-  // rellena variante_id automáticamente vía ensure_variant().
-  // Nunca se calcula en código para evitar el error histórico
-  // "No existe variante de stock para <tipo> · <color> · <espesor>".
-  variante_id: null;
 };
 
 type DbClientLike = { from: (table: string) => any };
@@ -76,7 +82,6 @@ export async function buildItemsCalc(
       color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
       tipo,
       espesor_mm: espesor,
-      variante_id: null,
     };
   });
 }

@@ -282,7 +282,6 @@ export type Database = {
           metros2: number
           position: number
           tipo: Database["public"]["Enums"]["tipo_producto"]
-          variante_id: string | null
         }
         Insert: {
           ancho_m?: number
@@ -297,7 +296,6 @@ export type Database = {
           metros2: number
           position?: number
           tipo?: Database["public"]["Enums"]["tipo_producto"]
-          variante_id?: string | null
         }
         Update: {
           ancho_m?: number
@@ -312,7 +310,6 @@ export type Database = {
           metros2?: number
           position?: number
           tipo?: Database["public"]["Enums"]["tipo_producto"]
-          variante_id?: string | null
         }
         Relationships: [
           {
@@ -515,54 +512,6 @@ export type Database = {
           },
         ]
       }
-      producto_variantes: {
-        Row: {
-          activo: boolean
-          color_id: string
-          created_at: string
-          espesor_mm: number
-          fabricado_m: number
-          id: string
-          tipo: Database["public"]["Enums"]["tipo_producto"]
-          updated_at: string
-        }
-        Insert: {
-          activo?: boolean
-          color_id: string
-          created_at?: string
-          espesor_mm?: number
-          fabricado_m?: number
-          id?: string
-          tipo: Database["public"]["Enums"]["tipo_producto"]
-          updated_at?: string
-        }
-        Update: {
-          activo?: boolean
-          color_id?: string
-          created_at?: string
-          espesor_mm?: number
-          fabricado_m?: number
-          id?: string
-          tipo?: Database["public"]["Enums"]["tipo_producto"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "producto_variantes_color_id_fkey"
-            columns: ["color_id"]
-            isOneToOne: false
-            referencedRelation: "colores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "producto_variantes_color_id_fkey"
-            columns: ["color_id"]
-            isOneToOne: false
-            referencedRelation: "colores_publicos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       solicitudes_egreso: {
         Row: {
           boleta_subida_por: string | null
@@ -625,7 +574,6 @@ export type Database = {
           tipo: Database["public"]["Enums"]["tipo_producto"] | null
           user_email: string | null
           user_id: string | null
-          variante_id: string | null
         }
         Insert: {
           color_id?: string | null
@@ -640,7 +588,6 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_producto"] | null
           user_email?: string | null
           user_id?: string | null
-          variante_id?: string | null
         }
         Update: {
           color_id?: string | null
@@ -655,7 +602,6 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_producto"] | null
           user_email?: string | null
           user_id?: string | null
-          variante_id?: string | null
         }
         Relationships: [
           {
@@ -677,13 +623,6 @@ export type Database = {
             columns: ["cotizacion_id"]
             isOneToOne: false
             referencedRelation: "cotizaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movimientos_variante_id_fkey"
-            columns: ["variante_id"]
-            isOneToOne: false
-            referencedRelation: "producto_variantes"
             referencedColumns: ["id"]
           },
         ]
@@ -754,22 +693,6 @@ export type Database = {
       }
     }
     Functions: {
-      ensure_variant: {
-        Args: { _color_id: string; _espesor_mm?: number; _tipo: string }
-        Returns: string
-      }
-      fetch_or_create_variant: {
-        Args: { _color_id: string; _espesor_mm?: number; _tipo: string }
-        Returns: {
-          activo: boolean
-          color_id: string
-          espesor_mm: number
-          fabricado_m: number
-          id: string
-          stock_m: number
-          tipo: string
-        }[]
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -809,6 +732,12 @@ export type Database = {
         | "6V"
         | "PV4"
         | "Lata Lisa"
+        | "Trapezoidal"
+        | "Minionda"
+        | "PV6"
+        | "Teja Continua"
+        | "Teja Colonial"
+        | "Teja Española"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -967,6 +896,12 @@ export const Constants = {
         "6V",
         "PV4",
         "Lata Lisa",
+        "Trapezoidal",
+        "Minionda",
+        "PV6",
+        "Teja Continua",
+        "Teja Colonial",
+        "Teja Española",
       ],
     },
   },
