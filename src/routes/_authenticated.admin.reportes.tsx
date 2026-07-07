@@ -182,4 +182,38 @@ function AuditSection() {
       )}
     </div>
   );
+    </div>
+  );
+}
+
+function FragmentRow({ r, open, onToggle, badge }: {
+  r: AuditRow;
+  open: boolean;
+  onToggle: () => void;
+  badge: (a: string) => "default" | "secondary" | "destructive";
+}) {
+  return (
+    <>
+      <TableRow>
+        <TableCell className="text-xs">{new Date(r.created_at).toLocaleString("es-CL")}</TableCell>
+        <TableCell className="text-xs">{r.user_email ?? "—"}</TableCell>
+        <TableCell className="text-xs">{r.rol ?? "—"}</TableCell>
+        <TableCell><Badge variant={badge(r.accion)}>{r.accion}</Badge></TableCell>
+        <TableCell className="text-xs font-mono">{r.tabla}</TableCell>
+        <TableCell className="text-[10px] font-mono text-muted-foreground truncate max-w-[160px]">{r.registro_id ?? "—"}</TableCell>
+        <TableCell>
+          <Button size="sm" variant="ghost" onClick={onToggle}>{open ? "Ocultar" : "Ver"}</Button>
+        </TableCell>
+      </TableRow>
+      {open && (
+        <TableRow>
+          <TableCell colSpan={7} className="bg-muted/30">
+            <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-all text-[10px]">
+              {JSON.stringify(r.payload, null, 2)}
+            </pre>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
 }
