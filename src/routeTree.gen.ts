@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as MisCotizacionesRouteImport } from './routes/mis-cotizaciones'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
@@ -32,6 +33,11 @@ import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authent
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisCotizacionesRoute = MisCotizacionesRouteImport.update({
+  id: '/mis-cotizaciones',
+  path: '/mis-cotizaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -139,6 +145,7 @@ const AuthenticatedAdminBoletasRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
   '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
@@ -203,6 +212,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/admin/boletas'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/admin/boletas'
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
     | '/_authenticated/admin/boletas'
@@ -266,6 +278,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthRoute: typeof AuthRoute
+  MisCotizacionesRoute: typeof MisCotizacionesRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   CotizacionNumeroRoute: typeof CotizacionNumeroRoute
   ApiPublicCreateGetnetPaymentRoute: typeof ApiPublicCreateGetnetPaymentRoute
@@ -279,6 +292,13 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-cotizaciones': {
+      id: '/mis-cotizaciones'
+      path: '/mis-cotizaciones'
+      fullPath: '/mis-cotizaciones'
+      preLoaderRoute: typeof MisCotizacionesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthRoute: AuthRoute,
+  MisCotizacionesRoute: MisCotizacionesRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   CotizacionNumeroRoute: CotizacionNumeroRoute,
   ApiPublicCreateGetnetPaymentRoute: ApiPublicCreateGetnetPaymentRoute,

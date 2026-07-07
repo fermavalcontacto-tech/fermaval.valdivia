@@ -24,10 +24,12 @@ export function PublicHeader({ linktreeUrl }: { linktreeUrl?: string | null }) {
         <nav className="hidden items-center gap-6 md:flex">
           <a href="#productos" className="text-sm font-medium text-foreground/80 hover:text-accent">Productos</a>
           <a href="#cotizador" className="text-sm font-medium text-foreground/80 hover:text-accent">Cotizar</a>
+          <Link to="/mis-cotizaciones" className="text-sm font-medium text-foreground/80 hover:text-accent">Mis cotizaciones</Link>
           <a href="#ubicacion" className="text-sm font-medium text-foreground/80 hover:text-accent">Ubicación</a>
           {linktreeUrl && (
             <a href={linktreeUrl} target="_blank" rel="noreferrer" className="text-sm font-medium text-foreground/80 hover:text-accent">Linktree</a>
           )}
+
           {authed ? (
             <Button asChild variant="navy" size="sm"><Link to="/admin">Panel</Link></Button>
           ) : (
@@ -43,8 +45,10 @@ export function PublicHeader({ linktreeUrl }: { linktreeUrl?: string | null }) {
           <div className="container mx-auto flex flex-col gap-2 px-4 py-4">
             <a href="#productos" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Productos</a>
             <a href="#cotizador" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Cotizar</a>
+            <Link to="/mis-cotizaciones" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Mis cotizaciones</Link>
             <a href="#ubicacion" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Ubicación</a>
             {linktreeUrl && <a href={linktreeUrl} target="_blank" rel="noreferrer" className="py-2 text-sm font-medium">Linktree</a>}
+
             {authed ? (
               <Button onClick={() => { router.navigate({ to: "/admin" }); setOpen(false); }} variant="navy" size="sm">Panel</Button>
             ) : (

@@ -202,3 +202,34 @@ export const getPublicConfig = createServerFn({ method: "GET" }).handler(async (
     .order("orden", { ascending: true });
   return { cfg, colores: colores ?? [] };
 });
+
+// Historial público del cliente: por correo. No devuelve tokens ni PII de otros.
+// Para abrir el detalle de una cotización específica sigue siendo necesario
+// el enlace con `?t=<token>` que el cliente recibe por correo.
+export const listMyQuotesByEmail = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    correo: z.string().trim().toLowerCase().email().max(160),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: cots, error } = await supabaseAdmin
+      .from("cotizaciones")
+      .select(
+        "numero, created_at, estado, metros2, color_nombre, total, pago_recibido, saldo, cliente:clientes!inner(correo)",
+      )
+      .eq("cliente.correo", data.correo)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (cots ?? []).map((c) => ({
+      numero: c.numero,
+      created_at: c.created_at,
+      estado: c.estado,
+      metros2: Number(c.metros2),
+      color_nombre: c.color_nombre,
+      total: Number(c.total),
+      pago_recibido: Number(c.pago_recibido),
+      saldo: Number(c.saldo),
+    }));
+  });
+
