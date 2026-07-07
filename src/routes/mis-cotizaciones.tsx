@@ -24,10 +24,21 @@ type QuoteRow = Awaited<ReturnType<typeof listMyQuotesByEmail>>[number];
 
 function MyQuotesPage() {
   const [correo, setCorreo] = useState("");
+  const [codigo, setCodigo] = useState("");
+  const [step, setStep] = useState<"email" | "code">("email");
   const [rows, setRows] = useState<QuoteRow[] | null>(null);
 
+  const requestCode = useMutation({
+    mutationFn: (c: string) => requestQuoteHistoryCode({ data: { correo: c } }),
+    onSuccess: () => {
+      setStep("code");
+      toast.success("Si el correo está registrado, te enviamos un código de 6 dígitos. Revisa tu bandeja de entrada.");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const search = useMutation({
-    mutationFn: (c: string) => listMyQuotesByEmail({ data: { correo: c } }),
+    mutationFn: (input: { correo: string; codigo: string }) => listMyQuotesByEmail({ data: input }),
     onSuccess: (r) => {
       setRows(r);
       if (!r.length) toast.info("No encontramos cotizaciones para ese correo.");
@@ -51,38 +62,75 @@ function MyQuotesPage() {
             <div>
               <h1 className="font-display text-2xl text-primary">Mis cotizaciones</h1>
               <p className="text-sm text-muted-foreground">
-                Ingresa el correo con el que solicitaste tus cotizaciones.
+                Verificamos tu correo antes de mostrar tu historial.
               </p>
             </div>
           </div>
 
-          <form
-            className="mt-6 flex flex-col gap-3 sm:flex-row"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!correo.trim()) return;
-              search.mutate(correo.trim().toLowerCase());
-            }}
-          >
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              placeholder="tu@correo.cl"
-              value={correo}
-              onChange={(e) => setCorreo(e.target.value)}
-              className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
-            />
-            <Button type="submit" variant="hero" disabled={search.isPending || !correo.trim()}>
-              <Search className="mr-1 h-4 w-4" />
-              {search.isPending ? "Buscando…" : "Buscar"}
-            </Button>
-          </form>
+          {step === "email" ? (
+            <form
+              className="mt-6 flex flex-col gap-3 sm:flex-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!correo.trim()) return;
+                requestCode.mutate(correo.trim().toLowerCase());
+              }}
+            >
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                placeholder="tu@correo.cl"
+                value={correo}
+                onChange={(e) => setCorreo(e.target.value)}
+                className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+              <Button type="submit" variant="hero" disabled={requestCode.isPending || !correo.trim()}>
+                <Search className="mr-1 h-4 w-4" />
+                {requestCode.isPending ? "Enviando…" : "Enviar código"}
+              </Button>
+            </form>
+          ) : (
+            <form
+              className="mt-6 flex flex-col gap-3 sm:flex-row"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!/^\d{6}$/.test(codigo)) {
+                  toast.error("Ingresa el código de 6 dígitos que enviamos a tu correo.");
+                  return;
+                }
+                search.mutate({ correo: correo.trim().toLowerCase(), codigo });
+              }}
+            >
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                pattern="\d{6}"
+                required
+                placeholder="Código de 6 dígitos"
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm tracking-widest"
+              />
+              <Button type="submit" variant="hero" disabled={search.isPending || codigo.length !== 6}>
+                {search.isPending ? "Verificando…" : "Ver mis cotizaciones"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => { setStep("email"); setCodigo(""); setRows(null); }}
+              >
+                Cambiar correo
+              </Button>
+            </form>
+          )}
 
           <p className="mt-2 text-[11px] text-muted-foreground">
             Por seguridad, para ver el detalle de una cotización necesitas el enlace personal que te enviamos por correo.
           </p>
         </Card>
+
 
         {rows && rows.length > 0 && (
           <Card className="mt-6 overflow-hidden border-2 border-border bg-card">
