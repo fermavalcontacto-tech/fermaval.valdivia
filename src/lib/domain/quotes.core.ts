@@ -1,0 +1,90 @@
+// Núcleo compartido de la lógica de cotización.
+// Cliente (público) y Admin usan EXACTAMENTE estas mismas funciones y constantes.
+// No importar server-only aquí: este módulo puede correr en ambos lados.
+
+import { z } from "zod";
+
+export const ANCHO_FIJO_M = 1;
+export const ESPESOR_FIJO_MM = 0.4;
+
+export const TIPOS_PRODUCTO = [
+  "Ondulado", "PV8", "PV8 Invertido", "Microondulado", "6V", "PV4", "Lata Lisa",
+] as const;
+export type TipoProducto = (typeof TIPOS_PRODUCTO)[number];
+
+export const TipoEnum = z.enum(TIPOS_PRODUCTO);
+
+export const ItemInputSchema = z.object({
+  largo_m: z.number().positive().max(1000),
+  cantidad_planchas: z.number().int().positive().max(10000),
+  color_id: z.string().uuid().nullable().optional(),
+  tipo: TipoEnum.optional().default("Ondulado"),
+  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
+});
+export type ItemInput = z.infer<typeof ItemInputSchema>;
+
+export type ItemCalc = {
+  largo_m: number;
+  ancho_m: number;
+  cantidad_planchas: number;
+  metros2: number;
+  color_id: string | null;
+  color_nombre: string | null;
+  tipo: TipoProducto;
+  espesor_mm: number;
+  // El trigger `trg_cotizacion_item_variant` en la base de datos
+  // rellena variante_id automáticamente vía ensure_variant().
+  // Nunca se calcula en código para evitar el error histórico
+  // "No existe variante de stock para <tipo> · <color> · <espesor>".
+  variante_id: null;
+};
+
+type DbClientLike = { from: (table: string) => any };
+
+/**
+ * Fuente única de cálculo de líneas. Usada por:
+ *  - createPublicQuote (cliente)
+ *  - createCotizacionManual (admin)
+ *  - updateCotizacionFull (admin)
+ */
+export async function buildItemsCalc(
+  supabase: DbClientLike,
+  items: ItemInput[],
+): Promise<ItemCalc[]> {
+  const colorIds = Array.from(
+    new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)),
+  );
+  const colorNames = new Map<string, string>();
+  if (colorIds.length) {
+    const { data: cols } = await supabase
+      .from("colores")
+      .select("id, nombre")
+      .in("id", colorIds);
+    for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
+  }
+
+  return items.map((it) => {
+    const tipo = (it.tipo ?? "Ondulado") as TipoProducto;
+    const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
+    const cid = it.color_id ?? null;
+    return {
+      largo_m: it.largo_m,
+      ancho_m: ANCHO_FIJO_M,
+      cantidad_planchas: it.cantidad_planchas,
+      metros2: Number((it.largo_m * ANCHO_FIJO_M * it.cantidad_planchas).toFixed(2)),
+      color_id: cid,
+      color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
+      tipo,
+      espesor_mm: espesor,
+      variante_id: null,
+    };
+  });
+}
+
+export function sumMetros2(items: Pick<ItemCalc, "metros2">[]): number {
+  return Number(items.reduce((s, x) => s + x.metros2, 0).toFixed(2));
+}
+
+export function calcTotal(metros2: number, precio_m2: number, descuento = 0): number {
+  return Math.max(0, Math.round(metros2 * precio_m2 - descuento));
+}
