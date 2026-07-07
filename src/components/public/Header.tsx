@@ -45,8 +45,10 @@ export function PublicHeader({ linktreeUrl }: { linktreeUrl?: string | null }) {
           <div className="container mx-auto flex flex-col gap-2 px-4 py-4">
             <a href="#productos" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Productos</a>
             <a href="#cotizador" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Cotizar</a>
+            <Link to="/mis-cotizaciones" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Mis cotizaciones</Link>
             <a href="#ubicacion" onClick={() => setOpen(false)} className="py-2 text-sm font-medium">Ubicación</a>
             {linktreeUrl && <a href={linktreeUrl} target="_blank" rel="noreferrer" className="py-2 text-sm font-medium">Linktree</a>}
+
             {authed ? (
               <Button onClick={() => { router.navigate({ to: "/admin" }); setOpen(false); }} variant="navy" size="sm">Panel</Button>
             ) : (
