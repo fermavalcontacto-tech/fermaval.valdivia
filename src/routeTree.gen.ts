@@ -18,7 +18,6 @@ import { Route as CotizacionNumeroRouteImport } from './routes/cotizacion.$numer
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as ApiPublicWebhookGetnetRouteImport } from './routes/api/public/webhook-getnet'
 import { Route as ApiPublicCreateGetnetPaymentRouteImport } from './routes/api/public/create-getnet-payment'
-import { Route as AuthenticatedAdminVariantesRouteImport } from './routes/_authenticated.admin.variantes'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
 import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
@@ -74,12 +73,6 @@ const ApiPublicCreateGetnetPaymentRoute =
     id: '/api/public/create-getnet-payment',
     path: '/api/public/create-getnet-payment',
     getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAdminVariantesRoute =
-  AuthenticatedAdminVariantesRouteImport.update({
-    id: '/admin/variantes',
-    path: '/admin/variantes',
-    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdminUsuariosRoute =
   AuthenticatedAdminUsuariosRouteImport.update({
@@ -158,7 +151,6 @@ export interface FileRoutesByFullPath {
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/admin/variantes': typeof AuthenticatedAdminVariantesRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
@@ -179,7 +171,6 @@ export interface FileRoutesByTo {
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/admin/variantes': typeof AuthenticatedAdminVariantesRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
@@ -202,7 +193,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
-  '/_authenticated/admin/variantes': typeof AuthenticatedAdminVariantesRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
@@ -225,7 +215,6 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
-    | '/admin/variantes'
     | '/api/public/create-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/admin/'
@@ -246,7 +235,6 @@ export interface FileRouteTypes {
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
-    | '/admin/variantes'
     | '/api/public/create-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/admin'
@@ -268,7 +256,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/reportes'
     | '/_authenticated/admin/usuarios'
-    | '/_authenticated/admin/variantes'
     | '/api/public/create-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/_authenticated/admin/'
@@ -349,13 +336,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/public/create-getnet-payment'
       preLoaderRoute: typeof ApiPublicCreateGetnetPaymentRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/admin/variantes': {
-      id: '/_authenticated/admin/variantes'
-      path: '/admin/variantes'
-      fullPath: '/admin/variantes'
-      preLoaderRoute: typeof AuthenticatedAdminVariantesRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/usuarios': {
       id: '/_authenticated/admin/usuarios'
@@ -441,7 +421,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminReportesRoute: typeof AuthenticatedAdminReportesRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
-  AuthenticatedAdminVariantesRoute: typeof AuthenticatedAdminVariantesRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
 }
 
@@ -456,7 +435,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminReportesRoute: AuthenticatedAdminReportesRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
-  AuthenticatedAdminVariantesRoute: AuthenticatedAdminVariantesRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
 }
 
