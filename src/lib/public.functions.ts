@@ -33,66 +33,79 @@ export const createPublicQuote = createServerFn({ method: "POST" })
   .inputValidator((data) => CreateQuoteSchema.parse(data))
   .handler(async ({ data }) => {
     try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: cfg, error: cfgErr } = await supabaseAdmin
-      .from("configuracion_web").select("precio_m2").eq("id", 1).single();
-    if (cfgErr) throw new Error("No se pudo cargar la configuración");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: cfg, error: cfgErr } = await supabaseAdmin
+        .from("configuracion_web").select("precio_m2").eq("id", 1).single();
+      if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
-    const precio = Number(cfg.precio_m2);
+      const precio = Number(cfg.precio_m2);
 
-    // Propagar color_id global a cada item si no lo trae, para que buildItemsCalc
-    // (fuente única de cálculo) lo resuelva junto al resto.
-    const itemsInput = data.items.map((it) => ({
-      ...it,
-      color_id: it.color_id ?? data.color_id ?? null,
-    }));
-    const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput);
+      // Propagar color_id global a cada item si no lo trae, para que buildItemsCalc
+      // (fuente única de cálculo) lo resuelva junto al resto.
+      const itemsInput = data.items.map((it) => ({
+        ...it,
+        color_id: it.color_id ?? data.color_id ?? null,
+      }));
+      const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput);
 
-    const metros2Total = sumMetros2(itemsCalc);
-    const total = calcTotal(metros2Total, precio);
-    const first = itemsCalc[0];
-    const color_nombre = first.color_nombre;
-    const color_id_cot = first.color_id;
+      const metros2Total = sumMetros2(itemsCalc);
+      const total = calcTotal(metros2Total, precio);
+      const first = itemsCalc[0];
+      const color_nombre = first.color_nombre;
+      const color_id_cot = first.color_id;
 
 
-    const { data: cliente, error: ceErr } = await supabaseAdmin
-      .from("clientes").insert({ ...data.cliente }).select("id").single();
-    if (ceErr) throw new Error("No se pudo registrar el cliente");
+      const { data: cliente, error: ceErr } = await supabaseAdmin
+        .from("clientes").insert({ ...data.cliente }).select("id").single();
+      if (ceErr) throw new Error("No se pudo registrar el cliente");
 
-    const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
-    const numero = seqErr || seqVal == null
-      ? "FV-" + Date.now().toString().slice(-7)
-      : "FV-" + String(seqVal as unknown as number).padStart(5, "0");
+      const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
+      const numero = seqErr || seqVal == null
+        ? "FV-" + Date.now().toString().slice(-7)
+        : "FV-" + String(seqVal as unknown as number).padStart(5, "0");
 
-    const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+      const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
-    const { data: cot, error: cotErr } = await supabaseAdmin
-      .from("cotizaciones")
-      .insert({
-        numero, cliente_id: cliente.id,
-        largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
-        cantidad_planchas: first.cantidad_planchas,
-        metros2: metros2Total, color_id: color_id_cot, color_nombre,
-        precio_m2: precio, total, saldo: total,
-        estado: "cotizacion_creada", plazo_horas: 72,
-        access_token, origen: "cliente",
-        responsable_nombre: null,
-      })
-      .select("id, numero, access_token").single();
-    if (cotErr) {
-      console.error("[createPublicQuote] cotizaciones insert failed:", cotErr);
-      throw new Error("No se pudo crear la cotización. Por favor intenta de nuevo.");
-    }
+      const { data: cot, error: cotErr } = await supabaseAdmin
+        .from("cotizaciones")
+        .insert({
+          numero, cliente_id: cliente.id,
+          largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
+          cantidad_planchas: first.cantidad_planchas,
+          metros2: metros2Total, color_id: color_id_cot, color_nombre,
+          precio_m2: precio, total, saldo: total,
+          estado: "cotizacion_creada", plazo_horas: 72,
+          access_token, origen: "cliente",
+          responsable_nombre: null,
+        })
+        .select("id, numero, access_token").single();
+      if (cotErr) {
+        console.error("[createPublicQuote] cotizaciones insert failed:", cotErr);
+        throw new Error("No se pudo crear la cotización. Por favor intenta de nuevo.");
+      }
 
-    const { error: itErr } = await supabaseAdmin
-      .from("cotizacion_items")
-      .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: cot.id, position: idx })));
-    if (itErr) {
-      console.error("[createPublicQuote] cotizacion_items insert failed:", itErr);
-      throw new Error("No se pudo guardar el detalle de la cotización. Por favor intenta de nuevo.");
-    }
+      const itemRows = itemsCalc.map((it, idx) => ({
+        cotizacion_id: cot.id,
+        position: idx,
+        largo_m: it.largo_m,
+        ancho_m: it.ancho_m,
+        cantidad_planchas: it.cantidad_planchas,
+        metros2: it.metros2,
+        color_id: it.color_id,
+        color_nombre: it.color_nombre,
+        tipo: it.tipo,
+        espesor_mm: it.espesor_mm,
+      }));
 
-    return { numero: cot.numero, access_token: cot.access_token };
+      const { error: itErr } = await supabaseAdmin
+        .from("cotizacion_items")
+        .insert(itemRows);
+      if (itErr) {
+        console.error("[createPublicQuote] cotizacion_items insert failed:", itErr);
+        throw new Error("No se pudo guardar el detalle de la cotización. Por favor intenta de nuevo.");
+      }
+
+      return { numero: cot.numero, access_token: cot.access_token };
     } catch (error) {
       const message = publicQuoteErrorMessage(error);
       console.error("[createPublicQuote] failed:", error);

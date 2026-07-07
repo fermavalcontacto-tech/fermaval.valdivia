@@ -95,6 +95,7 @@ export function calcTotal(metros2: number, precio_m2: number, descuento = 0): nu
 }
 
 export const QUOTE_FALLBACK_ERROR_MESSAGE = "No se pudo generar la cotización. Por favor intenta nuevamente.";
+export const LEGACY_VARIANT_ERROR_PATTERN = /(?:no\s+existe\s+variante|variante\s+de\s+stock|producto_variantes|variante_id|ensure_variant|fetch_or_create_variant|stock\s+para)/i;
 
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) return error.message;
@@ -107,10 +108,12 @@ export function errorMessage(error: unknown): string {
 }
 
 export function isLegacyVariantStockError(error: unknown): boolean {
-  return /variante|producto_variantes|variante_id|ensure_variant|fetch_or_create_variant|stock\s+para/i.test(errorMessage(error));
+  return LEGACY_VARIANT_ERROR_PATTERN.test(errorMessage(error));
 }
 
 export function publicQuoteErrorMessage(error: unknown): string {
   if (isLegacyVariantStockError(error)) return QUOTE_FALLBACK_ERROR_MESSAGE;
-  return errorMessage(error) || QUOTE_FALLBACK_ERROR_MESSAGE;
+  const message = errorMessage(error);
+  if (LEGACY_VARIANT_ERROR_PATTERN.test(message)) return QUOTE_FALLBACK_ERROR_MESSAGE;
+  return message || QUOTE_FALLBACK_ERROR_MESSAGE;
 }
