@@ -182,8 +182,6 @@ function AuditSection() {
       )}
     </div>
   );
-    </div>
-  );
 }
 
 function FragmentRow({ r, open, onToggle, badge }: {
