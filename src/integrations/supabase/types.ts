@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          accion: string
+          created_at: string
+          id: string
+          payload: Json | null
+          registro_id: string | null
+          rol: string | null
+          tabla: string
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          accion: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          registro_id?: string | null
+          rol?: string | null
+          tabla: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          accion?: string
+          created_at?: string
+          id?: string
+          payload?: Json | null
+          registro_id?: string | null
+          rol?: string | null
+          tabla?: string
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       boletas: {
         Row: {
           archivo_nombre: string | null
@@ -707,6 +743,10 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_variant: {
+        Args: { _color_id: string; _espesor_mm?: number; _tipo: string }
+        Returns: string
+      }
       fetch_or_create_variant: {
         Args: { _color_id: string; _espesor_mm?: number; _tipo: string }
         Returns: {
