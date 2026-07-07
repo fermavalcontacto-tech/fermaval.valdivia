@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createHash, randomBytes } from "crypto";
 
 // Getnet Chile Web Checkout (motor PlacetoPay).
-// Endpoint sandbox de integración. Cambiar a producción cuando se certifiquen las 4 compras de prueba.
 const GETNET_ENDPOINT =
   process.env.GETNET_ENDPOINT ?? "https://checkout.test.getnet.cl/api/session";
 
@@ -16,16 +15,10 @@ function buildAuth(login: string, secretKey: string) {
   const nonceBytes = randomBytes(16);
   const nonceB64 = nonceBytes.toString("base64");
   const seed = new Date().toISOString();
-  // tranKey = base64( sha256( nonce_raw + seed + secretKey ) )
   const hash = createHash("sha256")
     .update(Buffer.concat([nonceBytes, Buffer.from(seed + secretKey, "utf8")]))
     .digest();
-  return {
-    login,
-    tranKey: hash.toString("base64"),
-    nonce: nonceB64,
-    seed,
-  };
+  return { login, tranKey: hash.toString("base64"), nonce: nonceB64, seed };
 }
 
 export const Route = createFileRoute("/api/public/create-getnet-payment")({
@@ -46,31 +39,44 @@ export const Route = createFileRoute("/api/public/create-getnet-payment")({
           const body = (await request.json()) as {
             numero?: string;
             token?: string;
-            monto?: number;
             descripcion?: string;
             returnUrl?: string;
           };
 
           const numero = String(body.numero ?? "").trim();
           const token = String(body.token ?? "").trim();
-          const monto = Math.round(Number(body.monto ?? 0));
-          if (!numero || !token || monto <= 0) {
+          if (!numero || !token) {
             return new Response(JSON.stringify({ error: "Datos inválidos." }), {
               status: 400,
               headers: { "Content-Type": "application/json", ...CORS },
             });
           }
 
-          // Verificar que la cotización existe y el token es válido antes de crear la sesión.
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
           const { data: cot } = await supabaseAdmin
             .from("cotizaciones")
-            .select("id, numero, access_token, saldo, total")
+            .select("id, numero, access_token, saldo, total, estado")
             .eq("numero", numero)
             .maybeSingle();
           if (!cot || String(cot.access_token) !== token) {
             return new Response(JSON.stringify({ error: "Cotización no encontrada." }), {
               status: 404,
+              headers: { "Content-Type": "application/json", ...CORS },
+            });
+          }
+          if (cot.estado === "pedido_confirmado" || cot.estado === "pedido_terminado" || cot.estado === "rechazada") {
+            return new Response(JSON.stringify({ error: "Esta cotización no admite pagos." }), {
+              status: 409,
+              headers: { "Content-Type": "application/json", ...CORS },
+            });
+          }
+
+          // El monto SIEMPRE es el saldo pendiente autoritativo del servidor,
+          // nunca un valor suministrado por el cliente.
+          const monto = Math.round(Number(cot.saldo));
+          if (!Number.isFinite(monto) || monto <= 0) {
+            return new Response(JSON.stringify({ error: "Cotización sin saldo pendiente." }), {
+              status: 409,
               headers: { "Content-Type": "application/json", ...CORS },
             });
           }
@@ -89,10 +95,11 @@ export const Route = createFileRoute("/api/public/create-getnet-payment")({
             "0.0.0.0";
           const userAgent = request.headers.get("user-agent") ?? "Fermaval Web";
 
+          const reference = `${numero}-${Date.now()}`;
           const payload = {
             auth: buildAuth(login, secretKey),
             payment: {
-              reference: `${numero}-${Date.now()}`,
+              reference,
               description: body.descripcion ?? `Cotización ${numero} FERMAVAL`,
               amount: { currency: "CLP", total: monto },
             },
@@ -113,7 +120,7 @@ export const Route = createFileRoute("/api/public/create-getnet-payment")({
             processUrl?: string;
           };
 
-          if (!res.ok || json.status?.status !== "OK" || !json.processUrl) {
+          if (!res.ok || json.status?.status !== "OK" || !json.processUrl || !json.requestId) {
             return new Response(
               JSON.stringify({
                 error: json.status?.message ?? "No se pudo iniciar el pago con Getnet.",
@@ -122,11 +129,26 @@ export const Route = createFileRoute("/api/public/create-getnet-payment")({
             );
           }
 
+          // Guardar mapping request_id → cotización + monto esperado.
+          // Fuente autoritativa para el webhook (no confiar en `reference`).
+          await supabaseAdmin
+            .from("getnet_sessions" as never)
+            .upsert(
+              {
+                request_id: json.requestId,
+                cotizacion_id: cot.id,
+                reference,
+                monto_esperado: monto,
+                status: "PENDING",
+              } as never,
+              { onConflict: "request_id" } as never,
+            );
+
           return new Response(
             JSON.stringify({
               processUrl: json.processUrl,
               requestId: json.requestId,
-              reference: payload.payment.reference,
+              reference,
             }),
             { status: 200, headers: { "Content-Type": "application/json", ...CORS } },
           );
