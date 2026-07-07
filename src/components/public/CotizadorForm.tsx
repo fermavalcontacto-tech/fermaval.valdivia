@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, publicQuoteErrorMessage } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -24,7 +24,6 @@ const DEFAULT_FIELDS: FormFields = {
 
 type Tipo = typeof TIPOS_PRODUCTO[number];
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
-const VARIANT_STOCK_REGEX = /variante|stock\s+para/i;
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
@@ -81,15 +80,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       toast.success(`Cotización ${r.numero} generada`);
       navigate({ to: "/cotizacion/$numero", params: { numero: r.numero }, search: { t: r.access_token } });
     },
-    onError: (e: Error) => {
-      // Bypass: silenciar cualquier mensaje relacionado con variantes de stock;
-      // el inventario real se controla por Color + 0,4 mm, no por tipo de lata.
-      if (VARIANT_STOCK_REGEX.test(e.message)) {
-        toast.dismiss();
-        return;
-      }
-      toast.error(e.message);
-    },
+    onError: (e: Error) => toast.error(publicQuoteErrorMessage(e)),
   });
 
   function submit(e: React.FormEvent) {
