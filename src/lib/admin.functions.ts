@@ -699,57 +699,11 @@ export const adjustColorStock = createServerFn({ method: "POST" })
     return { ok: true, stock_m: nuevo };
   });
 
-// ============= PRODUCTO_VARIANTES (stock por tipo+color+espesor) =============
+// El módulo de "Variantes (Tipo + Color)" se eliminó del sistema.
+// El inventario se administra sólo por color en "Colores y Stock".
+// (Ajustes vía adjustColorStock, más arriba.)
 
-export const listProductoVariantes = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
-      .from("producto_variantes")
-      .select("id, tipo, color_id, espesor_mm, activo, fabricado_m, color:colores(nombre, hex, stock_m)")
-      .order("tipo", { ascending: true });
-    if (error) throw new Error(error.message);
-    return (data ?? []).map((v) => ({
-      ...v,
-      fabricado_m: Number(v.fabricado_m ?? 0),
-      materia_prima_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
-      stock_m: Number((v.color as { stock_m?: number } | null)?.stock_m ?? 0),
-    }));
-  });
 
-// Stock per "variante" is virtual: it lives in the parent color row.
-// Adjusting a variant adjusts the whole color pool (all tipos share it).
-export const adjustVarianteStock = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({
-    variante_id: z.string().uuid(),
-    delta_m: z.number().refine((v) => v !== 0, "Ingresa un valor distinto de 0"),
-    motivo: z.string().trim().min(2).max(200),
-  }).parse(d))
-  .handler(async ({ data, context }) => {
-    const email = (context.claims?.email ?? "").toLowerCase();
-    const { data: roles } = await context.supabase.from("user_roles").select("role").eq("user_id", context.userId);
-    const isAdmin = (roles ?? []).some((r) => r.role === "admin");
-    if (!isAdmin) throw new Error("Solo administradores pueden ajustar stock.");
-    const { data: prev } = await context.supabase
-      .from("producto_variantes")
-      .select("id, tipo, color_id, espesor_mm, color:colores(nombre, stock_m)").eq("id", data.variante_id).single();
-    if (!prev) throw new Error("Variante no encontrada");
-    const colName = (prev.color as { nombre?: string } | null)?.nombre ?? null;
-    const stockActual = Number((prev.color as { stock_m?: number } | null)?.stock_m ?? 0);
-    const nuevo = stockActual + data.delta_m;
-    if (nuevo < 0) throw new Error("El ajuste deja stock negativo.");
-    const { error } = await context.supabase.from("colores").update({ stock_m: nuevo }).eq("id", prev.color_id);
-    if (error) throw new Error(error.message);
-    await context.supabase.from("stock_movimientos").insert({
-      color_id: prev.color_id, color_nombre: colName,
-      variante_id: data.variante_id, tipo: prev.tipo, espesor_mm: prev.espesor_mm,
-      metros: data.delta_m,
-      motivo: `${data.motivo} (pool global del color)`,
-      user_id: context.userId, user_email: email,
-    });
-    return { ok: true, stock_m: nuevo };
-  });
 
 
 export const listStockMovimientos = createServerFn({ method: "GET" })
