@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { getDashboard, getAnalytics } from "@/lib/admin.functions";
+import { getDashboard, getAnalytics, listAlertas } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCLP } from "@/lib/format";
@@ -74,6 +74,9 @@ function Dashboard() {
           </div>
         </Card>
       )}
+
+      <AlertsCard />
+
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
@@ -221,5 +224,42 @@ function AnalyticsSection() {
         {isFetching && <p className="mt-2 text-xs text-muted-foreground">Actualizando…</p>}
       </Card>
     </div>
+  );
+}
+
+type Alerta = { tipo: string; severidad: string; registro_id: string; mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null> };
+
+function AlertsCard() {
+  const { data, isLoading } = useQuery<Alerta[]>({
+    queryKey: ["alertas"],
+    queryFn: () => listAlertas() as unknown as Promise<Alerta[]>,
+    refetchInterval: 60_000,
+  });
+  if (isLoading) return null;
+  const alertas = data ?? [];
+  if (alertas.length === 0) return null;
+  const color = (s: string) =>
+    s === "alta" ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : s === "media" ? "border-amber-400/50 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100"
+    : "border-border bg-muted/30 text-muted-foreground";
+  return (
+    <Card className="p-5">
+      <div className="mb-3 flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Alertas del sistema ({alertas.length})
+        </h3>
+      </div>
+      <ul className="space-y-2 max-h-72 overflow-auto">
+        {alertas.map((a, i) => (
+          <li key={`${a.tipo}-${a.registro_id}-${i}`} className={`rounded-md border px-3 py-2 text-sm ${color(a.severidad)}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium">{a.mensaje}</span>
+              <span className="text-[10px] uppercase tracking-wider">{a.tipo.replace(/_/g, " ")}</span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }

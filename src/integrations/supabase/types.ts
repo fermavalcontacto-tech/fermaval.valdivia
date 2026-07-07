@@ -741,6 +741,17 @@ export type Database = {
         }
         Relationships: []
       }
+      v_alertas: {
+        Row: {
+          mensaje: string | null
+          meta: Json | null
+          ocurrido_at: string | null
+          registro_id: string | null
+          severidad: string | null
+          tipo: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       ensure_variant: {

@@ -1416,3 +1416,18 @@ export const listAuditLog = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return rows ?? [];
   });
+
+export const listAlertas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("v_alertas")
+      .select("tipo, severidad, registro_id, mensaje, ocurrido_at, meta")
+      .order("severidad", { ascending: true })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as unknown as Array<{
+      tipo: string; severidad: string; registro_id: string;
+      mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null>;
+    }>;
+  });
