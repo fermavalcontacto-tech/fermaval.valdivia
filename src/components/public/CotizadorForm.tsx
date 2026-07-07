@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -21,9 +22,7 @@ const DEFAULT_FIELDS: FormFields = {
   direccion: { label: "Dirección (opcional)", visible: true, required: false },
 };
 
-const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
 type Tipo = typeof TIPOS_PRODUCTO[number];
-const ESPESOR_MM = 0.4;
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
 const VARIANT_STOCK_REGEX = /variante|stock\s+para/i;
 
@@ -73,7 +72,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       data: {
         items: itemsCalc.map((it) => ({
           largo_m: it.largo, cantidad_planchas: it.cantidad,
-          color_id: it.color_id || null, tipo: it.tipo, espesor_mm: ESPESOR_MM,
+          color_id: it.color_id || null, tipo: it.tipo, espesor_mm: ESPESOR_FIJO_MM,
         })),
         cliente: { nombre, telefono, correo, direccion },
       },
