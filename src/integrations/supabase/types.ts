@@ -693,6 +693,14 @@ export type Database = {
       }
     }
     Functions: {
+      ensure_variant: {
+        Args: { _color_id: string; _espesor_mm: number; _tipo: string }
+        Returns: string
+      }
+      fetch_or_create_variant: {
+        Args: { _color_id: string; _espesor_mm: number; _tipo: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
