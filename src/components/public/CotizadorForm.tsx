@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, publicQuoteErrorMessage } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -25,6 +25,14 @@ type Tipo = typeof TIPOS_PRODUCTO[number];
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
+
+function clearLegacyVariantToasts() {
+  toast.dismiss();
+  if (typeof document === "undefined") return;
+  document.querySelectorAll<HTMLElement>("[data-sonner-toast]").forEach((node) => {
+    if (isLegacyVariantStockError(node.textContent ?? "")) node.remove();
+  });
+}
 
 export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
   const ff: FormFields = {
@@ -79,7 +87,10 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       toast.success(`Cotización ${r.numero} generada`);
       navigate({ to: "/cotizacion/$numero", params: { numero: r.numero }, search: { t: r.access_token } });
     },
-    onError: (e: Error) => toast.error(publicQuoteErrorMessage(e)),
+    onError: (e: Error) => {
+      clearLegacyVariantToasts();
+      toast.error(publicQuoteErrorMessage(e));
+    },
   });
 
   function submit(e: React.FormEvent) {
@@ -101,6 +112,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
     if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       toast.error("Correo inválido"); return;
     }
+    clearLegacyVariantToasts();
     mut.mutate();
   }
 
