@@ -7,19 +7,19 @@ import { z } from "zod";
 export const ANCHO_FIJO_M = 1;
 export const ESPESOR_FIJO_MM = 0.4;
 
-// Tipos de fabricación oficiales. El color NO es una variante del tipo:
-// las bobinas de acero se administran por color y se usan en cualquier
-// máquina según el pedido. Los tipos históricos siguen existiendo en la
-// base para no romper cotizaciones antiguas, pero no aparecen en UI.
+// Tipos de fabricación oficiales ofrecidos en el cotizador público.
+// El color NO es una variante del tipo: las bobinas se administran por color
+// y se usan en cualquier máquina según el pedido. Cotizaciones antiguas con
+// tipos legacy (Trapezoidal, Minionda, PV6, Teja Continua/Colonial/Española)
+// siguen visibles en el admin porque `cotizacion_items.tipo` es texto libre.
 export const TIPOS_PRODUCTO = [
   "Ondulado",
-  "Trapezoidal",
-  "Minionda",
+  "PV8",
+  "PV8 Invertido",
+  "Microondulado",
+  "6V",
   "PV4",
-  "PV6",
-  "Teja Continua",
-  "Teja Colonial",
-  "Teja Española",
+  "Lata Lisa",
 ] as const;
 export type TipoProducto = (typeof TIPOS_PRODUCTO)[number];
 
