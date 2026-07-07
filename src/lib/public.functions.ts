@@ -210,15 +210,95 @@ export const getPublicConfig = createServerFn({ method: "GET" }).handler(async (
   return { cfg, colores: colores ?? [] };
 });
 
-// Historial público del cliente: por correo. No devuelve tokens ni PII de otros.
-// Para abrir el detalle de una cotización específica sigue siendo necesario
-// el enlace con `?t=<token>` que el cliente recibe por correo.
-export const listMyQuotesByEmail = createServerFn({ method: "POST" })
+// Historial público del cliente: dos pasos.
+// 1) `requestQuoteHistoryCode` genera un código de 6 dígitos y lo envía al correo
+//    indicado; sólo llegará si el correo corresponde a un cliente real.
+// 2) `listMyQuotesByEmail` requiere correo + código válido; sin proof of ownership
+//    no se devuelven datos.
+async function sha256Hex(input: string) {
+  const buf = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", buf);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export const requestQuoteHistoryCode = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     correo: z.string().trim().toLowerCase().email().max(160),
   }).parse(d))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Verificar que existe al menos un cliente con ese correo.
+    const { data: cli } = await supabaseAdmin
+      .from("clientes").select("id").eq("correo", data.correo).limit(1).maybeSingle();
+
+    // Respuesta genérica siempre (evita enumeración de correos).
+    if (cli) {
+      const raw = String(Math.floor(100000 + Math.random() * 900000));
+      const code_hash = await sha256Hex(`${data.correo}:${raw}`);
+      const expires_at = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+      await supabaseAdmin.from("email_verify_codes" as never).insert({
+        correo: data.correo,
+        code_hash,
+        purpose: "quote_history",
+        expires_at,
+      } as never);
+
+      try {
+        const { sendGmail } = await import("@/lib/gmail.server");
+        await sendGmail({
+          to: data.correo,
+          subject: "Tu código para ver tus cotizaciones FERMAVAL",
+          text:
+            `Hola,\r\n\r\nTu código de verificación es: ${raw}\r\n` +
+            `Vence en 15 minutos.\r\n\r\nSi no lo solicitaste puedes ignorar este correo.\r\n\r\nEquipo FERMAVAL`,
+        });
+      } catch (e) {
+        console.error("requestQuoteHistoryCode email failed:", (e as Error).message);
+      }
+    }
+    return { ok: true };
+  });
+
+export const listMyQuotesByEmail = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({
+    correo: z.string().trim().toLowerCase().email().max(160),
+    codigo: z.string().trim().regex(/^\d{6}$/, "Código inválido"),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Buscar el código vigente más reciente para ese correo.
+    const { data: rows } = await supabaseAdmin
+      .from("email_verify_codes" as never)
+      .select("id, code_hash, expires_at, consumed_at, attempts")
+      .eq("correo", data.correo)
+      .eq("purpose", "quote_history")
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = (rows ?? [])[0] as unknown as
+      | { id: string; code_hash: string; expires_at: string; consumed_at: string | null; attempts: number }
+      | undefined;
+
+    if (!row || row.consumed_at || new Date(row.expires_at).getTime() < Date.now() || row.attempts >= 5) {
+      throw new Error("Código inválido o expirado. Solicita uno nuevo.");
+    }
+
+    const expectedHash = await sha256Hex(`${data.correo}:${data.codigo}`);
+    // Comparación en tiempo constante.
+    const a = Buffer.from(expectedHash);
+    const b = Buffer.from(row.code_hash);
+    let diff = a.length ^ b.length;
+    for (let i = 0; i < Math.min(a.length, b.length); i++) diff |= a[i] ^ b[i];
+    if (diff !== 0) {
+      await supabaseAdmin.from("email_verify_codes" as never)
+        .update({ attempts: row.attempts + 1 } as never).eq("id", row.id);
+      throw new Error("Código inválido o expirado. Solicita uno nuevo.");
+    }
+
+    await supabaseAdmin.from("email_verify_codes" as never)
+      .update({ consumed_at: new Date().toISOString() } as never).eq("id", row.id);
+
     const { data: cots, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
@@ -239,4 +319,5 @@ export const listMyQuotesByEmail = createServerFn({ method: "POST" })
       saldo: Number(c.saldo),
     }));
   });
+
 
