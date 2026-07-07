@@ -45,7 +45,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, variante_id)")
+      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
