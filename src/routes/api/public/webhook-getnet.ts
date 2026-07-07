@@ -1,9 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createHash } from "crypto";
+import { createHash, randomBytes } from "crypto";
 
-// Webhook oficial de Getnet Chile (motor PlacetoPay). Getnet firma cada notificación con:
-//   signature = sha1( requestId + status.status + status.date + secretKey )
-// Ver documentación: https://docs.placetopay.dev/checkout/notifications
+const GETNET_ENDPOINT =
+  process.env.GETNET_ENDPOINT ?? "https://checkout.test.getnet.cl/api/session";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +17,50 @@ type NotifyBody = {
   status?: { status?: string; message?: string; date?: string; reason?: string };
 };
 
+type GetnetPayment = {
+  status?: { status?: string; date?: string; message?: string };
+  amount?: { from?: { currency?: string; total?: number }; to?: { currency?: string; total?: number } };
+};
+
+type GetnetSessionResp = {
+  status?: { status?: string; message?: string };
+  request?: { payment?: { reference?: string; amount?: { currency?: string; total?: number } } };
+  payment?: GetnetPayment[];
+};
+
+function buildAuth(login: string, secretKey: string) {
+  const nonceBytes = randomBytes(16);
+  const nonceB64 = nonceBytes.toString("base64");
+  const seed = new Date().toISOString();
+  const hash = createHash("sha256")
+    .update(Buffer.concat([nonceBytes, Buffer.from(seed + secretKey, "utf8")]))
+    .digest();
+  return { login, tranKey: hash.toString("base64"), nonce: nonceB64, seed };
+}
+
+async function fetchSessionAmount(requestId: number | string, login: string, secretKey: string) {
+  try {
+    const url = `${GETNET_ENDPOINT.replace(/\/$/, "")}/${encodeURIComponent(String(requestId))}`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ auth: buildAuth(login, secretKey) }),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as GetnetSessionResp;
+    const approved = (json.payment ?? []).filter((p) => p.status?.status === "APPROVED");
+    if (!approved.length) return null;
+    // Sumar montos aprobados
+    const total = approved.reduce(
+      (acc, p) => acc + Math.round(Number(p.amount?.to?.total ?? p.amount?.from?.total ?? 0)),
+      0,
+    );
+    return Number.isFinite(total) && total > 0 ? total : null;
+  } catch {
+    return null;
+  }
+}
+
 export const Route = createFileRoute("/api/public/webhook-getnet")({
   server: {
     handlers: {
@@ -29,8 +72,9 @@ export const Route = createFileRoute("/api/public/webhook-getnet")({
       POST: async ({ request }) => {
         try {
           const secretKey = process.env.GETNET_SECRET_KEY;
-          if (!secretKey) {
-            return new Response(JSON.stringify({ error: "Missing secret" }), {
+          const login = process.env.GETNET_LOGIN;
+          if (!secretKey || !login) {
+            return new Response(JSON.stringify({ error: "Missing config" }), {
               status: 500,
               headers: { "Content-Type": "application/json", ...CORS },
             });
@@ -59,34 +103,81 @@ export const Route = createFileRoute("/api/public/webhook-getnet")({
             });
           }
 
-          // Extraer número de cotización desde reference "NUMERO-timestamp"
-          const numero = String(body.reference ?? "").split("-").slice(0, -1).join("-") || String(body.reference ?? "");
-
           const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-          if (status === "APPROVED" && numero) {
+          // Lookup autoritativo por request_id (jamás por `reference` sin firmar).
+          const { data: session } = await supabaseAdmin
+            .from("getnet_sessions" as never)
+            .select("request_id, cotizacion_id, monto_esperado, status")
+            .eq("request_id", requestId)
+            .maybeSingle();
+
+          if (!session) {
+            // Firma correcta pero requestId desconocido → nada que actualizar.
+            return new Response(JSON.stringify({ ok: true, ignored: "unknown_session" }), {
+              status: 200,
+              headers: { "Content-Type": "application/json", ...CORS },
+            });
+          }
+
+          const s = session as unknown as {
+            request_id: number;
+            cotizacion_id: string;
+            monto_esperado: number;
+            status: string | null;
+          };
+
+          // Traer monto real aprobado desde Getnet (no confiar en el body).
+          const montoAprobado =
+            status === "APPROVED" ? await fetchSessionAmount(requestId, login, secretKey) : null;
+
+          await supabaseAdmin
+            .from("getnet_sessions" as never)
+            .update({
+              status,
+              monto_aprobado: montoAprobado,
+              updated_at: new Date().toISOString(),
+            } as never)
+            .eq("request_id", requestId);
+
+          if (status === "APPROVED" && montoAprobado && montoAprobado > 0) {
             const { data: cot } = await supabaseAdmin
               .from("cotizaciones")
-              .select("id, total, pago_recibido")
-              .eq("numero", numero)
+              .select("id, total, pago_recibido, estado")
+              .eq("id", s.cotizacion_id)
               .maybeSingle();
+
             if (cot) {
-              // Marcamos como pagada; el monto real vendría en un fetch a /api/session/{requestId},
-              // aquí registramos el evento en pagos y actualizamos estado.
-              await supabaseAdmin.from("pagos").insert({
-                cotizacion_id: cot.id,
-                monto: Number(cot.total),
-                metodo: `getnet:${requestId}`,
-                estado: "aprobado",
-              });
-              await supabaseAdmin
-                .from("cotizaciones")
-                .update({
-                  estado: "pedido_confirmado",
-                  pago_recibido: Number(cot.total),
-                  saldo: 0,
-                })
-                .eq("id", cot.id);
+              // Evitar procesar dos veces el mismo requestId.
+              const { data: prev } = await supabaseAdmin
+                .from("pagos")
+                .select("id")
+                .eq("cotizacion_id", cot.id)
+                .eq("metodo", `getnet:${requestId}`)
+                .maybeSingle();
+
+              if (!prev) {
+                // Créditar solo lo realmente aprobado, tope al saldo esperado.
+                const credit = Math.min(montoAprobado, s.monto_esperado);
+                const nuevoPagado = Number(cot.pago_recibido) + credit;
+                const total = Number(cot.total);
+                const saldo = Math.max(0, total - nuevoPagado);
+
+                await supabaseAdmin.from("pagos").insert({
+                  cotizacion_id: cot.id,
+                  monto: credit,
+                  metodo: `getnet:${requestId}`,
+                  estado: "aprobado",
+                });
+                await supabaseAdmin
+                  .from("cotizaciones")
+                  .update({
+                    pago_recibido: nuevoPagado,
+                    saldo,
+                    estado: saldo === 0 ? "pedido_confirmado" : "pago_parcial",
+                  })
+                  .eq("id", cot.id);
+              }
             }
           }
 
