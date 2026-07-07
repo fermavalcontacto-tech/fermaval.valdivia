@@ -75,6 +75,9 @@ function Dashboard() {
         </Card>
       )}
 
+      <AlertsCard />
+
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
