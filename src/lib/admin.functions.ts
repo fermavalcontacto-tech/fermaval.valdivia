@@ -1426,8 +1426,8 @@ export const listAlertas = createServerFn({ method: "GET" })
       .order("severidad", { ascending: true })
       .limit(50);
     if (error) throw new Error(error.message);
-    return (data ?? []) as Array<{
+    return (data ?? []) as unknown as Array<{
       tipo: string; severidad: string; registro_id: string;
-      mensaje: string; ocurrido_at: string; meta: Record<string, unknown>;
+      mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null>;
     }>;
   });
