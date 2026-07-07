@@ -1,18 +1,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import {
+  ANCHO_FIJO_M,
+  ESPESOR_FIJO_MM,
+  ItemInputSchema as ItemSchema,
+  buildItemsCalc,
+  sumMetros2,
+  calcTotal,
+} from "@/lib/domain/quotes.core";
 
-const ANCHO_FIJO_M = 1;
-const ESPESOR_FIJO_MM = 0.4;
-const TIPOS_PRODUCTO = ["Ondulado","PV8","PV8 Invertido","Microondulado","6V","PV4","Lata Lisa"] as const;
-const TipoEnum = z.enum(TIPOS_PRODUCTO);
-
-const ItemSchema = z.object({
-  largo_m: z.number().positive().max(1000),
-  cantidad_planchas: z.number().int().positive().max(10000),
-  color_id: z.string().uuid().nullable().optional(),
-  tipo: TipoEnum.optional().default("Ondulado"),
-  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
-});
 
 const CreateQuoteSchema = z.object({
   cliente: z.object({
@@ -41,40 +37,21 @@ export const createPublicQuote = createServerFn({ method: "POST" })
     if (cfgErr) throw new Error("No se pudo cargar la configuración");
 
     const precio = Number(cfg.precio_m2);
-    const colorIds = Array.from(new Set([
-      ...(data.color_id ? [data.color_id] : []),
-      ...data.items.map((i) => i.color_id).filter((x): x is string => !!x),
-    ]));
-    const colorNames = new Map<string, string>();
-    if (colorIds.length) {
-      const { data: cols } = await supabaseAdmin.from("colores").select("id, nombre").in("id", colorIds);
-      for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
-    }
 
-    const itemsCalc = data.items.map((it) => {
-      const cid = it.color_id ?? data.color_id ?? null;
-      const tipo = it.tipo ?? "Ondulado";
-      const espesor = it.espesor_mm ?? ESPESOR_FIJO_MM;
-      return {
-        largo_m: it.largo_m,
-        ancho_m: ANCHO_FIJO_M,
-        cantidad_planchas: it.cantidad_planchas,
-        metros2: Number((it.largo_m * ANCHO_FIJO_M * it.cantidad_planchas).toFixed(2)),
-        color_id: cid,
-        color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
-        tipo, espesor_mm: espesor,
-        // El stock real se controla por color; no bloqueamos la cotización
-        // por falta de una variante exacta tipo/color/espesor.
-        variante_id: null,
-      };
-    });
+    // Propagar color_id global a cada item si no lo trae, para que buildItemsCalc
+    // (fuente única de cálculo) lo resuelva junto al resto.
+    const itemsInput = data.items.map((it) => ({
+      ...it,
+      color_id: it.color_id ?? data.color_id ?? null,
+    }));
+    const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput);
 
-
-    const metros2Total = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
-    const total = Math.round(metros2Total * precio);
+    const metros2Total = sumMetros2(itemsCalc);
+    const total = calcTotal(metros2Total, precio);
     const first = itemsCalc[0];
-    const color_nombre = first.color_nombre ?? (data.color_id ? colorNames.get(data.color_id) ?? null : null);
-    const color_id_cot = first.color_id ?? data.color_id ?? null;
+    const color_nombre = first.color_nombre;
+    const color_id_cot = first.color_id;
+
 
     const { data: cliente, error: ceErr } = await supabaseAdmin
       .from("clientes").insert({ ...data.cliente }).select("id").single();

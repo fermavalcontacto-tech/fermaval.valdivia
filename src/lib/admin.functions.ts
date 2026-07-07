@@ -1,13 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import {
+  TIPOS_PRODUCTO,
+  ESPESOR_FIJO_MM,
+  TipoEnum,
+  ItemInputSchema as ItemSchema,
+  buildItemsCalc as buildItemsCalcCore,
+  type ItemInput,
+} from "@/lib/domain/quotes.core";
+
+export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
 
 export const SUPERADMIN_EMAIL = "fermaval.contacto@gmail.com";
-
-export const TIPOS_PRODUCTO = [
-  "Ondulado", "PV8", "PV8 Invertido", "Microondulado", "6V", "PV4", "Lata Lisa",
-] as const;
-export const ESPESOR_FIJO_MM = 0.4;
 
 function assertSuperadmin(email: string | undefined) {
   if ((email ?? "").toLowerCase() !== SUPERADMIN_EMAIL) {
@@ -25,50 +30,15 @@ function enforceFecha(email: string | undefined, fecha: string | undefined): str
   return fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : today;
 }
 
-const TipoEnum = z.enum(TIPOS_PRODUCTO);
-
-const ItemSchema = z.object({
-  largo_m: z.number().positive().max(1000),
-  cantidad_planchas: z.number().int().positive().max(10000),
-  color_id: z.string().uuid().nullable().optional(),
-  tipo: TipoEnum.optional().default("Ondulado"),
-  espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
-});
-
 type DbClientLike = { from: (table: string) => any };
 
 async function buildItemsCalc(
   supabase: DbClientLike,
-  items: Array<{ largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string; espesor_mm?: number }>,
+  items: ItemInput[],
 ) {
-  const colorIds = Array.from(new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)));
-  const colorNames = new Map<string, string>();
-  if (colorIds.length) {
-    // Inventario real: bobina global por color, con espesor fijo de 0,4 mm.
-    // El tipo de lata no participa en la búsqueda ni en la validación.
-    const { data: cols } = await supabase.from("colores").select("id, nombre, stock_m").in("id", colorIds);
-    for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
-  }
-
-  const itemsCalc = items.map((it) => {
-    const tipo = (it.tipo ?? "Ondulado") as typeof TIPOS_PRODUCTO[number];
-    const espesor = Number(it.espesor_mm ?? ESPESOR_FIJO_MM);
-    return {
-      largo_m: it.largo_m,
-      ancho_m: 1,
-      cantidad_planchas: it.cantidad_planchas,
-      metros2: Number((it.largo_m * 1 * it.cantidad_planchas).toFixed(2)),
-      color_id: it.color_id ?? null,
-      color_nombre: it.color_id ? (colorNames.get(it.color_id) ?? null) : null,
-      tipo,
-      espesor_mm: espesor,
-      // El stock real se controla por color. No se consulta ni se crea una
-      // variante exacta tipo/color/espesor para cotizaciones.
-      variante_id: null,
-    };
-  });
-  return itemsCalc;
+  return buildItemsCalcCore(supabase, items);
 }
+
 
 export const listCotizaciones = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
