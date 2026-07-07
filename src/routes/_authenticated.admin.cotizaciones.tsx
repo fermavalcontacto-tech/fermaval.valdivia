@@ -366,10 +366,13 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
           <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
             <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Tipo</Label>
-              <Select value={it.tipo} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: v as Tipo } : x))}>
-                <SelectTrigger className="h-9 w-full text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              <select
+                value={it.tipo}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, tipo: e.target.value as Tipo } : x))}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-xs shadow-sm outline-none focus:ring-1 focus:ring-ring"
+              >
+                {TIPOS_PRODUCTO.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
             <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Largo (m) *</Label>

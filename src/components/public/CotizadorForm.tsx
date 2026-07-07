@@ -5,10 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, publicQuoteErrorMessage } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -24,7 +23,6 @@ const DEFAULT_FIELDS: FormFields = {
 
 type Tipo = typeof TIPOS_PRODUCTO[number];
 const PUBLIC_LEGAL_NOTICE = "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. El retiro de planchas debe cumplir la normativa chilena vigente (Decreto 158 MOP): la carga no puede sobresalir más de 2 metros de la carrocería.";
-const VARIANT_STOCK_REGEX = /variante|stock\s+para/i;
 
 type Item = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
 
@@ -81,15 +79,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       toast.success(`Cotización ${r.numero} generada`);
       navigate({ to: "/cotizacion/$numero", params: { numero: r.numero }, search: { t: r.access_token } });
     },
-    onError: (e: Error) => {
-      // Bypass: silenciar cualquier mensaje relacionado con variantes de stock;
-      // el inventario real se controla por Color + 0,4 mm, no por tipo de lata.
-      if (VARIANT_STOCK_REGEX.test(e.message)) {
-        toast.dismiss();
-        return;
-      }
-      toast.error(e.message);
-    },
+    onError: (e: Error) => toast.error(publicQuoteErrorMessage(e)),
   });
 
   function submit(e: React.FormEvent) {
@@ -133,12 +123,14 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
                 <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`tipo-${i}`}>Tipo</Label>
-                    <Select value={it.tipo} onValueChange={(v) => updateItem(i, { tipo: v as Tipo })}>
-                      <SelectTrigger id={`tipo-${i}`} className="h-9 w-full"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {TIPOS_PRODUCTO.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <select
+                      id={`tipo-${i}`}
+                      value={it.tipo}
+                      onChange={(e) => updateItem(i, { tipo: e.target.value as Tipo })}
+                      className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm shadow-sm outline-none focus:ring-1 focus:ring-ring"
+                    >
+                      {TIPOS_PRODUCTO.map((t) => <option key={t} value={t}>{t}</option>)}
+                    </select>
                   </div>
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`largo-${i}`}>Largo (m)</Label>

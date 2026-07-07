@@ -93,3 +93,24 @@ export function sumMetros2(items: Pick<ItemCalc, "metros2">[]): number {
 export function calcTotal(metros2: number, precio_m2: number, descuento = 0): number {
   return Math.max(0, Math.round(metros2 * precio_m2 - descuento));
 }
+
+export const QUOTE_FALLBACK_ERROR_MESSAGE = "No se pudo generar la cotización. Por favor intenta nuevamente.";
+
+export function errorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string") return message;
+  }
+  return "";
+}
+
+export function isLegacyVariantStockError(error: unknown): boolean {
+  return /variante|producto_variantes|variante_id|ensure_variant|fetch_or_create_variant|stock\s+para/i.test(errorMessage(error));
+}
+
+export function publicQuoteErrorMessage(error: unknown): string {
+  if (isLegacyVariantStockError(error)) return QUOTE_FALLBACK_ERROR_MESSAGE;
+  return errorMessage(error) || QUOTE_FALLBACK_ERROR_MESSAGE;
+}
