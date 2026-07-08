@@ -98,6 +98,7 @@ function QuotePage() {
   }));
   const [showPay, setShowPay] = useState(false);
   const [correo, setCorreo] = useState("");
+  const [paying, setPaying] = useState(false);
 
   const accept = useMutation({
     mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo, token: token ?? "" } }),
@@ -108,6 +109,55 @@ function QuotePage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  async function payWithGetnet() {
+    if (paying) return;
+    setPaying(true);
+    try {
+      const res = await fetch("/api/public/create-getnet-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero,
+          token: token ?? "",
+          descripcion: `Cotización ${numero} FERMAVAL`,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.processUrl) throw new Error(j.error ?? "Error iniciando pago");
+      window.location.href = j.processUrl;
+    } catch (e) {
+      setPaying(false);
+      toast.error(e instanceof Error ? e.message : "No se pudo iniciar el pago");
+    }
+  }
+
+  // Al volver desde Getnet (?pago=getnet), consultar estado y refrescar.
+  useEffect(() => {
+    if (search.pago !== "getnet") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/public/query-getnet-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numero, token: token ?? "" }),
+        });
+        const j = await res.json();
+        if (cancelled) return;
+        if (res.ok) {
+          if (j.status === "Pagado") toast.success("¡Pago confirmado!");
+          else toast.info(`Estado del pago: ${j.status ?? "Pendiente"}`);
+          router.invalidate();
+        }
+      } catch {
+        /* silencio: el webhook actualizará el estado */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [search.pago, numero, token, router]);
 
   if (!data.cot) {
     return (
