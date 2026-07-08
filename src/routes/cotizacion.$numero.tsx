@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { acceptQuoteAndPay } from "@/lib/public.functions";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, ArrowLeft, Download } from "lucide-react";
+import { CheckCircle2, Clock, ArrowLeft, Download, CreditCard } from "lucide-react";
 import { downloadCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 
 function maskCorreo(c: string | null | undefined): string {
@@ -72,7 +72,10 @@ const getQuote = createServerFn({ method: "GET" })
 
 
 export const Route = createFileRoute("/cotizacion/$numero")({
-  validateSearch: (s: Record<string, unknown>) => ({ t: typeof s.t === "string" ? s.t : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    t: typeof s.t === "string" ? s.t : undefined,
+    pago: typeof s.pago === "string" ? s.pago : undefined,
+  }),
   loaderDeps: ({ search }) => ({ t: search.t }),
   loader: ({ params, deps, context }) =>
     context.queryClient.ensureQueryData(

@@ -17,10 +17,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as CotizacionNumeroRouteImport } from './routes/cotizacion.$numero'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
 import { Route as ApiPublicWebhookGetnetRouteImport } from './routes/api/public/webhook-getnet'
+import { Route as ApiPublicQueryGetnetPaymentRouteImport } from './routes/api/public/query-getnet-payment'
 import { Route as ApiPublicCreateGetnetPaymentRouteImport } from './routes/api/public/create-getnet-payment'
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
 import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminPagosGetnetRouteImport } from './routes/_authenticated.admin.pagos-getnet'
 import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
 import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
@@ -68,6 +70,12 @@ const ApiPublicWebhookGetnetRoute = ApiPublicWebhookGetnetRouteImport.update({
   path: '/api/public/webhook-getnet',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicQueryGetnetPaymentRoute =
+  ApiPublicQueryGetnetPaymentRouteImport.update({
+    id: '/api/public/query-getnet-payment',
+    path: '/api/public/query-getnet-payment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCreateGetnetPaymentRoute =
   ApiPublicCreateGetnetPaymentRouteImport.update({
     id: '/api/public/create-getnet-payment',
@@ -90,6 +98,12 @@ const AuthenticatedAdminPedidosRoute =
   AuthenticatedAdminPedidosRouteImport.update({
     id: '/admin/pedidos',
     path: '/admin/pedidos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminPagosGetnetRoute =
+  AuthenticatedAdminPagosGetnetRouteImport.update({
+    id: '/admin/pagos-getnet',
+    path: '/admin/pagos-getnet',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdminFinanzasRoute =
@@ -148,10 +162,12 @@ export interface FileRoutesByFullPath {
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
+  '/api/public/query-getnet-payment': typeof ApiPublicQueryGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -168,10 +184,12 @@ export interface FileRoutesByTo {
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
+  '/api/public/query-getnet-payment': typeof ApiPublicQueryGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
 }
@@ -190,10 +208,12 @@ export interface FileRoutesById {
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/_authenticated/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
+  '/_authenticated/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
   '/api/public/create-getnet-payment': typeof ApiPublicCreateGetnetPaymentRoute
+  '/api/public/query-getnet-payment': typeof ApiPublicQueryGetnetPaymentRoute
   '/api/public/webhook-getnet': typeof ApiPublicWebhookGetnetRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
 }
@@ -212,10 +232,12 @@ export interface FileRouteTypes {
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/finanzas'
+    | '/admin/pagos-getnet'
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
     | '/api/public/create-getnet-payment'
+    | '/api/public/query-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
@@ -232,10 +254,12 @@ export interface FileRouteTypes {
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/finanzas'
+    | '/admin/pagos-getnet'
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
     | '/api/public/create-getnet-payment'
+    | '/api/public/query-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/admin'
   id:
@@ -253,10 +277,12 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/cotizaciones'
     | '/_authenticated/admin/egresos'
     | '/_authenticated/admin/finanzas'
+    | '/_authenticated/admin/pagos-getnet'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/reportes'
     | '/_authenticated/admin/usuarios'
     | '/api/public/create-getnet-payment'
+    | '/api/public/query-getnet-payment'
     | '/api/public/webhook-getnet'
     | '/_authenticated/admin/'
   fileRoutesById: FileRoutesById
@@ -269,6 +295,7 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   CotizacionNumeroRoute: typeof CotizacionNumeroRoute
   ApiPublicCreateGetnetPaymentRoute: typeof ApiPublicCreateGetnetPaymentRoute
+  ApiPublicQueryGetnetPaymentRoute: typeof ApiPublicQueryGetnetPaymentRoute
   ApiPublicWebhookGetnetRoute: typeof ApiPublicWebhookGetnetRoute
 }
 
@@ -330,6 +357,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicWebhookGetnetRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/query-getnet-payment': {
+      id: '/api/public/query-getnet-payment'
+      path: '/api/public/query-getnet-payment'
+      fullPath: '/api/public/query-getnet-payment'
+      preLoaderRoute: typeof ApiPublicQueryGetnetPaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/create-getnet-payment': {
       id: '/api/public/create-getnet-payment'
       path: '/api/public/create-getnet-payment'
@@ -356,6 +390,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/pedidos'
       fullPath: '/admin/pedidos'
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/pagos-getnet': {
+      id: '/_authenticated/admin/pagos-getnet'
+      path: '/admin/pagos-getnet'
+      fullPath: '/admin/pagos-getnet'
+      preLoaderRoute: typeof AuthenticatedAdminPagosGetnetRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/finanzas': {
@@ -418,6 +459,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
   AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
   AuthenticatedAdminFinanzasRoute: typeof AuthenticatedAdminFinanzasRoute
+  AuthenticatedAdminPagosGetnetRoute: typeof AuthenticatedAdminPagosGetnetRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminReportesRoute: typeof AuthenticatedAdminReportesRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
@@ -432,6 +474,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
   AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
   AuthenticatedAdminFinanzasRoute: AuthenticatedAdminFinanzasRoute,
+  AuthenticatedAdminPagosGetnetRoute: AuthenticatedAdminPagosGetnetRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminReportesRoute: AuthenticatedAdminReportesRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
@@ -450,6 +493,7 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   CotizacionNumeroRoute: CotizacionNumeroRoute,
   ApiPublicCreateGetnetPaymentRoute: ApiPublicCreateGetnetPaymentRoute,
+  ApiPublicQueryGetnetPaymentRoute: ApiPublicQueryGetnetPaymentRoute,
   ApiPublicWebhookGetnetRoute: ApiPublicWebhookGetnetRoute,
 }
 export const routeTree = rootRouteImport
