@@ -251,10 +251,39 @@ function QuotePage() {
               <Clock className="h-4 w-4 text-accent" />
               <span>{data.cfg?.info_comercial}</span>
             </div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground">
-              {ESTADO_LABEL[cot.estado] ?? cot.estado}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground">
+                {ESTADO_LABEL[cot.estado] ?? cot.estado}
+              </div>
+              {Number(cot.saldo) === 0 && Number(cot.total) > 0 && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+                  <CheckCircle2 className="h-3 w-3" /> Pagado
+                </div>
+              )}
             </div>
           </div>
+
+          {aceptada && Number(cot.saldo) > 0 && (
+            <div className="border-t border-border p-6">
+              <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                  <CreditCard className="h-4 w-4" /> Pagar saldo pendiente con Getnet
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Serás redirigido al checkout seguro de Getnet Chile.
+                </p>
+                <Button
+                  onClick={() => payWithGetnet()}
+                  disabled={paying}
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                >
+                  {paying ? "Redirigiendo…" : `Pagar ${formatCLP(Number(cot.saldo))} con Getnet`}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!aceptada && cot.estado !== "rechazada" && (
             <div className="border-t border-border p-6">
