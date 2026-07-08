@@ -476,33 +476,48 @@ export type Database = {
       }
       getnet_sessions: {
         Row: {
+          amount: number
+          checkout_url: string | null
           cotizacion_id: string
           created_at: string
-          monto_aprobado: number | null
-          monto_esperado: number
+          expiration_date: string | null
+          id: string
+          paid_amount: number
+          payment_date: string | null
+          payment_id_getnet: string | null
+          raw_response: Json | null
           reference: string
-          request_id: number
-          status: string | null
+          status: string
           updated_at: string
         }
         Insert: {
+          amount: number
+          checkout_url?: string | null
           cotizacion_id: string
           created_at?: string
-          monto_aprobado?: number | null
-          monto_esperado: number
+          expiration_date?: string | null
+          id?: string
+          paid_amount?: number
+          payment_date?: string | null
+          payment_id_getnet?: string | null
+          raw_response?: Json | null
           reference: string
-          request_id: number
-          status?: string | null
+          status?: string
           updated_at?: string
         }
         Update: {
+          amount?: number
+          checkout_url?: string | null
           cotizacion_id?: string
           created_at?: string
-          monto_aprobado?: number | null
-          monto_esperado?: number
+          expiration_date?: string | null
+          id?: string
+          paid_amount?: number
+          payment_date?: string | null
+          payment_id_getnet?: string | null
+          raw_response?: Json | null
           reference?: string
-          request_id?: number
-          status?: string | null
+          status?: string
           updated_at?: string
         }
         Relationships: [
