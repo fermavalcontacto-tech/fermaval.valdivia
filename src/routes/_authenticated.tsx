@@ -6,7 +6,7 @@ import logoHorizontal from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 import logoMark from "@/assets/fermaval-logo-transparent.png.asset.json";
 import {
   LayoutDashboard, FileText, PackageCheck, Receipt, FileImage,
-  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X, Search, ShieldCheck,
+  TrendingUp, FileDown, Settings, Palette, LogOut, Menu, X, Search, ShieldCheck, CreditCard,
 } from "lucide-react";
 
 
@@ -39,6 +39,7 @@ const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; e
   { to: "/admin/egresos", label: "Egresos", icon: Receipt },
   { to: "/admin/boletas", label: "Boletas", icon: FileImage },
   { to: "/admin/finanzas", label: "Finanzas", icon: TrendingUp },
+  { to: "/admin/pagos-getnet", label: "Pagos Getnet", icon: CreditCard },
   { to: "/admin/reportes", label: "Reportes", icon: FileDown },
 ];
 const navAdmin: Array<{ to: string; label: string; icon: typeof Settings }> = [

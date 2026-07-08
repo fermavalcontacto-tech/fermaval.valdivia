@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { acceptQuoteAndPay } from "@/lib/public.functions";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, ArrowLeft, Download } from "lucide-react";
+import { CheckCircle2, Clock, ArrowLeft, Download, CreditCard } from "lucide-react";
 import { downloadCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 
 function maskCorreo(c: string | null | undefined): string {
@@ -72,7 +72,10 @@ const getQuote = createServerFn({ method: "GET" })
 
 
 export const Route = createFileRoute("/cotizacion/$numero")({
-  validateSearch: (s: Record<string, unknown>) => ({ t: typeof s.t === "string" ? s.t : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    t: typeof s.t === "string" ? s.t : undefined,
+    pago: typeof s.pago === "string" ? s.pago : undefined,
+  }),
   loaderDeps: ({ search }) => ({ t: search.t }),
   loader: ({ params, deps, context }) =>
     context.queryClient.ensureQueryData(
@@ -95,6 +98,7 @@ function QuotePage() {
   }));
   const [showPay, setShowPay] = useState(false);
   const [correo, setCorreo] = useState("");
+  const [paying, setPaying] = useState(false);
 
   const accept = useMutation({
     mutationFn: (porcentaje: 20 | 50) => acceptQuoteAndPay({ data: { numero, porcentaje, correo, token: token ?? "" } }),
@@ -105,6 +109,55 @@ function QuotePage() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
+  async function payWithGetnet() {
+    if (paying) return;
+    setPaying(true);
+    try {
+      const res = await fetch("/api/public/create-getnet-payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          numero,
+          token: token ?? "",
+          descripcion: `Cotización ${numero} FERMAVAL`,
+        }),
+      });
+      const j = await res.json();
+      if (!res.ok || !j.processUrl) throw new Error(j.error ?? "Error iniciando pago");
+      window.location.href = j.processUrl;
+    } catch (e) {
+      setPaying(false);
+      toast.error(e instanceof Error ? e.message : "No se pudo iniciar el pago");
+    }
+  }
+
+  // Al volver desde Getnet (?pago=getnet), consultar estado y refrescar.
+  useEffect(() => {
+    if (search.pago !== "getnet") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/public/query-getnet-payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ numero, token: token ?? "" }),
+        });
+        const j = await res.json();
+        if (cancelled) return;
+        if (res.ok) {
+          if (j.status === "Pagado") toast.success("¡Pago confirmado!");
+          else toast.info(`Estado del pago: ${j.status ?? "Pendiente"}`);
+          router.invalidate();
+        }
+      } catch {
+        /* silencio: el webhook actualizará el estado */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [search.pago, numero, token, router]);
 
   if (!data.cot) {
     return (
@@ -248,10 +301,39 @@ function QuotePage() {
               <Clock className="h-4 w-4 text-accent" />
               <span>{data.cfg?.info_comercial}</span>
             </div>
-            <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground">
-              {ESTADO_LABEL[cot.estado] ?? cot.estado}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider text-primary-foreground">
+                {ESTADO_LABEL[cot.estado] ?? cot.estado}
+              </div>
+              {Number(cot.saldo) === 0 && Number(cot.total) > 0 && (
+                <div className="inline-flex items-center gap-1 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white">
+                  <CheckCircle2 className="h-3 w-3" /> Pagado
+                </div>
+              )}
             </div>
           </div>
+
+          {aceptada && Number(cot.saldo) > 0 && (
+            <div className="border-t border-border p-6">
+              <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4">
+                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
+                  <CreditCard className="h-4 w-4" /> Pagar saldo pendiente con Getnet
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Serás redirigido al checkout seguro de Getnet Chile.
+                </p>
+                <Button
+                  onClick={() => payWithGetnet()}
+                  disabled={paying}
+                  variant="hero"
+                  size="lg"
+                  className="w-full"
+                >
+                  {paying ? "Redirigiendo…" : `Pagar ${formatCLP(Number(cot.saldo))} con Getnet`}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {!aceptada && cot.estado !== "rechazada" && (
             <div className="border-t border-border p-6">
@@ -297,29 +379,15 @@ function QuotePage() {
                       Serás redirigido al checkout seguro de Getnet Chile (sandbox de pruebas).
                     </p>
                     <Button
-                      onClick={async () => {
-                        try {
-                          const res = await fetch("/api/public/create-getnet-payment", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              numero,
-                              token: token ?? "",
-                              descripcion: `Cotización ${numero} FERMAVAL`,
-                            }),
-                          });
-                          const j = await res.json();
-                          if (!res.ok || !j.processUrl) throw new Error(j.error ?? "Error iniciando pago");
-                          window.location.href = j.processUrl;
-                        } catch (e) {
-                          toast.error(e instanceof Error ? e.message : "No se pudo iniciar el pago");
-                        }
-                      }}
+                      onClick={() => payWithGetnet()}
+                      disabled={paying}
                       variant="hero"
                       size="lg"
                       className="w-full"
                     >
-                      Pagar {formatCLP(Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total))))} con Getnet
+                      {paying
+                        ? "Redirigiendo…"
+                        : `Pagar ${formatCLP(Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total))))} con Getnet`}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
