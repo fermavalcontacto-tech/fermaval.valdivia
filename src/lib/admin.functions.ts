@@ -1380,3 +1380,53 @@ export const listAlertas = createServerFn({ method: "GET" })
       mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null>;
     }>;
   });
+
+// ============================================================
+// Ventas de chatarra (ingreso adicional en Finanzas)
+// ============================================================
+
+export const listVentasChatarra = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("ventas_chatarra")
+      .select("id, fecha, monto, descripcion, created_at")
+      .order("fecha", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Array<{ id: string; fecha: string; monto: number; descripcion: string | null; created_at: string }>;
+  });
+
+export const upsertVentaChatarra = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid().optional(),
+    fecha: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida"),
+    monto: z.number().int().min(0).max(1e12),
+    descripcion: z.string().trim().max(500).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const payload = {
+      fecha: data.fecha,
+      monto: data.monto,
+      descripcion: data.descripcion?.trim() ? data.descripcion.trim() : null,
+      created_by: context.userId,
+    };
+    if (data.id) {
+      const { error } = await context.supabase.from("ventas_chatarra").update(payload).eq("id", data.id);
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await context.supabase.from("ventas_chatarra").insert(payload);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const deleteVentaChatarra = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("ventas_chatarra").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
