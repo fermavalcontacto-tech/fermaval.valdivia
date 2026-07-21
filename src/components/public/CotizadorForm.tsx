@@ -54,7 +54,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
   const itemsCalc = useMemo(
     () => items.map((it) => {
-      const l = Number(it.largo) || 0;
+      const l = Number((it.largo ?? "").replace(",", ".")) || 0;
       const n = Number(it.cantidad) || 0;
       return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
     }),
@@ -146,8 +146,15 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
                   </div>
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`largo-${i}`}>Largo (m)</Label>
-                    <Input id={`largo-${i}`} type="number" step="0.01" min="0" value={it.largo}
-                      onChange={(e) => updateItem(i, { largo: e.target.value })} placeholder="0,00" />
+                    <Input id={`largo-${i}`} type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={it.largo}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^0-9.,]/g, "");
+                        // permitir sólo un separador decimal
+                        const parts = v.split(/[.,]/);
+                        const clean = parts.length > 1 ? `${parts[0]}${v.includes(",") ? "," : "."}${parts.slice(1).join("")}` : v;
+                        updateItem(i, { largo: clean });
+                      }}
+                      placeholder="0,00" />
                   </div>
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`cant-${i}`}>Cantidad</Label>
