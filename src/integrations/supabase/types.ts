@@ -734,6 +734,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ventas_chatarra: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          descripcion: string | null
+          fecha: string
+          id: string
+          monto: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          monto: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          id?: string
+          monto?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       colores_publicos: {
