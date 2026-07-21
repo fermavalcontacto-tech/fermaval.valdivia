@@ -262,27 +262,6 @@ function QuotePage() {
             </div>
           </div>
 
-          {aceptada && Number(cot.saldo) > 0 && (
-            <div className="border-t border-border p-6">
-              <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4">
-                <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-primary">
-                  <CreditCard className="h-4 w-4" /> Pagar saldo pendiente con Getnet
-                </div>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  Serás redirigido al checkout seguro de Getnet Chile.
-                </p>
-                <Button
-                  onClick={() => payWithGetnet()}
-                  disabled={paying}
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                >
-                  {paying ? "Redirigiendo…" : `Pagar ${formatCLP(Number(cot.saldo))} con Getnet`}
-                </Button>
-              </div>
-            </div>
-          )}
 
           {!aceptada && cot.estado !== "rechazada" && (
             <div className="border-t border-border p-6">
@@ -318,25 +297,6 @@ function QuotePage() {
                     <Button onClick={() => accept.mutate(50)} disabled={accept.isPending || !correo} variant="hero" size="lg" className="h-auto flex-col py-4">
                       <span className="font-display text-3xl">50%</span>
                       <span className="text-sm">{formatCLP(Math.round(Number(cot.total) * 0.50))}</span>
-                    </Button>
-                  </div>
-                  <div className="rounded-md border-2 border-primary/30 bg-primary/5 p-4">
-                    <div className="mb-2 text-xs font-bold uppercase tracking-wider text-primary">
-                      💳 Pagar el saldo total con Getnet
-                    </div>
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      Serás redirigido al checkout seguro de Getnet Chile (sandbox de pruebas).
-                    </p>
-                    <Button
-                      onClick={() => payWithGetnet()}
-                      disabled={paying}
-                      variant="hero"
-                      size="lg"
-                      className="w-full"
-                    >
-                      {paying
-                        ? "Redirigiendo…"
-                        : `Pagar ${formatCLP(Math.max(1, Math.round(Number(cot.saldo) || Number(cot.total))))} con Getnet`}
                     </Button>
                   </div>
                   <p className="text-xs text-muted-foreground">
