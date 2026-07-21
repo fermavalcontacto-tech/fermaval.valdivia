@@ -7,6 +7,9 @@ import {
   listMovimientosHistoricos,
   upsertMovimientoHistorico,
   deleteMovimientoHistorico,
+  listVentasChatarra,
+  upsertVentaChatarra,
+  deleteVentaChatarra,
 } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,10 +19,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCLP } from "@/lib/format";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
-import { Trash2, Lock } from "lucide-react";
+import { Trash2, Lock, Recycle } from "lucide-react";
 
 const q = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 const qMov = queryOptions({ queryKey: ["movimientos_historicos"], queryFn: () => listMovimientosHistoricos() });
+const qChatarra = queryOptions({ queryKey: ["ventas_chatarra"], queryFn: () => listVentasChatarra() });
 
 export const Route = createFileRoute("/_authenticated/admin/finanzas")({
   loader: ({ context }) => context.queryClient.ensureQueryData(q),
@@ -109,6 +113,8 @@ function FinanzasPage() {
         </div>
       </Card>
 
+      <ChatarraPanel />
+
       {auth.isSuperadmin ? (
         <HistoricosPanel />
       ) : (
@@ -118,6 +124,121 @@ function FinanzasPage() {
         </Card>
       )}
     </div>
+  );
+}
+
+function ChatarraPanel() {
+  const qc = useQueryClient();
+  const { data: ventas = [] } = useQuery(qChatarra);
+  const today = new Date().toISOString().slice(0, 10);
+  const [fecha, setFecha] = useState<string>(today);
+  const [monto, setMonto] = useState<string>("");
+  const [descripcion, setDescripcion] = useState<string>("");
+
+  const upsert = useMutation({
+    mutationFn: (v: { fecha: string; monto: number; descripcion: string }) =>
+      upsertVentaChatarra({ data: v }),
+    onSuccess: () => {
+      toast.success("Venta de chatarra registrada");
+      setMonto(""); setDescripcion(""); setFecha(today);
+      qc.invalidateQueries({ queryKey: ["ventas_chatarra"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const del = useMutation({
+    mutationFn: (id: string) => deleteVentaChatarra({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Eliminado");
+      qc.invalidateQueries({ queryKey: ["ventas_chatarra"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const totalRegistrado = ventas.reduce((s, v) => s + Number(v.monto), 0);
+
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const m = Number(monto);
+    if (!Number.isFinite(m) || m < 0) return toast.error("Monto inválido");
+    if (!fecha) return toast.error("Selecciona una fecha");
+    upsert.mutate({ fecha, monto: Math.round(m), descripcion: descripcion.trim() });
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <Recycle className="h-4 w-4 text-accent" />
+        <h3 className="font-display text-lg text-primary">Ingresos por venta de chatarra</h3>
+        <span className="ml-auto text-xs text-muted-foreground">
+          Acumulado registrado: <strong className="text-primary">{formatCLP(totalRegistrado)}</strong>
+        </span>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Registra cada venta de chatarra. Los montos se suman automáticamente a las ventas del Dashboard y a los gráficos del mes.
+      </p>
+
+      <form onSubmit={submit} className="grid gap-4 md:grid-cols-4">
+        <div>
+          <Label className="text-xs">Fecha</Label>
+          <Input type="date" value={fecha} max={today} onChange={(e) => setFecha(e.target.value)} required />
+        </div>
+        <div>
+          <Label className="text-xs">Monto (CLP)</Label>
+          <Input type="number" min="0" step="1" value={monto} onChange={(e) => setMonto(e.target.value)} placeholder="0" required />
+        </div>
+        <div className="md:col-span-2">
+          <Label className="text-xs">Descripción (opcional)</Label>
+          <Input value={descripcion} maxLength={500} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej: Retazos de bobinas, viruta, planchas dadas de baja" />
+        </div>
+        <div className="md:col-span-4">
+          <Button type="submit" disabled={upsert.isPending} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            {upsert.isPending ? "Guardando..." : "Registrar venta"}
+          </Button>
+        </div>
+      </form>
+
+      <div className="mt-6">
+        <h4 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Ventas registradas</h4>
+        {ventas.length === 0 ? (
+          <div className="rounded border border-dashed p-4 text-sm text-muted-foreground">Sin ventas de chatarra registradas.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3">Fecha</th>
+                  <th className="py-2 pr-3 text-right">Monto</th>
+                  <th className="py-2 pr-3">Descripción</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {ventas.map((v) => (
+                  <tr key={v.id} className="border-b last:border-0">
+                    <td className="py-2 pr-3 font-medium">{v.fecha}</td>
+                    <td className="py-2 pr-3 text-right">{formatCLP(Number(v.monto))}</td>
+                    <td className="py-2 pr-3 text-muted-foreground">{v.descripcion ?? "—"}</td>
+                    <td className="py-2 text-right">
+                      <Button
+                        variant="ghost" size="sm"
+                        onClick={() => {
+                          if (confirm("¿Eliminar esta venta de chatarra?")) del.mutate(v.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Card>
   );
 }
 

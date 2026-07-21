@@ -22,7 +22,6 @@ import { Route as ApiPublicCreateGetnetPaymentRouteImport } from './routes/api/p
 import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
 import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
 import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
-import { Route as AuthenticatedAdminPagosGetnetRouteImport } from './routes/_authenticated.admin.pagos-getnet'
 import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
 import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
 import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
@@ -100,12 +99,6 @@ const AuthenticatedAdminPedidosRoute =
     path: '/admin/pedidos',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAdminPagosGetnetRoute =
-  AuthenticatedAdminPagosGetnetRouteImport.update({
-    id: '/admin/pagos-getnet',
-    path: '/admin/pagos-getnet',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedAdminFinanzasRoute =
   AuthenticatedAdminFinanzasRouteImport.update({
     id: '/admin/finanzas',
@@ -162,7 +155,6 @@ export interface FileRoutesByFullPath {
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
-  '/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -184,7 +176,6 @@ export interface FileRoutesByTo {
   '/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
-  '/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -208,7 +199,6 @@ export interface FileRoutesById {
   '/_authenticated/admin/cotizaciones': typeof AuthenticatedAdminCotizacionesRoute
   '/_authenticated/admin/egresos': typeof AuthenticatedAdminEgresosRoute
   '/_authenticated/admin/finanzas': typeof AuthenticatedAdminFinanzasRoute
-  '/_authenticated/admin/pagos-getnet': typeof AuthenticatedAdminPagosGetnetRoute
   '/_authenticated/admin/pedidos': typeof AuthenticatedAdminPedidosRoute
   '/_authenticated/admin/reportes': typeof AuthenticatedAdminReportesRoute
   '/_authenticated/admin/usuarios': typeof AuthenticatedAdminUsuariosRoute
@@ -232,7 +222,6 @@ export interface FileRouteTypes {
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/finanzas'
-    | '/admin/pagos-getnet'
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
@@ -254,7 +243,6 @@ export interface FileRouteTypes {
     | '/admin/cotizaciones'
     | '/admin/egresos'
     | '/admin/finanzas'
-    | '/admin/pagos-getnet'
     | '/admin/pedidos'
     | '/admin/reportes'
     | '/admin/usuarios'
@@ -277,7 +265,6 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/cotizaciones'
     | '/_authenticated/admin/egresos'
     | '/_authenticated/admin/finanzas'
-    | '/_authenticated/admin/pagos-getnet'
     | '/_authenticated/admin/pedidos'
     | '/_authenticated/admin/reportes'
     | '/_authenticated/admin/usuarios'
@@ -392,13 +379,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admin/pagos-getnet': {
-      id: '/_authenticated/admin/pagos-getnet'
-      path: '/admin/pagos-getnet'
-      fullPath: '/admin/pagos-getnet'
-      preLoaderRoute: typeof AuthenticatedAdminPagosGetnetRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/admin/finanzas': {
       id: '/_authenticated/admin/finanzas'
       path: '/admin/finanzas'
@@ -459,7 +439,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedAdminCotizacionesRoute: typeof AuthenticatedAdminCotizacionesRoute
   AuthenticatedAdminEgresosRoute: typeof AuthenticatedAdminEgresosRoute
   AuthenticatedAdminFinanzasRoute: typeof AuthenticatedAdminFinanzasRoute
-  AuthenticatedAdminPagosGetnetRoute: typeof AuthenticatedAdminPagosGetnetRoute
   AuthenticatedAdminPedidosRoute: typeof AuthenticatedAdminPedidosRoute
   AuthenticatedAdminReportesRoute: typeof AuthenticatedAdminReportesRoute
   AuthenticatedAdminUsuariosRoute: typeof AuthenticatedAdminUsuariosRoute
@@ -474,7 +453,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminCotizacionesRoute: AuthenticatedAdminCotizacionesRoute,
   AuthenticatedAdminEgresosRoute: AuthenticatedAdminEgresosRoute,
   AuthenticatedAdminFinanzasRoute: AuthenticatedAdminFinanzasRoute,
-  AuthenticatedAdminPagosGetnetRoute: AuthenticatedAdminPagosGetnetRoute,
   AuthenticatedAdminPedidosRoute: AuthenticatedAdminPedidosRoute,
   AuthenticatedAdminReportesRoute: AuthenticatedAdminReportesRoute,
   AuthenticatedAdminUsuariosRoute: AuthenticatedAdminUsuariosRoute,
@@ -499,13 +477,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

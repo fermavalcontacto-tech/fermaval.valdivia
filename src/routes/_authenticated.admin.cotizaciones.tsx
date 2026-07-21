@@ -284,9 +284,13 @@ type FormErrors = {
   items?: ItemErrors[]; itemsGeneral?: string;
 };
 
+function parseLargo(s: string): number {
+  return Number((s ?? "").replace(",", ".")) || 0;
+}
+
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
-    const l = Number(it.largo) || 0;
+    const l = parseLargo(it.largo);
     const n = Number(it.cantidad) || 0;
     return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
   });
@@ -331,8 +335,8 @@ function validateCotizacion(
   if (!items.length) errors.itemsGeneral = "Agrega al menos una plancha";
   const itemErrs: ItemErrors[] = items.map((it) => {
     const e: ItemErrors = {};
-    const l = Number(it.largo);
-    if (!it.largo || Number.isNaN(l) || l <= 0) e.largo = "Largo > 0";
+    const l = parseLargo(it.largo);
+    if (!it.largo || !Number.isFinite(l) || l <= 0) e.largo = "Largo > 0";
     else if (l > 50) e.largo = "Máximo 50 m";
     const n = Number(it.cantidad);
     if (!it.cantidad || !Number.isInteger(n) || n < 1) e.cantidad = "Mínimo 1";
@@ -376,8 +380,13 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
             </div>
             <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Largo (m) *</Label>
-              <Input type="number" inputMode="decimal" step="0.01" value={it.largo} aria-invalid={!!er.largo} className="w-full"
-                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, largo: e.target.value } : x))} />
+              <Input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={it.largo} aria-invalid={!!er.largo} className="w-full"
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^0-9.,]/g, "");
+                  const parts = v.split(/[.,]/);
+                  const clean = parts.length > 1 ? `${parts[0]}${v.includes(",") ? "," : "."}${parts.slice(1).join("")}` : v;
+                  setItems(items.map((x, idx) => idx === i ? { ...x, largo: clean } : x));
+                }} />
               <FieldError msg={er.largo} />
             </div>
             <div className="w-full min-w-0 space-y-1">

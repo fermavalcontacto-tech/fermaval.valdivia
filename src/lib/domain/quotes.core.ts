@@ -25,8 +25,14 @@ export type TipoProducto = (typeof TIPOS_PRODUCTO)[number];
 
 export const TipoEnum = z.enum(TIPOS_PRODUCTO);
 
+// Acepta números o strings con coma/punto ("10,5" o "10.5"): se normaliza a Number.
+const decimalFromInput = z.preprocess(
+  (v) => (typeof v === "string" ? Number(v.trim().replace(",", ".")) : v),
+  z.number(),
+);
+
 export const ItemInputSchema = z.object({
-  largo_m: z.number().positive().max(1000),
+  largo_m: decimalFromInput.pipe(z.number().positive().max(1000)),
   cantidad_planchas: z.number().int().positive().max(10000),
   color_id: z.string().uuid().nullable().optional(),
   tipo: TipoEnum.optional().default("Ondulado"),
