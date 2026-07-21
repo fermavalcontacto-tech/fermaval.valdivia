@@ -88,8 +88,7 @@ export const Route = createFileRoute("/cotizacion/$numero")({
 
 function QuotePage() {
   const { numero } = Route.useParams();
-  const search = Route.useSearch();
-  const token = search.t;
+  const { t: token } = Route.useSearch();
   const router = useRouter();
   const { data } = useSuspenseQuery(queryOptions({
     queryKey: ["quote", numero, token ?? ""],
