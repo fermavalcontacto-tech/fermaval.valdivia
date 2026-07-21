@@ -420,6 +420,14 @@ export const getDashboard = createServerFn({ method: "GET" })
       .from("movimientos_historicos")
       .select("periodo, ventas, gastos")
       .gte("periodo", since.toISOString().slice(0,10));
+    const { data: chatarra } = await context.supabase
+      .from("ventas_chatarra")
+      .select("fecha, monto")
+      .gte("fecha", since.toISOString().slice(0,10));
+    const { data: chatarraMes } = await context.supabase
+      .from("ventas_chatarra")
+      .select("monto")
+      .gte("fecha", inicioMesISO.slice(0, 10));
 
     const months: Array<{ key: string; label: string; ventas: number; gastos: number; aceptadas: number; rechazadas: number }> = [];
     for (let i = 0; i < 12; i++) {
@@ -460,7 +468,15 @@ export const getDashboard = createServerFn({ method: "GET" })
       if (key === currentKey) { ventasHistMes += Number(h.ventas); gastosHistMes += Number(h.gastos); }
     }
 
-    const ventasTotal = ventas + ventasHistMes;
+    for (const c of chatarra ?? []) {
+      const d = new Date(c.fecha as string);
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,"0")}`;
+      const m = months.find(x => x.key === key); if (!m) continue;
+      m.ventas += Number(c.monto);
+    }
+
+    const ventasChatarraMes = (chatarraMes ?? []).reduce((s, r) => s + Number(r.monto), 0);
+    const ventasTotal = ventas + ventasHistMes + ventasChatarraMes;
     const gastosTotal = gastos + gastosHistMes;
     const utilidadesTotal = ventasTotal - gastosTotal;
     const ivaTotal = Math.round(ventasTotal * 0.19 / 1.19);
