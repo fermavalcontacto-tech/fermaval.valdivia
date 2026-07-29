@@ -306,8 +306,7 @@ function validateCotizacion(
 ): { ok: boolean; errors: FormErrors } {
   const errors: FormErrors = {};
   const nombre = form.nombre.trim();
-  if (!nombre) errors.nombre = "El nombre es obligatorio";
-  else if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
+  if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
   const tel = form.telefono.trim();
   if (tel && !PHONE_RE.test(tel)) errors.telefono = "Teléfono inválido (6-20 dígitos)";
   const correo = form.correo.trim();
@@ -498,7 +497,7 @@ function EditarCotizacionDialog({
       <DialogContent className={QUOTE_DIALOG_CLASS}>
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
         <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
-          <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Nombre</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
@@ -625,7 +624,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         {!reviewing && (
           <>
             <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
-              <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Nombre</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>

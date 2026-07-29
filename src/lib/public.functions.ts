@@ -13,7 +13,7 @@ import {
 
 const CreateQuoteSchema = z.object({
   cliente: z.object({
-    nombre: z.string().trim().min(2).max(120),
+    nombre: z.string().trim().max(120).optional().default(""),
     telefono: z.string().trim().max(40).optional().default(""),
     correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
     direccion: z.string().trim().max(300).optional().default(""),
