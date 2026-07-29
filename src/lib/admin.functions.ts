@@ -183,10 +183,10 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     cliente: z.object({
-      nombre: z.string().trim().min(2),
-      telefono: z.string().trim().min(3),
-      correo: z.string().trim().email(),
-      direccion: z.string().trim().min(3),
+      nombre: z.string().trim().max(120).optional().default(""),
+      telefono: z.string().trim().max(40).optional().default(""),
+      correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
+      direccion: z.string().trim().max(300).optional().default(""),
     }),
     items: z.array(ItemSchema).min(1).max(50),
     color_nombre: z.string().nullable().optional(),
@@ -933,10 +933,10 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     id: z.string().uuid(),
     cliente: z.object({
       id: z.string().uuid(),
-      nombre: z.string().trim().min(2),
-      telefono: z.string().trim().min(3),
-      correo: z.string().trim().email(),
-      direccion: z.string().trim().min(3),
+      nombre: z.string().trim().max(120).optional().default(""),
+      telefono: z.string().trim().max(40).optional().default(""),
+      correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
+      direccion: z.string().trim().max(300).optional().default(""),
     }),
     items: z.array(ItemSchema).min(1).max(50),
     color_nombre: z.string().nullable().optional(),

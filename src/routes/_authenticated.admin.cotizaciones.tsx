@@ -306,8 +306,7 @@ function validateCotizacion(
 ): { ok: boolean; errors: FormErrors } {
   const errors: FormErrors = {};
   const nombre = form.nombre.trim();
-  if (!nombre) errors.nombre = "El nombre es obligatorio";
-  else if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
+  if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
   const tel = form.telefono.trim();
   if (tel && !PHONE_RE.test(tel)) errors.telefono = "Teléfono inválido (6-20 dígitos)";
   const correo = form.correo.trim();
