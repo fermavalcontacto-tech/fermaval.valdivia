@@ -223,16 +223,16 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
         <div className="grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
           {ff.nombre.visible && (
-            <div className="w-full min-w-0 space-y-1"><Label htmlFor="nombre">{ff.nombre.label}{ff.nombre.required && " *"}</Label><Input className="w-full" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="nombre">{ff.nombre.label}</Label><Input className="w-full" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
           )}
           {ff.telefono.visible && (
-            <div className="w-full min-w-0 space-y-1"><Label htmlFor="telefono">{ff.telefono.label}{ff.telefono.required && " *"}</Label><Input className="w-full" id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="telefono">{ff.telefono.label}</Label><Input className="w-full" id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
           )}
           {ff.correo.visible && (
-            <div className="w-full min-w-0 space-y-1"><Label htmlFor="correo">{ff.correo.label}{ff.correo.required && " *"}</Label><Input className="w-full" id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="correo">{ff.correo.label}</Label><Input className="w-full" id="correo" type="email" value={correo} onChange={(e) => setCorreo(e.target.value)} /></div>
           )}
           {ff.direccion.visible && (
-            <div className="w-full min-w-0 space-y-1"><Label htmlFor="direccion">{ff.direccion.label}{ff.direccion.required && " *"}</Label><Input className="w-full" id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="direccion">{ff.direccion.label}</Label><Input className="w-full" id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
           )}
         </div>
 
