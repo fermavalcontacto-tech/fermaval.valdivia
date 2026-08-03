@@ -66,6 +66,8 @@ const BANCO = {
   correo: "fermavalspa@gmail.com",
 };
 
+export const CONTACTO_FERMAVAL = "+56 9 3012 6744";
+
 const LEGAL_TITLE = "Nota sobre el retiro de materiales";
 const LEGAL_BODY =
   "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. Recuerde que el retiro de planchas de zinc debe cumplir con la normativa chilena vigente (Decreto 158 MOP), la cual prohíbe que la carga sobresalga más de 2 metros de la carrocería.";
@@ -306,10 +308,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const blockY = 58;
   const blockW = (W - 30 - 6) / 2;
   const endA = infoBlock(doc, 15, blockY, blockW, "Datos del cliente", [
-    ["Cliente:", c.cliente.nombre || "—"],
-    ["Correo:", c.cliente.correo || "—"],
-    ["Teléfono:", c.cliente.telefono || "—"],
-    ["Dirección:", c.cliente.direccion || "—"],
+    ["Cliente:", c.cliente.nombre || "No informado"],
+    ["Correo:", c.cliente.correo || "No informado"],
+    ["Teléfono:", c.cliente.telefono || "No informado"],
+    ["Dirección:", c.cliente.direccion || "No informado"],
   ]);
   const endB = infoBlock(doc, 15 + blockW + 6, blockY, blockW, "Datos del documento", [
     ["N° cotización:", c.numero],
