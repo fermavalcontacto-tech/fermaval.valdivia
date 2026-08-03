@@ -263,6 +263,33 @@ function drawLegalBlock(doc: jsPDF, y: number): number {
   return y + h + 6;
 }
 
+function drawContactBlock(doc: jsPDF, y: number): number {
+  const W = doc.internal.pageSize.getWidth();
+  const h = 26;
+  y = drawNewPageIfNeeded(doc, y, h + 6);
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.6);
+  doc.line(15, y, W - 15, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text("¿Tienes dudas o deseas confirmar tu pedido?", W / 2, y + 7, { align: "center" });
+  doc.setFontSize(11);
+  doc.text("FERMAVAL", W / 2, y + 13, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...GREY_DARK);
+  doc.text("WhatsApp / Teléfono:", W / 2, y + 18, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...NAVY);
+  doc.text(CONTACTO_FERMAVAL, W / 2, y + 24, { align: "center" });
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.6);
+  doc.line(15, y + h, W - 15, y + h);
+  return y + h + 6;
+}
+
 export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
