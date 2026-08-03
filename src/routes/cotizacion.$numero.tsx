@@ -242,7 +242,14 @@ function QuotePage() {
                 Esta cotización tiene una validez de <span className="text-accent">7 días corridos</span> desde la fecha de emisión.
               </p>
             </div>
+            <div className="mt-4 rounded-md border-y-2 border-primary/60 bg-background px-4 py-5 text-center">
+              <p className="text-sm font-semibold text-foreground">¿Tienes dudas o deseas confirmar tu pedido?</p>
+              <p className="mt-1 font-display text-xl text-primary">FERMAVAL</p>
+              <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">📞 WhatsApp / Teléfono</p>
+              <a href="https://wa.me/56930126744" className="font-mono text-lg font-bold text-primary underline-offset-4 hover:underline">+56 9 3012 6744</a>
+            </div>
           </div>
+
 
           <div className="border-t border-border bg-muted/40 p-6">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
