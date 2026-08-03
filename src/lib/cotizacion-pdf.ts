@@ -407,6 +407,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
   y += 20;
 
+  // Bloque de contacto FERMAVAL
+  y = drawContactBlock(doc, y);
+
+
   // Datos bancarios (solo si origen interno)
   if (isInterno) {
     y = drawBankBlock(doc, y);
