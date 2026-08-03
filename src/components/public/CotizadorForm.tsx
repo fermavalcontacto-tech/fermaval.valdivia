@@ -100,7 +100,8 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       if (it.cantidad <= 0 || !Number.isInteger(it.cantidad)) { toast.error(`Plancha ${i + 1}: cantidad inválida`); return; }
       if (!it.color_id) { toast.error(`Plancha ${i + 1}: selecciona un color`); return; }
     }
-    // Datos de contacto opcionales: no se exige nombre, teléfono, correo ni dirección.
+    if (!nombre.trim()) { toast.error("Ingresa el nombre del cliente"); return; }
+    // Correo, teléfono y dirección son opcionales.
     if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       toast.error("Correo inválido"); return;
     }
