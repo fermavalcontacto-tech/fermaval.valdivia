@@ -66,6 +66,8 @@ const BANCO = {
   correo: "fermavalspa@gmail.com",
 };
 
+export const CONTACTO_FERMAVAL = "+56 9 3012 6744";
+
 const LEGAL_TITLE = "Nota sobre el retiro de materiales";
 const LEGAL_BODY =
   "Por razones de seguridad y cumplimiento legal, solo se despacharán productos en vehículos que cuenten con las dimensiones adecuadas para su traslado. Recuerde que el retiro de planchas de zinc debe cumplir con la normativa chilena vigente (Decreto 158 MOP), la cual prohíbe que la carga sobresalga más de 2 metros de la carrocería.";
@@ -263,6 +265,33 @@ function drawLegalBlock(doc: jsPDF, y: number): number {
   return y + h + 6;
 }
 
+function drawContactBlock(doc: jsPDF, y: number): number {
+  const W = doc.internal.pageSize.getWidth();
+  const h = 26;
+  y = drawNewPageIfNeeded(doc, y, h + 6);
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.6);
+  doc.line(15, y, W - 15, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text("¿Tienes dudas o deseas confirmar tu pedido?", W / 2, y + 7, { align: "center" });
+  doc.setFontSize(11);
+  doc.text("FERMAVAL", W / 2, y + 13, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...GREY_DARK);
+  doc.text("WhatsApp / Teléfono:", W / 2, y + 18, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(12);
+  doc.setTextColor(...NAVY);
+  doc.text(CONTACTO_FERMAVAL, W / 2, y + 24, { align: "center" });
+  doc.setDrawColor(...NAVY);
+  doc.setLineWidth(0.6);
+  doc.line(15, y + h, W - 15, y + h);
+  return y + h + 6;
+}
+
 export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
@@ -279,10 +308,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const blockY = 58;
   const blockW = (W - 30 - 6) / 2;
   const endA = infoBlock(doc, 15, blockY, blockW, "Datos del cliente", [
-    ["Cliente:", c.cliente.nombre || "—"],
-    ["Correo:", c.cliente.correo || "—"],
-    ["Teléfono:", c.cliente.telefono || "—"],
-    ["Dirección:", c.cliente.direccion || "—"],
+    ["Cliente:", c.cliente.nombre || "No informado"],
+    ["Correo:", c.cliente.correo || "No informado"],
+    ["Teléfono:", c.cliente.telefono || "No informado"],
+    ["Dirección:", c.cliente.direccion || "No informado"],
   ]);
   const endB = infoBlock(doc, 15 + blockW + 6, blockY, blockW, "Datos del documento", [
     ["N° cotización:", c.numero],
@@ -406,6 +435,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setTextColor(...GREY_DARK);
   doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
   y += 20;
+
+  // Bloque de contacto FERMAVAL
+  y = drawContactBlock(doc, y);
+
 
   // Datos bancarios (solo si origen interno)
   if (isInterno) {

@@ -15,9 +15,9 @@ type Color = { id: string; nombre: string; hex: string; imagen_url: string | nul
 type FieldCfg = { label: string; visible: boolean; required: boolean };
 type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
 const DEFAULT_FIELDS: FormFields = {
-  nombre: { label: "Nombre", visible: true, required: true },
-  telefono: { label: "Teléfono", visible: true, required: true },
-  correo: { label: "Correo", visible: true, required: true },
+  nombre: { label: "Nombre *", visible: true, required: true },
+  telefono: { label: "Teléfono (opcional)", visible: true, required: false },
+  correo: { label: "Correo (opcional)", visible: true, required: false },
   direccion: { label: "Dirección (opcional)", visible: true, required: false },
 };
 
@@ -100,7 +100,8 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       if (it.cantidad <= 0 || !Number.isInteger(it.cantidad)) { toast.error(`Plancha ${i + 1}: cantidad inválida`); return; }
       if (!it.color_id) { toast.error(`Plancha ${i + 1}: selecciona un color`); return; }
     }
-    // Datos de contacto opcionales: no se exige nombre, teléfono, correo ni dirección.
+    if (!nombre.trim()) { toast.error("Ingresa el nombre del cliente"); return; }
+    // Correo, teléfono y dirección son opcionales.
     if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       toast.error("Correo inválido"); return;
     }
@@ -234,6 +235,13 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
           {ff.direccion.visible && (
             <div className="w-full min-w-0 space-y-1"><Label htmlFor="direccion">{ff.direccion.label}</Label><Input className="w-full" id="direccion" value={direccion} onChange={(e) => setDireccion(e.target.value)} /></div>
           )}
+        </div>
+
+        <div className="w-full min-w-0 rounded-md border-y-2 border-primary/60 bg-background px-4 py-5 text-center">
+          <p className="text-sm font-semibold text-foreground">¿Tienes dudas o deseas confirmar tu pedido?</p>
+          <p className="mt-1 font-display text-xl text-primary">FERMAVAL</p>
+          <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">📞 WhatsApp / Teléfono</p>
+          <a href="https://wa.me/56930126744" className="font-mono text-lg font-bold text-primary">+56 9 3012 6744</a>
         </div>
 
         <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground">
