@@ -13,9 +13,10 @@ import { Plus, Trash2 } from "lucide-react";
 
 type Color = { id: string; nombre: string; hex: string; imagen_url: string | null; stock_m?: number };
 type FieldCfg = { label: string; visible: boolean; required: boolean };
-type FormFields = { nombre: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
+type FormFields = { nombre: FieldCfg; rut: FieldCfg; telefono: FieldCfg; correo: FieldCfg; direccion: FieldCfg };
 const DEFAULT_FIELDS: FormFields = {
   nombre: { label: "Nombre *", visible: true, required: true },
+  rut: { label: "RUT (opcional)", visible: true, required: false },
   telefono: { label: "Teléfono (opcional)", visible: true, required: false },
   correo: { label: "Correo (opcional)", visible: true, required: false },
   direccion: { label: "Dirección (opcional)", visible: true, required: false },
@@ -37,6 +38,7 @@ function clearLegacyVariantToasts() {
 export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
   const ff: FormFields = {
     nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
+    rut: { ...DEFAULT_FIELDS.rut, ...(formFields?.rut ?? {}) },
     telefono: { ...DEFAULT_FIELDS.telefono, ...(formFields?.telefono ?? {}) },
     correo: { ...DEFAULT_FIELDS.correo, ...(formFields?.correo ?? {}) },
     direccion: { ...DEFAULT_FIELDS.direccion, ...(formFields?.direccion ?? {}) },
@@ -48,6 +50,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
     { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" },
   ]);
   const [nombre, setNombre] = useState("");
+  const [rut, setRut] = useState("");
   const [telefono, setTelefono] = useState("");
   const [correo, setCorreo] = useState("");
   const [direccion, setDireccion] = useState("");
@@ -80,7 +83,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
           largo_m: it.largo, cantidad_planchas: it.cantidad,
           color_id: it.color_id || null, tipo: it.tipo, espesor_mm: ESPESOR_FIJO_MM,
         })),
-        cliente: { nombre, telefono, correo, direccion },
+        cliente: { nombre, rut, telefono, correo, direccion },
       },
     }),
     onSuccess: (r) => {
@@ -101,6 +104,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
       if (!it.color_id) { toast.error(`Plancha ${i + 1}: selecciona un color`); return; }
     }
     if (!nombre.trim()) { toast.error("Ingresa el nombre del cliente"); return; }
+    if (ff.rut.visible && !isValidRut(rut)) { toast.error(RUT_INVALID_MESSAGE); return; }
     // Correo, teléfono y dirección son opcionales.
     if (ff.correo.visible && correo.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.trim())) {
       toast.error("Correo inválido"); return;
@@ -219,6 +223,9 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
         <div className="grid w-full min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
           {ff.nombre.visible && (
             <div className="w-full min-w-0 space-y-1"><Label htmlFor="nombre">{ff.nombre.label}</Label><Input className="w-full" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
+          )}
+          {ff.rut.visible && (
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="rut">{ff.rut.label}</Label><Input className="w-full" id="rut" placeholder="12345678-9" value={rut} onChange={(e) => setRut(sanitizeRutInput(e.target.value))} /></div>
           )}
           {ff.telefono.visible && (
             <div className="w-full min-w-0 space-y-1"><Label htmlFor="telefono">{ff.telefono.label}</Label><Input className="w-full" id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>
