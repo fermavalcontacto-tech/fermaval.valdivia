@@ -54,8 +54,8 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
   const itemsCalc = useMemo(
     () => items.map((it) => {
-      const l = Number((it.largo ?? "").replace(",", ".")) || 0;
-      const n = Number(it.cantidad) || 0;
+      const l = parseDecimal(it.largo);
+      const n = parseDecimal(it.cantidad);
       return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
     }),
     [items],
