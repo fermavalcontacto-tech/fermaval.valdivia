@@ -225,7 +225,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
             <div className="w-full min-w-0 space-y-1"><Label htmlFor="nombre">{ff.nombre.label}</Label><Input className="w-full" id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} /></div>
           )}
           {ff.rut.visible && (
-            <div className="w-full min-w-0 space-y-1"><Label htmlFor="rut">{ff.rut.label}</Label><Input className="w-full" id="rut" placeholder="12345678-9" value={rut} onChange={(e) => setRut(sanitizeRutInput(e.target.value))} /></div>
+            <div className="w-full min-w-0 space-y-1"><Label htmlFor="rut">{ff.rut.label}</Label><Input className="w-full" id="rut" placeholder="12345678-5" value={rut} onChange={(e) => setRut(sanitizeRutInput(e.target.value))} /></div>
           )}
           {ff.telefono.visible && (
             <div className="w-full min-w-0 space-y-1"><Label htmlFor="telefono">{ff.telefono.label}</Label><Input className="w-full" id="telefono" value={telefono} onChange={(e) => setTelefono(e.target.value)} /></div>

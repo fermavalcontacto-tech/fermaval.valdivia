@@ -285,7 +285,7 @@ export function isValidRut(value: unknown): boolean {
   return dv === expected;
 }
 
-export const RUT_INVALID_MESSAGE = "RUT inválido (ej: 12345678-9)";
+export const RUT_INVALID_MESSAGE = "RUT inválido (ej: 12345678-5)";
 
 /** Schema Zod reutilizable: opcional, normalizado y validado. */
 export const RutSchema = z
