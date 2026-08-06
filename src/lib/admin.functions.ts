@@ -8,6 +8,7 @@ import {
   ItemInputSchema as ItemSchema,
   buildItemsCalc as buildItemsCalcCore,
   type ItemInput,
+  RutSchema,
 } from "@/lib/domain/quotes.core";
 
 export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
