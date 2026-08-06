@@ -286,13 +286,13 @@ type FormErrors = {
 };
 
 function parseLargo(s: string): number {
-  return Number((s ?? "").replace(",", ".")) || 0;
+  return parseDecimal(s);
 }
 
 function calcItems(items: ItemForm[]) {
   return items.map((it) => {
     const l = parseLargo(it.largo);
-    const n = Number(it.cantidad) || 0;
+    const n = parseDecimal(it.cantidad);
     return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
   });
 }
