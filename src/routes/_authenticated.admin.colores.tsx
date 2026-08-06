@@ -158,7 +158,7 @@ function ColorDialog({
   onSaved: () => void;
 }) {
   const [form, setForm] = useState({
-    id: "", nombre: "", hex: "#888888", imagen_url: "", activo: true, orden: 0, stock_m: 0,
+    id: "", nombre: "", hex: "#888888", imagen_url: "", activo: true, orden: "0", stock_m: "0",
   });
 
   useEffect(() => {
@@ -166,11 +166,11 @@ function ColorDialog({
     if (initial) {
       setForm({
         id: initial.id, nombre: initial.nombre, hex: initial.hex,
-        imagen_url: initial.imagen_url ?? "", activo: initial.activo, orden: initial.orden,
-        stock_m: Number(initial.stock_m ?? 0),
+        imagen_url: initial.imagen_url ?? "", activo: initial.activo, orden: String(initial.orden ?? 0),
+        stock_m: String(initial.stock_m ?? 0),
       });
     } else {
-      setForm({ id: "", nombre: "", hex: "#888888", imagen_url: "", activo: true, orden: 0, stock_m: 0 });
+      setForm({ id: "", nombre: "", hex: "#888888", imagen_url: "", activo: true, orden: "0", stock_m: "0" });
     }
   }, [open, initial]);
 
@@ -178,8 +178,8 @@ function ColorDialog({
     mutationFn: () => upsertColor({
       data: {
         id: form.id || null, nombre: form.nombre, hex: form.hex,
-        imagen_url: form.imagen_url || null, activo: form.activo, orden: form.orden,
-        stock_m: Number(form.stock_m) || 0,
+        imagen_url: form.imagen_url || null, activo: form.activo, orden: Math.trunc(parseDecimal(form.orden)),
+        stock_m: parseDecimal(form.stock_m),
       },
     }),
     onSuccess: () => { toast.success("Guardado"); onSaved(); onOpenChange(false); },
@@ -194,12 +194,12 @@ function ColorDialog({
           <div><Label>Nombre</Label><Input value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Color (hex)</Label><Input value={form.hex} onChange={(e) => setForm({ ...form, hex: e.target.value })} /></div>
-            <div><Label>Orden</Label><Input type="number" value={form.orden} onChange={(e) => setForm({ ...form, orden: Number(e.target.value) })} /></div>
+            <div><Label>Orden</Label><Input {...INTEGER_INPUT_PROPS} value={form.orden} onChange={(e) => setForm({ ...form, orden: sanitizeIntegerInput(e.target.value) })} /></div>
           </div>
           <div>
             <Label>Stock (metros)</Label>
-            <Input type="number" step="0.01" min="0" value={form.stock_m}
-              onChange={(e) => setForm({ ...form, stock_m: Number(e.target.value) })} />
+            <Input {...DECIMAL_INPUT_PROPS} placeholder="Ej: 12.50" value={form.stock_m}
+              onChange={(e) => setForm({ ...form, stock_m: sanitizeDecimalInput(e.target.value) })} />
             <p className="mt-1 text-[10px] text-muted-foreground">Editar aquí sobrescribe el stock total y queda registrado como ajuste.</p>
           </div>
           <div>
