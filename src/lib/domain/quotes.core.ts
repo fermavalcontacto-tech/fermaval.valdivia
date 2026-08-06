@@ -124,6 +124,7 @@ export function isLegacyVariantStockError(error: unknown): boolean {
 
 const FIELD_LABELS: Record<string, string> = {
   nombre: "Nombre",
+  rut: "RUT",
   telefono: "Teléfono",
   correo: "Correo",
   direccion: "Dirección",
@@ -243,3 +244,55 @@ export function isValidDecimal(value: unknown): boolean {
   if (s === "") return false;
   return /^\d*\.?\d*$/.test(s) && Number.isFinite(Number(s));
 }
+
+// ── RUT del cliente ──────────────────────────────────────────────────────────
+// Se guarda SIEMPRE sin puntos y con guión antes del dígito verificador: 12345678-9.
+// Es opcional: vacío es válido en el Portal del Cliente y en el Panel Administrativo.
+
+/** Deja solo dígitos y K, en mayúscula (uso interno). */
+function rutRaw(value: unknown): string {
+  return String(value ?? "").toUpperCase().replace(/[^0-9K]/g, "");
+}
+
+/** Sanitiza mientras el usuario escribe: quita puntos/espacios y agrega el guión. */
+export function sanitizeRutInput(value: unknown): string {
+  const raw = rutRaw(value).slice(0, 9);
+  if (raw.length <= 1) return raw;
+  return `${raw.slice(0, -1)}-${raw.slice(-1)}`;
+}
+
+/** Formato final almacenado: sin puntos, con guión. Vacío si no se informó. */
+export function formatRut(value: unknown): string {
+  return sanitizeRutInput(value);
+}
+
+/** Valida el RUT con módulo 11. Vacío se considera válido (campo opcional). */
+export function isValidRut(value: unknown): boolean {
+  const raw = rutRaw(value);
+  if (raw === "") return true;
+  if (raw.length < 8 || raw.length > 9) return false;
+  const body = raw.slice(0, -1);
+  const dv = raw.slice(-1);
+  if (!/^\d+$/.test(body)) return false;
+  let sum = 0;
+  let mul = 2;
+  for (let i = body.length - 1; i >= 0; i--) {
+    sum += Number(body[i]) * mul;
+    mul = mul === 7 ? 2 : mul + 1;
+  }
+  const rest = 11 - (sum % 11);
+  const expected = rest === 11 ? "0" : rest === 10 ? "K" : String(rest);
+  return dv === expected;
+}
+
+export const RUT_INVALID_MESSAGE = "RUT inválido (ej: 12345678-9)";
+
+/** Schema Zod reutilizable: opcional, normalizado y validado. */
+export const RutSchema = z
+  .string()
+  .trim()
+  .max(20)
+  .transform((v) => formatRut(v))
+  .refine((v) => isValidRut(v), RUT_INVALID_MESSAGE)
+  .optional()
+  .default("");
