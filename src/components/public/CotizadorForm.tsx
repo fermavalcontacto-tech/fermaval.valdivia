@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -54,8 +54,8 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
   const itemsCalc = useMemo(
     () => items.map((it) => {
-      const l = Number((it.largo ?? "").replace(",", ".")) || 0;
-      const n = Number(it.cantidad) || 0;
+      const l = parseDecimal(it.largo);
+      const n = parseDecimal(it.cantidad);
       return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
     }),
     [items],
@@ -139,20 +139,14 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
                   </div>
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`largo-${i}`}>Largo (m)</Label>
-                    <Input id={`largo-${i}`} type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={it.largo}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/[^0-9.,]/g, "");
-                        // permitir sólo un separador decimal
-                        const parts = v.split(/[.,]/);
-                        const clean = parts.length > 1 ? `${parts[0]}${v.includes(",") ? "," : "."}${parts.slice(1).join("")}` : v;
-                        updateItem(i, { largo: clean });
-                      }}
-                      placeholder="0,00" />
+                    <Input id={`largo-${i}`} {...DECIMAL_INPUT_PROPS} value={it.largo}
+                      onChange={(e) => updateItem(i, { largo: sanitizeDecimalInput(e.target.value) })}
+                      placeholder="Ej: 3.5" />
                   </div>
                   <div className="w-full min-w-0 space-y-1">
                     <Label htmlFor={`cant-${i}`}>Cantidad</Label>
-                    <Input id={`cant-${i}`} type="number" step="1" min="1" value={it.cantidad}
-                      onChange={(e) => updateItem(i, { cantidad: e.target.value })} placeholder="1" />
+                    <Input id={`cant-${i}`} {...INTEGER_INPUT_PROPS} value={it.cantidad}
+                      onChange={(e) => updateItem(i, { cantidad: sanitizeIntegerInput(e.target.value) })} placeholder="1" />
                   </div>
                   <div className="flex w-full min-w-0 items-center justify-between rounded-md bg-background px-3 py-2 text-sm md:block md:bg-transparent md:px-0 md:py-0">
                     <div className="text-[10px] uppercase text-muted-foreground">m²</div>

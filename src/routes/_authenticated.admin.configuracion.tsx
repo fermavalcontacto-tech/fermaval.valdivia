@@ -4,6 +4,7 @@ import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba } from "@/
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DECIMAL_INPUT_PROPS } from "@/lib/domain/quotes.core";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -138,7 +139,7 @@ function ConfiguracionPage() {
       {/* Datos de contacto y enlaces */}
       <Card className="grid gap-4 p-6 md:grid-cols-2">
         <h2 className="md:col-span-2 font-display text-2xl text-primary">CONTACTO Y ENLACES</h2>
-        <div><Label>Precio por m² (CLP)</Label><Input type="number" {...f("precio_m2")} /></div>
+        <div><Label>Precio por m² (CLP)</Label><Input {...DECIMAL_INPUT_PROPS} {...f("precio_m2")} /></div>
         <div><Label>Teléfono</Label><Input {...f("telefono")} /></div>
         <div><Label>Dirección</Label><Input {...f("direccion")} /></div>
         <div><Label>Instagram</Label><Input {...f("instagram")} /></div>

@@ -123,3 +123,59 @@ export function publicQuoteErrorMessage(error: unknown): string {
   if (LEGACY_VARIANT_ERROR_PATTERN.test(message)) return QUOTE_FALLBACK_ERROR_MESSAGE;
   return message || QUOTE_FALLBACK_ERROR_MESSAGE;
 }
+
+// ── Entrada numérica decimal (compatible con punto y coma, y con todos los teclados móviles) ──
+// Un solo lugar define cómo se sanitiza y se parsea un número decimal escrito por el usuario,
+// tanto en el Portal del Cliente como en el Panel Administrativo.
+
+/** Props recomendadas para cualquier input decimal (abre teclado numérico con "." y "," en iOS/Android). */
+export const DECIMAL_INPUT_PROPS = {
+  type: "text" as const,
+  inputMode: "decimal" as const,
+  autoComplete: "off" as const,
+  pattern: "[0-9]*[.,]?[0-9]*",
+};
+
+/** Props para enteros (cantidades). */
+export const INTEGER_INPUT_PROPS = {
+  type: "text" as const,
+  inputMode: "numeric" as const,
+  autoComplete: "off" as const,
+  pattern: "[0-9]*",
+};
+
+/**
+ * Limpia lo que escribe el usuario sin romper la escritura:
+ * mantiene dígitos y un único separador decimal (el primero que se escribió, "." o ",").
+ * Nunca elimina los decimales ni convierte "3.5" en "35".
+ */
+export function sanitizeDecimalInput(raw: string): string {
+  const only = (raw ?? "").replace(/[^0-9.,]/g, "");
+  const firstSep = only.search(/[.,]/);
+  if (firstSep === -1) return only;
+  const sep = only[firstSep] as string;
+  const head = only.slice(0, firstSep);
+  const tail = only.slice(firstSep + 1).replace(/[.,]/g, "");
+  return `${head}${sep}${tail}`;
+}
+
+/** Igual que sanitizeDecimalInput pero solo dígitos (enteros). */
+export function sanitizeIntegerInput(raw: string): string {
+  return (raw ?? "").replace(/[^0-9]/g, "");
+}
+
+/** Convierte a número aceptando "." o "," como separador decimal. Devuelve `fallback` si no es válido. */
+export function parseDecimal(value: unknown, fallback = 0): number {
+  if (typeof value === "number") return Number.isFinite(value) ? value : fallback;
+  const s = String(value ?? "").trim().replace(",", ".");
+  if (s === "" || s === "." ) return fallback;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+/** true si el texto representa un número decimal válido (acepta "." y ","). */
+export function isValidDecimal(value: unknown): boolean {
+  const s = String(value ?? "").trim().replace(",", ".");
+  if (s === "") return false;
+  return /^\d*\.?\d*$/.test(s) && Number.isFinite(Number(s));
+}
