@@ -107,6 +107,7 @@ export type Database = {
           direccion: string
           id: string
           nombre: string
+          rut: string
           telefono: string
         }
         Insert: {
@@ -115,6 +116,7 @@ export type Database = {
           direccion: string
           id?: string
           nombre: string
+          rut?: string
           telefono: string
         }
         Update: {
@@ -123,6 +125,7 @@ export type Database = {
           direccion?: string
           id?: string
           nombre?: string
+          rut?: string
           telefono?: string
         }
         Relationships: []
