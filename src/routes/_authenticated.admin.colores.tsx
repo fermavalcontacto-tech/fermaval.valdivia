@@ -233,7 +233,7 @@ function StockDialog({
   const mut = useMutation({
     mutationFn: () => adjustColorStock({ data: {
       color_id: color!.id,
-      delta_m: (signo === "in" ? 1 : -1) * Number(delta),
+      delta_m: (signo === "in" ? 1 : -1) * parseDecimal(delta),
       motivo: motivo.trim(),
     }}),
     onSuccess: () => { toast.success("Stock actualizado"); onSaved(); },
@@ -259,7 +259,7 @@ function StockDialog({
           </div>
           <div>
             <Label>Cantidad (m)</Label>
-            <Input type="number" step="0.01" min="0" value={delta} onChange={(e) => setDelta(e.target.value)} />
+            <Input {...DECIMAL_INPUT_PROPS} placeholder="Ej: 12.50" value={delta} onChange={(e) => setDelta(sanitizeDecimalInput(e.target.value))} />
           </div>
           <div>
             <Label>Motivo</Label>
