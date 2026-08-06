@@ -16,7 +16,7 @@ export type CotizacionItem = {
 export type CotizacionPDF = {
   numero: string;
   fecha: string;
-  cliente: { nombre: string; correo: string; telefono: string; direccion: string };
+  cliente: { nombre: string; rut?: string; correo: string; telefono: string; direccion: string };
   largo_m: number;
   ancho_m: number;
   cantidad_planchas?: number;
@@ -67,6 +67,7 @@ const BANCO = {
 };
 
 export const CONTACTO_FERMAVAL = "+56 9 3012 6744";
+export const WEB_FERMAVAL = "www.fermaval.com";
 
 const LEGAL_TITLE = "Nota sobre el retiro de materiales";
 const LEGAL_BODY =
@@ -267,7 +268,7 @@ function drawLegalBlock(doc: jsPDF, y: number): number {
 
 function drawContactBlock(doc: jsPDF, y: number): number {
   const W = doc.internal.pageSize.getWidth();
-  const h = 26;
+  const h = 32;
   y = drawNewPageIfNeeded(doc, y, h + 6);
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.6);
@@ -286,6 +287,10 @@ function drawContactBlock(doc: jsPDF, y: number): number {
   doc.setFontSize(12);
   doc.setTextColor(...NAVY);
   doc.text(CONTACTO_FERMAVAL, W / 2, y + 24, { align: "center" });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text(WEB_FERMAVAL, W / 2, y + 30, { align: "center" });
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.6);
   doc.line(15, y + h, W - 15, y + h);
@@ -309,6 +314,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const blockW = (W - 30 - 6) / 2;
   const endA = infoBlock(doc, 15, blockY, blockW, "Datos del cliente", [
     ["Cliente:", c.cliente.nombre || "No informado"],
+    ["RUT:", c.cliente.rut || "No informado"],
     ["Correo:", c.cliente.correo || "No informado"],
     ["Teléfono:", c.cliente.telefono || "No informado"],
     ["Dirección:", c.cliente.direccion || "No informado"],
@@ -481,6 +487,7 @@ export function buildPagoPDF(c: CotizacionPDF): jsPDF {
   let y = 60;
   y = infoBlock(doc, 15, y, blockW, "Datos del cliente", [
     ["Cliente:", c.cliente.nombre || "—"],
+    ["RUT:", c.cliente.rut || "—"],
     ["Correo:", c.cliente.correo || "—"],
     ["Cotización:", c.numero],
   ]);

@@ -8,6 +8,7 @@ import {
   ItemInputSchema as ItemSchema,
   buildItemsCalc as buildItemsCalcCore,
   type ItemInput,
+  RutSchema,
 } from "@/lib/domain/quotes.core";
 
 export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
@@ -45,7 +46,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
+      .select("*, cliente:clientes(nombre, rut, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -184,6 +185,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     cliente: z.object({
       nombre: z.string().trim().max(120).optional().default(""),
+      rut: RutSchema,
       telefono: z.string().trim().max(40).optional().default(""),
       correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
       direccion: z.string().trim().max(300).optional().default(""),
@@ -934,6 +936,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     cliente: z.object({
       id: z.string().uuid(),
       nombre: z.string().trim().max(120).optional().default(""),
+      rut: RutSchema,
       telefono: z.string().trim().max(40).optional().default(""),
       correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),
       direccion: z.string().trim().max(300).optional().default(""),
@@ -956,7 +959,8 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     const first = itemsCalc[0];
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
     const { error: cErr } = await context.supabase.from("clientes").update({
-      nombre: data.cliente.nombre, telefono: data.cliente.telefono,
+      nombre: data.cliente.nombre, rut: data.cliente.rut,
+      telefono: data.cliente.telefono,
       correo: data.cliente.correo, direccion: data.cliente.direccion,
     }).eq("id", data.cliente.id);
     if (cErr) throw new Error(cErr.message);
@@ -1111,7 +1115,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
+      .select("*, cliente:clientes(nombre, rut, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
       .order("created_at", { ascending: false })
       .limit(200);
 
