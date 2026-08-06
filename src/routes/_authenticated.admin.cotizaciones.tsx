@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO,
 } from "@/lib/admin.functions";
-import { DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal } from "@/lib/domain/quotes.core";
+import { friendlyValidationMessage, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -133,7 +133,7 @@ function CotizacionesPage() {
       }});
       toast.success(`Email enviado a ${correo}`);
     } catch (e) {
-      toast.error(`Email no enviado: ${(e as Error).message}`);
+      toast.error(`Email no enviado: ${friendlyValidationMessage(e, "error desconocido")}`);
     }
   }
 
@@ -147,12 +147,12 @@ function CotizacionesPage() {
         await dispatchAprobacion({ ...v.cot, estado: v.estado }, enviarCorreoAuto);
       }
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudo completar la operación.")),
   });
   const del = useMutation({
     mutationFn: (id: string) => deleteCotizacion({ data: { id } }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["cotizaciones"] }); toast.success("Cotización eliminada"); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudo completar la operación.")),
   });
 
   return (
@@ -489,7 +489,7 @@ function EditarCotizacionDialog({
       responsable_nombre: form.responsable || null,
     } }),
     onSuccess: () => { toast.success("Cotización actualizada"); onSaved(); },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudo completar la operación.")),
   });
 
   return (
@@ -600,7 +600,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       setReviewing(false);
       setItems([{ largo: "", cantidad: "1", color_id: (colores[0] as ColorOption)?.id ?? "", tipo: "Ondulado" }]);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudo completar la operación.")),
   });
 
   function handleOpenChange(o: boolean) {

@@ -117,12 +117,76 @@ export function isLegacyVariantStockError(error: unknown): boolean {
   return LEGACY_VARIANT_ERROR_PATTERN.test(errorMessage(error));
 }
 
+// ── Mensajes de validación legibles ──────────────────────────────────────────
+// Convierte errores de Zod (objeto ZodError o el JSON crudo que Zod imprime en
+// `error.message`) en un texto corto en español. Evita que aparezcan bloques
+// rojos con JSON técnico en el Portal del Cliente o en el Panel Administrativo.
+
+const FIELD_LABELS: Record<string, string> = {
+  nombre: "Nombre",
+  telefono: "Teléfono",
+  correo: "Correo",
+  direccion: "Dirección",
+  largo_m: "Largo (m)",
+  cantidad_planchas: "Cantidad",
+  precio_m2: "Precio por m²",
+  descuento: "Descuento",
+  pago_recibido: "Pago recibido",
+  color_id: "Color",
+  tipo: "Tipo",
+  items: "Planchas",
+  stock_m: "Stock (m)",
+};
+
+type ZodIssueLike = { code?: string; message?: string; path?: (string | number)[]; validation?: string };
+
+function issueText(issue: ZodIssueLike): string {
+  const key = [...(issue.path ?? [])].reverse().find((p) => typeof p === "string" && FIELD_LABELS[p]) as string | undefined;
+  const label = key ? FIELD_LABELS[key] : undefined;
+  if (issue.validation === "email" || issue.code === "invalid_string") return label ? `${label} inválido` : "Dato inválido";
+  if (issue.code === "too_small") return label ? `${label} inválido o incompleto` : "Falta completar un campo";
+  if (issue.code === "too_big") return label ? `${label} excede el máximo permitido` : "Valor demasiado grande";
+  if (issue.code === "invalid_type") return label ? `${label} es obligatorio` : "Falta completar un campo";
+  return label ? `${label} inválido` : (issue.message ?? "Dato inválido");
+}
+
+function parseZodIssues(error: unknown): ZodIssueLike[] | null {
+  const candidate = (error && typeof error === "object" && Array.isArray((error as { issues?: unknown }).issues))
+    ? (error as { issues: ZodIssueLike[] }).issues
+    : null;
+  if (candidate) return candidate;
+  const raw = errorMessage(error).trim();
+  if (!raw.startsWith("[") && !raw.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const arr = Array.isArray(parsed) ? parsed : Array.isArray(parsed?.issues) ? parsed.issues : null;
+    if (!arr || !arr.length) return null;
+    if (!arr.some((i: ZodIssueLike) => i && (i.code || i.message))) return null;
+    return arr as ZodIssueLike[];
+  } catch {
+    return null;
+  }
+}
+
+/** Mensaje corto en español para cualquier error (Zod o normal). */
+export function friendlyValidationMessage(error: unknown, fallback = QUOTE_FALLBACK_ERROR_MESSAGE): string {
+  const issues = parseZodIssues(error);
+  if (issues) {
+    const texts = Array.from(new Set(issues.map(issueText))).slice(0, 3);
+    return texts.length ? texts.join(" · ") : fallback;
+  }
+  const message = errorMessage(error).trim();
+  if (!message || message.startsWith("[") || message.startsWith("{")) return fallback;
+  return message;
+}
+
 export function publicQuoteErrorMessage(error: unknown): string {
   if (isLegacyVariantStockError(error)) return QUOTE_FALLBACK_ERROR_MESSAGE;
   const message = errorMessage(error);
   if (LEGACY_VARIANT_ERROR_PATTERN.test(message)) return QUOTE_FALLBACK_ERROR_MESSAGE;
-  return message || QUOTE_FALLBACK_ERROR_MESSAGE;
+  return friendlyValidationMessage(error);
 }
+
 
 // ── Entrada numérica decimal (compatible con punto y coma, y con todos los teclados móviles) ──
 // Un solo lugar define cómo se sanitiza y se parsea un número decimal escrito por el usuario,
