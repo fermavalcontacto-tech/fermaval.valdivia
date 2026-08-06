@@ -243,6 +243,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
           <p className="mt-1 font-display text-xl text-primary">FERMAVAL</p>
           <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">📞 WhatsApp / Teléfono</p>
           <a href="https://wa.me/56930126744" className="font-mono text-lg font-bold text-primary">+56 9 3012 6744</a>
+          <p className="mt-2"><a href="https://www.fermaval.com" className="text-sm font-semibold text-primary underline-offset-4 hover:underline">www.fermaval.com</a></p>
         </div>
 
         <div className="quote-legal-notice w-full min-w-0 rounded-md p-3 text-xs font-medium text-foreground">
