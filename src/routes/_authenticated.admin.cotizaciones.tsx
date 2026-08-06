@@ -4,6 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO,
 } from "@/lib/admin.functions";
+import { DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
