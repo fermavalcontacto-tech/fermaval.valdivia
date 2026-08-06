@@ -317,15 +317,15 @@ function validateCotizacion(
     else if (!EMAIL_RE.test(correo)) errors.correo = "Correo inválido";
   }
   if ((form.direccion ?? "").length > 200) errors.direccion = "Máximo 200 caracteres";
-  const precio = Number(form.precio_m2);
+  const precio = parseDecimal(form.precio_m2, NaN);
   if (!form.precio_m2 || Number.isNaN(precio) || precio <= 0) errors.precio_m2 = "Debe ser mayor a 0";
   else if (precio > 10_000_000) errors.precio_m2 = "Precio fuera de rango";
   if (form.descuento !== undefined && form.descuento !== "") {
-    const d = Number(form.descuento);
+    const d = parseDecimal(form.descuento, NaN);
     if (Number.isNaN(d) || d < 0) errors.descuento = "No puede ser negativo";
   }
   if (form.pago_recibido !== undefined && form.pago_recibido !== "") {
-    const p = Number(form.pago_recibido);
+    const p = parseDecimal(form.pago_recibido, NaN);
     if (Number.isNaN(p) || p < 0) errors.pago_recibido = "No puede ser negativo";
   }
   if (opts.requireResponsable && !(form.responsable ?? "").trim()) errors.responsable = "Selecciona un responsable";
