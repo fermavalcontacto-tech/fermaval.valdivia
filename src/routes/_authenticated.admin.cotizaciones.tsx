@@ -381,19 +381,17 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
             </div>
             <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Largo (m) *</Label>
-              <Input type="text" inputMode="decimal" pattern="[0-9]*[.,]?[0-9]*" value={it.largo} aria-invalid={!!er.largo} className="w-full"
+              <Input {...DECIMAL_INPUT_PROPS} placeholder="Ej: 3.5" value={it.largo} aria-invalid={!!er.largo} className="w-full"
                 onChange={(e) => {
-                  const v = e.target.value.replace(/[^0-9.,]/g, "");
-                  const parts = v.split(/[.,]/);
-                  const clean = parts.length > 1 ? `${parts[0]}${v.includes(",") ? "," : "."}${parts.slice(1).join("")}` : v;
+                  const clean = sanitizeDecimalInput(e.target.value);
                   setItems(items.map((x, idx) => idx === i ? { ...x, largo: clean } : x));
                 }} />
               <FieldError msg={er.largo} />
             </div>
             <div className="w-full min-w-0 space-y-1">
               <Label className="text-[10px]">Cantidad *</Label>
-              <Input type="number" inputMode="numeric" step="1" min="1" value={it.cantidad} aria-invalid={!!er.cantidad} className="w-full"
-                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: e.target.value } : x))} />
+              <Input {...INTEGER_INPUT_PROPS} value={it.cantidad} aria-invalid={!!er.cantidad} className="w-full"
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, cantidad: sanitizeIntegerInput(e.target.value) } : x))} />
               <FieldError msg={er.cantidad} />
             </div>
             <div className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md bg-background px-3 py-2 md:block md:bg-transparent md:px-0 md:py-0">
