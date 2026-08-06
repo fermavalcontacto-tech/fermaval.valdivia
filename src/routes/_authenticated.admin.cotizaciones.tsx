@@ -115,8 +115,8 @@ function CotizacionesPage() {
 
   async function dispatchAprobacion(c: Cotizacion, sendEmail: boolean) {
     const pdfData = toPdfData(c);
-    downloadCotizacionPDF(pdfData);
-    downloadPagoPDF(pdfData);
+    await downloadCotizacionPDF(pdfData);
+    await downloadPagoPDF(pdfData);
     if (!sendEmail) {
       toast.info("Envío de correo desactivado — PDFs descargados.");
       return;

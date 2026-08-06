@@ -518,14 +518,53 @@ export function pdfsForCotizacion(c: CotizacionPDF) {
   };
 }
 
+/**
+ * Entrega el PDF de forma confiable en celular y escritorio:
+ * 1) hoja nativa de compartir/guardar (iOS/Android modernos)
+ * 2) descarga por enlace con atributo download
+ * 3) apertura en pestaña nueva como último recurso
+ */
+export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
+  const blob: Blob = doc.output("blob");
+  const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
+
+  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
+  if (file && nav?.share && nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: filename });
+      return;
+    } catch (e) {
+      // usuario canceló o falló: seguimos con la descarga clásica
+      if ((e as Error)?.name === "AbortError") return;
+    }
+  }
+
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.rel = "noopener";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    if (!("download" in a)) window.open(url, "_blank", "noopener");
+  } catch {
+    window.open(url, "_blank", "noopener");
+  }
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 export function downloadCotizacionPDF(c: CotizacionPDF) {
-  buildCotizacionPDF(c).save(`Cotizacion-${c.numero}.pdf`);
+  return deliverPdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
 }
 export function downloadPagoPDF(c: CotizacionPDF) {
-  buildPagoPDF(c).save(`Comprobante-Pago-${c.numero}.pdf`);
+  return deliverPdf(buildPagoPDF(c), `Comprobante-Pago-${c.numero}.pdf`);
 }
 
 export function cotizacionPdfBlobUrl(c: CotizacionPDF): string {
   const blob = buildCotizacionPDF(c).output("blob");
   return URL.createObjectURL(blob);
 }
+
