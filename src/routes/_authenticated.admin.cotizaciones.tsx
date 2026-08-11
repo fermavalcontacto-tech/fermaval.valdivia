@@ -746,7 +746,9 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                       <div className="col-span-2 inline-flex min-w-0 items-center gap-1"><span className="h-3 w-3 shrink-0 rounded" style={{ background: it.color_hex }} /><span className="truncate">{it.color_nombre}</span></div>
                       <div><span className="text-muted-foreground">Largo:</span> <span className="font-mono">{it.largo.toFixed(2)} m</span></div>
                       <div><span className="text-muted-foreground">Cant.:</span> <span className="font-mono">{it.cantidad}</span></div>
-                      <div className="col-span-2"><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground">$ / m²:</span> <span className="font-mono">{formatCLP(it.precio_m2)}</span></div>
+                      <div className="col-span-2"><span className="text-muted-foreground">Subtotal:</span> <span className="font-mono font-semibold">{formatCLP(it.subtotal)}</span></div>
                     </div>
                   ))}
                 </div>
@@ -758,7 +760,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border bg-muted/30 p-3">
                 <div className="flex justify-between"><span>Total m²:</span><span className="font-mono font-semibold">{m2Total.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Precio / m²:</span><span className="font-mono">{formatCLP(parseDecimal(form.precio_m2) || 0)}</span></div>
+                <div className="flex justify-between"><span>Precio / m² promedio:</span><span className="font-mono">{formatCLP(precioPromedioCalc)}</span></div>
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 
