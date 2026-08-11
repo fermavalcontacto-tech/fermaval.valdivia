@@ -1460,3 +1460,52 @@ export const deleteVentaChatarra = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ============= Precios por tipo de plancha =============
+// Una sola fuente de precios base: el Portal del Cliente y el Panel Administrativo
+// leen esta tabla. En cada cotización el administrador puede ajustar el precio de
+// una línea sin alterar estos valores base.
+
+export const listPreciosTipo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("precios_tipo")
+      .select("id, tipo, precio_m2")
+      .order("tipo", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const updatePreciosTipo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    precios: z.array(z.object({
+      tipo: TipoEnum,
+      precio_m2: z.number().min(0).max(100_000_000),
+    })).min(1).max(50),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("precios_tipo").select("tipo, precio_m2");
+    const prevMap = new Map((prev ?? []).map((r) => [r.tipo as string, Number(r.precio_m2)]));
+    const { error } = await context.supabase
+      .from("precios_tipo")
+      .upsert(
+        data.precios.map((p) => ({ tipo: p.tipo, precio_m2: p.precio_m2 })),
+        { onConflict: "tipo" },
+      );
+    if (error) throw new Error(error.message);
+    const rows = data.precios
+      .filter((p) => prevMap.get(p.tipo) !== p.precio_m2)
+      .map((p) => ({
+        user_id: context.userId, user_email: email,
+        entidad: "precios_tipo", accion: "update",
+        cambio: `Precio por m² de ${p.tipo} actualizado`,
+        valor_antes: prevMap.has(p.tipo) ? String(prevMap.get(p.tipo)) : null,
+        valor_despues: String(p.precio_m2),
+      }));
+    if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
+    return { ok: true };
+  });
