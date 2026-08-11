@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo,
 } from "@/lib/admin.functions";
-import { friendlyValidationMessage, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -277,8 +277,8 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
-type ItemErrors = { largo?: string; cantidad?: string; color_id?: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string };
+type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string };
 type FormErrors = {
   nombre?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
   precio_m2?: string; descuento?: string; pago_recibido?: string;
@@ -290,11 +290,18 @@ function parseLargo(s: string): number {
   return parseDecimal(s);
 }
 
-function calcItems(items: ItemForm[]) {
+function calcItems(items: ItemForm[], precios: PreciosPorTipo = {}, precioBase = 0) {
   return items.map((it) => {
     const l = parseLargo(it.largo);
     const n = parseDecimal(it.cantidad);
-    return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
+    const m2 = Number((l * 1 * n).toFixed(2));
+    const manual = (it.precio ?? "").trim() ? parseDecimal(it.precio) : 0;
+    const precio_m2 = resolvePrecioItem({ tipo: it.tipo, precio_m2: manual || null }, precios, precioBase);
+    return {
+      largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2,
+      precio_m2, subtotal: Math.round(m2 * precio_m2),
+      precio_manual: manual > 0 ? manual : null,
+    };
   });
 }
 
@@ -345,6 +352,11 @@ function validateCotizacion(
     if (!it.cantidad || !Number.isInteger(n) || n < 1) e.cantidad = "Mínimo 1";
     else if (n > 1000) e.cantidad = "Máximo 1000";
     if (!it.color_id) e.color_id = "Selecciona color";
+    if ((it.precio ?? "").trim()) {
+      const pr = parseDecimal(it.precio, NaN);
+      if (Number.isNaN(pr) || pr <= 0) e.precio = "Precio > 0";
+      else if (pr > 10_000_000) e.precio = "Precio fuera de rango";
+    }
     return e;
   });
   if (itemErrs.some((e) => Object.keys(e).length)) errors.items = itemErrs;
@@ -356,9 +368,10 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
 }
 
-function ItemsEditor({ items, setItems, colores, errors, generalError }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string }) {
-  const calc = calcItems(items);
+function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0 }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number }) {
+  const calc = calcItems(items, precios, precioBase);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
+  const totalPesos = calc.reduce((s, x) => s + x.subtotal, 0);
   return (
     <div className="w-full min-w-0 space-y-3 col-span-2">
       <div className="space-y-1">
@@ -427,13 +440,35 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
             </Select>
             <FieldError msg={er.color_id} />
           </div>
+
+          <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
+            <div className="w-full min-w-0 space-y-1">
+              <Label className="text-[10px]">Precio / m² de esta plancha</Label>
+              <Input {...DECIMAL_INPUT_PROPS} className="w-full" aria-invalid={!!er.precio}
+                placeholder={`Precio de ${it.tipo}: ${formatCLP(calc[i].precio_m2)}`}
+                value={it.precio ?? ""}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, precio: sanitizeDecimalInput(e.target.value) } : x))} />
+              <FieldError msg={er.precio} />
+              <p className="text-[10px] text-muted-foreground">
+                Vacío usa el precio base del tipo. Ajustarlo aquí solo afecta esta cotización.
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm md:justify-end md:gap-3 md:bg-transparent md:px-0">
+              <span className="text-[10px] uppercase text-muted-foreground">Subtotal</span>
+              <span className="font-mono font-semibold">{formatCLP(calc[i].subtotal)}</span>
+            </div>
+          </div>
         </div>
       );})}
       <div className="flex w-full flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
         <Button type="button" variant="outline" size="sm" className="quote-mobile-button" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
-        <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
+        <div className="text-sm">
+          Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span>
+          <span className="mx-2 text-muted-foreground">·</span>
+          Subtotal: <span className="font-mono font-semibold">{formatCLP(totalPesos)}</span>
+        </div>
       </div>
     </div>
   );
