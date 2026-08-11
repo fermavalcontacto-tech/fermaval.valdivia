@@ -267,7 +267,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
           <div className="min-w-0">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total estimado</div>
             <div className="font-display text-4xl text-primary">{formatCLP(total)}</div>
-            <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² × {formatCLP(precio)} / m²</div>
+            <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² · precio según el tipo de plancha</div>
           </div>
           <Button type="submit" variant="hero" size="lg" className="w-full sm:w-auto" disabled={mut.isPending}>
             {mut.isPending ? "Generando..." : "Generar cotización"}
