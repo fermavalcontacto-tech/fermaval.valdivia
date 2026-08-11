@@ -37,6 +37,9 @@ export const ItemInputSchema = z.object({
   color_id: z.string().uuid().nullable().optional(),
   tipo: TipoEnum.optional().default("Ondulado"),
   espesor_mm: z.number().optional().default(ESPESOR_FIJO_MM),
+  // Precio por m² específico de esta línea (ajuste manual del administrador).
+  // Si no viene, se usa el precio del tipo y, en última instancia, el precio general.
+  precio_m2: decimalFromInput.pipe(z.number().min(0).max(100_000_000)).nullable().optional(),
 });
 export type ItemInput = z.infer<typeof ItemInputSchema>;
 
@@ -49,9 +52,40 @@ export type ItemCalc = {
   color_nombre: string | null;
   tipo: TipoProducto;
   espesor_mm: number;
+  precio_m2: number;
 };
 
 type DbClientLike = { from: (table: string) => any };
+
+/** Precios base por tipo de plancha, leídos de `precios_tipo`. */
+export type PreciosPorTipo = Partial<Record<string, number>>;
+
+export async function fetchPreciosPorTipo(supabase: DbClientLike): Promise<PreciosPorTipo> {
+  const map: PreciosPorTipo = {};
+  try {
+    const { data } = await supabase.from("precios_tipo").select("tipo, precio_m2");
+    for (const row of (data ?? [])) {
+      const precio = Number(row.precio_m2);
+      if (Number.isFinite(precio) && precio > 0) map[row.tipo as string] = precio;
+    }
+  } catch {
+    // Sin precios por tipo se usa el precio general: nunca bloquea la cotización.
+  }
+  return map;
+}
+
+/** Precio por m² efectivo de una línea: precio manual → precio del tipo → precio general. */
+export function resolvePrecioItem(
+  item: { tipo?: string | null; precio_m2?: number | null },
+  precios: PreciosPorTipo,
+  precioBase: number,
+): number {
+  const manual = Number(item.precio_m2);
+  if (Number.isFinite(manual) && manual > 0) return manual;
+  const porTipo = precios[(item.tipo ?? "Ondulado") as string];
+  if (Number.isFinite(Number(porTipo)) && Number(porTipo) > 0) return Number(porTipo);
+  return precioBase;
+}
 
 /**
  * Fuente única de cálculo de líneas. Usada por:
@@ -62,6 +96,7 @@ type DbClientLike = { from: (table: string) => any };
 export async function buildItemsCalc(
   supabase: DbClientLike,
   items: ItemInput[],
+  opts: { precioBase?: number; precios?: PreciosPorTipo } = {},
 ): Promise<ItemCalc[]> {
   const colorIds = Array.from(
     new Set(items.map((i) => i.color_id).filter((x): x is string => !!x)),
@@ -74,6 +109,9 @@ export async function buildItemsCalc(
       .in("id", colorIds);
     for (const c of (cols ?? [])) colorNames.set(c.id, c.nombre);
   }
+
+  const precios = opts.precios ?? await fetchPreciosPorTipo(supabase);
+  const precioBase = Number(opts.precioBase ?? 0);
 
   return items.map((it) => {
     const tipo = (it.tipo ?? "Ondulado") as TipoProducto;
@@ -88,6 +126,7 @@ export async function buildItemsCalc(
       color_nombre: cid ? (colorNames.get(cid) ?? null) : null,
       tipo,
       espesor_mm: espesor,
+      precio_m2: resolvePrecioItem({ tipo, precio_m2: it.precio_m2 ?? null }, precios, precioBase),
     };
   });
 }
@@ -96,9 +135,33 @@ export function sumMetros2(items: Pick<ItemCalc, "metros2">[]): number {
   return Number(items.reduce((s, x) => s + x.metros2, 0).toFixed(2));
 }
 
+/** Suma de subtotales (m² × precio por m² de cada línea). */
+export function sumSubtotales(items: Pick<ItemCalc, "metros2" | "precio_m2">[]): number {
+  return items.reduce((s, x) => s + x.metros2 * Number(x.precio_m2 || 0), 0);
+}
+
+/** Total de la cotización a partir de las líneas, con descuento aplicado. */
+export function calcTotalItems(
+  items: Pick<ItemCalc, "metros2" | "precio_m2">[],
+  descuento = 0,
+): number {
+  return Math.max(0, Math.round(sumSubtotales(items) - descuento));
+}
+
+/** Precio por m² representativo de la cotización (para compatibilidad de la cabecera). */
+export function precioPromedio(
+  items: Pick<ItemCalc, "metros2" | "precio_m2">[],
+  fallback = 0,
+): number {
+  const m2 = items.reduce((s, x) => s + x.metros2, 0);
+  if (m2 <= 0) return fallback;
+  return Math.round(sumSubtotales(items) / m2);
+}
+
 export function calcTotal(metros2: number, precio_m2: number, descuento = 0): number {
   return Math.max(0, Math.round(metros2 * precio_m2 - descuento));
 }
+
 
 export const QUOTE_FALLBACK_ERROR_MESSAGE = "No se pudo generar la cotización. Por favor intenta nuevamente.";
 export const LEGACY_VARIANT_ERROR_PATTERN = /(?:no\s+existe\s+variante|variante\s+de\s+stock|producto_variantes|variante_id|ensure_variant|fetch_or_create_variant|stock\s+para)/i;
