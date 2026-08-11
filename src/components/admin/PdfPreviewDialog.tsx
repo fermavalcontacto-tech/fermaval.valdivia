@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, FileText, MessageCircle, X } from "lucide-react";
-import { cotizacionPdfBlobUrl, downloadCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { Download, ExternalLink, FileText, MessageCircle, Printer, X } from "lucide-react";
+import { cotizacionPdfBlobUrl, downloadCotizacionPDF, printCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCLP } from "@/lib/format";
 
@@ -50,6 +50,11 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
                   <Download className="mr-1 h-4 w-4" /> Descargar PDF
                 </Button>
               )}
+              {data && (
+                <Button variant="outline" size="lg" onClick={() => printCotizacionPDF(data)}>
+                  <Printer className="mr-1 h-4 w-4" /> Imprimir
+                </Button>
+              )}
               {data && onShareWhatsApp && (
                 <Button variant="outline" size="lg" onClick={() => onShareWhatsApp(data)}>
                   <MessageCircle className="mr-1 h-4 w-4 text-emerald-600" /> Compartir por WhatsApp
@@ -75,6 +80,11 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="mr-1 h-4 w-4" /> Cerrar
           </Button>
+          {!isMobile && data && (
+            <Button variant="outline" onClick={() => printCotizacionPDF(data)}>
+              <Printer className="mr-1 h-4 w-4" /> Imprimir
+            </Button>
+          )}
           {!isMobile && data && onShareWhatsApp && (
             <Button variant="outline" onClick={() => onShareWhatsApp(data)}>
               <MessageCircle className="mr-1 h-4 w-4 text-emerald-600" /> Compartir por WhatsApp
