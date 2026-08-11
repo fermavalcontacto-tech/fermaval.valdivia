@@ -35,7 +35,7 @@ function clearLegacyVariantToasts() {
   });
 }
 
-export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
+export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { precio: number; preciosTipo?: Record<string, number> | null; colores: Color[]; formFields?: Partial<FormFields> | null }) {
   const ff: FormFields = {
     nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
     rut: { ...DEFAULT_FIELDS.rut, ...(formFields?.rut ?? {}) },
@@ -46,6 +46,10 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
   const navigate = useNavigate();
   const colorMap = useMemo(() => new Map(colores.map((c) => [c.id, c])), [colores]);
+  const precioDeTipo = useMemo(
+    () => (tipo: string) => resolvePrecioItem({ tipo }, preciosTipo ?? {}, precio),
+    [preciosTipo, precio],
+  );
   const [items, setItems] = useState<Item[]>([
     { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" },
   ]);
@@ -59,12 +63,15 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
     () => items.map((it) => {
       const l = parseDecimal(it.largo);
       const n = parseDecimal(it.cantidad);
-      return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
+      const m2 = Number((l * 1 * n).toFixed(2));
+      const p = precioDeTipo(it.tipo);
+      return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2, precio_m2: p, subtotal: Math.round(m2 * p) };
     }),
-    [items],
+    [items, precioDeTipo],
   );
   const m2Total = useMemo(() => Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2)), [itemsCalc]);
-  const total = Math.round(m2Total * precio);
+  const total = Math.round(itemsCalc.reduce((s, x) => s + x.m2 * x.precio_m2, 0));
+
 
   function updateItem(i: number, patch: Partial<Item>) {
     setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it));
