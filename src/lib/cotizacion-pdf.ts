@@ -11,7 +11,14 @@ export type CotizacionItem = {
   color_nombre?: string | null;
   tipo?: string | null;
   espesor_mm?: number | null;
+  precio_m2?: number | null;
 };
+
+/** Precio por m² de la línea: el guardado en la línea o, si no hay, el de la cotización. */
+function itemPrecio(it: CotizacionItem, c: { precio_m2: number }): number {
+  const p = Number(it.precio_m2);
+  return Number.isFinite(p) && p > 0 ? p : Number(c.precio_m2 || 0);
+}
 
 export type CotizacionPDF = {
   numero: string;
@@ -369,14 +376,15 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
       (it.color_nombre ? ` · ${it.color_nombre}` : "") +
       `\nPlancha ${Number(it.largo_m).toFixed(2)} m × 1.00 m  ·  ${Number(it.metros2).toFixed(2)} m²`;
     const cant = `${it.cantidad_planchas}`;
-    const subtotal = Number(it.metros2) * c.precio_m2;
+    const precioLinea = itemPrecio(it, c);
+    const subtotal = Number(it.metros2) * precioLinea;
     doc.setTextColor(...GREY_DARK);
     doc.text(String(i + 1), cols[0].x + 2, y + 5.5);
     doc.setTextColor(...BLACK);
     const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
     doc.text(descLines, cols[1].x + 2, y + 4);
     doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(c.precio_m2), cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
+    doc.text(formatCLP(precioLinea), cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
     doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
     y += rowH;
   });
@@ -387,7 +395,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
 
   y += 4;
 
-  const subtotal = items.reduce((s, it) => s + Number(it.metros2) * c.precio_m2, 0);
+  const subtotal = items.reduce((s, it) => s + Number(it.metros2) * itemPrecio(it, c), 0);
   const neto = Math.max(0, subtotal - (c.descuento || 0));
   const iva = Math.round(neto * 0.19);
   const totalConIva = neto + iva;
@@ -568,3 +576,49 @@ export function cotizacionPdfBlobUrl(c: CotizacionPDF): string {
   return URL.createObjectURL(blob);
 }
 
+
+/**
+ * Abre el diálogo de impresión del sistema con el PDF de la cotización.
+ * Usa un iframe oculto en escritorio y una pestaña nueva en celulares
+ * (iOS/Android no imprimen desde iframes de PDF).
+ */
+export function printPdfDoc(doc: jsPDF): void {
+  const blob: Blob = doc.output("blob");
+  const url = URL.createObjectURL(blob);
+  const cleanup = () => setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isMobileUA = /Android|iPhone|iPad|iPod/i.test(ua);
+
+  if (isMobileUA) {
+    window.open(url, "_blank", "noopener");
+    cleanup();
+    return;
+  }
+
+  const frame = document.createElement("iframe");
+  frame.style.position = "fixed";
+  frame.style.right = "0";
+  frame.style.bottom = "0";
+  frame.style.width = "0";
+  frame.style.height = "0";
+  frame.style.border = "0";
+  frame.src = url;
+  frame.onload = () => {
+    try {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+    } catch {
+      window.open(url, "_blank", "noopener");
+    }
+    setTimeout(() => frame.remove(), 60_000);
+    cleanup();
+  };
+  document.body.appendChild(frame);
+}
+
+export function printCotizacionPDF(c: CotizacionPDF) {
+  printPdfDoc(buildCotizacionPDF(c));
+}
+export function printPagoPDF(c: CotizacionPDF) {
+  printPdfDoc(buildPagoPDF(c));
+}
