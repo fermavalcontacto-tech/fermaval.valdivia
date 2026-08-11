@@ -232,8 +232,17 @@ export const getPublicConfig = createServerFn({ method: "GET" }).handler(async (
     .select("id, nombre, hex, imagen_url, activo, orden")
     .eq("activo", true)
     .order("orden", { ascending: true });
-  return { cfg, colores: colores ?? [] };
+  const { data: precios } = await supabaseAdmin
+    .from("precios_tipo")
+    .select("tipo, precio_m2");
+  const preciosTipo: Record<string, number> = {};
+  for (const row of (precios ?? [])) {
+    const p = Number(row.precio_m2);
+    if (Number.isFinite(p) && p > 0) preciosTipo[row.tipo as string] = p;
+  }
+  return { cfg, colores: colores ?? [], preciosTipo };
 });
+
 
 // Historial público del cliente: dos pasos.
 // 1) `requestQuoteHistoryCode` genera un código de 6 dígitos y lo envía al correo
