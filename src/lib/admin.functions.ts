@@ -36,9 +36,11 @@ type DbClientLike = { from: (table: string) => any };
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: ItemInput[],
+  precioBase = 0,
 ) {
-  return buildItemsCalcCore(supabase, items);
+  return buildItemsCalcCore(supabase, items, { precioBase });
 }
+
 
 
 export const listCotizaciones = createServerFn({ method: "GET" })
