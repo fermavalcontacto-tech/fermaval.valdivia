@@ -129,14 +129,14 @@ function QuotePage() {
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
   function buildPdf(): CotizacionPDF {
-    const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }])
+    const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2), tipo: null, espesor_mm: null, color_nombre: null, precio_m2: null }])
       .map((it) => ({
         largo_m: Number(it.largo_m), ancho_m: 1,
         cantidad_planchas: Number(it.cantidad_planchas), metros2: Number(it.metros2),
-        tipo: ("tipo" in it ? it.tipo : null) ?? null,
-        espesor_mm: ("espesor_mm" in it ? it.espesor_mm : null) ?? null,
-        color_nombre: ("color_nombre" in it ? it.color_nombre : null) ?? null,
-        precio_m2: ("precio_m2" in it ? it.precio_m2 : null) ?? null,
+        tipo: it.tipo ?? null,
+        espesor_mm: it.espesor_mm == null ? null : Number(it.espesor_mm),
+        color_nombre: it.color_nombre ?? null,
+        precio_m2: it.precio_m2 == null ? null : Number(it.precio_m2),
       }));
     const pdf: CotizacionPDF = {
       numero: cot.numero,
