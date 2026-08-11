@@ -7,9 +7,12 @@ import {
   buildItemsCalc,
   sumMetros2,
   calcTotal,
+  calcTotalItems,
+  precioPromedio,
   publicQuoteErrorMessage,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+
 
 
 const CreateQuoteSchema = z.object({
