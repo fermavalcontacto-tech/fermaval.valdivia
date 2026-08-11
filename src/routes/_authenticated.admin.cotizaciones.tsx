@@ -474,10 +474,22 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
   );
 }
 
+/** Precios base por tipo, compartidos con el Portal del Cliente. */
+function usePreciosTipo() {
+  const { data = [] } = useQuery({ queryKey: ["precios-tipo"], queryFn: () => listPreciosTipo() });
+  const map: PreciosPorTipo = {};
+  for (const row of data as Array<{ tipo: string; precio_m2: number }>) {
+    const p = Number(row.precio_m2);
+    if (Number.isFinite(p) && p > 0) map[row.tipo] = p;
+  }
+  return map;
+}
+
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const precios = usePreciosTipo();
   const [form, setForm] = useState({
     nombre: "", rut: "", telefono: "", correo: "", direccion: "",
     color: "", precio_m2: "0", responsable: "",
@@ -500,15 +512,16 @@ function EditarCotizacionDialog({
       setItems(its.map((it) => ({
         largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
         color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
+        precio: it.precio_m2 == null ? "" : String(Number(it.precio_m2)),
       })));
     } else {
       setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "", tipo: "Ondulado" }]);
     }
   }, [cot]);
 
-  const itemsCalc = calcItems(items);
+  const itemsCalc = calcItems(items, precios, parseDecimal(form.precio_m2));
   const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
-  const total = Math.max(0, Math.round(m2 * parseDecimal(form.precio_m2) - parseDecimal(form.descuento)));
+  const total = Math.max(0, Math.round(itemsCalc.reduce((s, x) => s + x.subtotal, 0) - parseDecimal(form.descuento)));
   const saldo = Math.max(0, total - parseDecimal(form.pago_recibido));
 
   const mut = useMutation({
@@ -520,7 +533,7 @@ function EditarCotizacionDialog({
         telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       descuento: parseDecimal(form.descuento), pago_recibido: parseDecimal(form.pago_recibido),
       estado: form.estado,
@@ -540,8 +553,8 @@ function EditarCotizacionDialog({
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Descuento (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.descuento} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.pago_recibido} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2">
