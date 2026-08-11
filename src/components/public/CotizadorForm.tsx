@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage, resolvePrecioItem, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -35,7 +35,7 @@ function clearLegacyVariantToasts() {
   });
 }
 
-export function CotizadorForm({ precio, colores, formFields }: { precio: number; colores: Color[]; formFields?: Partial<FormFields> | null }) {
+export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { precio: number; preciosTipo?: Record<string, number> | null; colores: Color[]; formFields?: Partial<FormFields> | null }) {
   const ff: FormFields = {
     nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
     rut: { ...DEFAULT_FIELDS.rut, ...(formFields?.rut ?? {}) },
@@ -46,6 +46,10 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
 
   const navigate = useNavigate();
   const colorMap = useMemo(() => new Map(colores.map((c) => [c.id, c])), [colores]);
+  const precioDeTipo = useMemo(
+    () => (tipo: string) => resolvePrecioItem({ tipo }, preciosTipo ?? {}, precio),
+    [preciosTipo, precio],
+  );
   const [items, setItems] = useState<Item[]>([
     { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" },
   ]);
@@ -59,12 +63,15 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
     () => items.map((it) => {
       const l = parseDecimal(it.largo);
       const n = parseDecimal(it.cantidad);
-      return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
+      const m2 = Number((l * 1 * n).toFixed(2));
+      const p = precioDeTipo(it.tipo);
+      return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2, precio_m2: p, subtotal: Math.round(m2 * p) };
     }),
-    [items],
+    [items, precioDeTipo],
   );
   const m2Total = useMemo(() => Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2)), [itemsCalc]);
-  const total = Math.round(m2Total * precio);
+  const total = Math.round(itemsCalc.reduce((s, x) => s + x.m2 * x.precio_m2, 0));
+
 
   function updateItem(i: number, patch: Partial<Item>) {
     setItems((arr) => arr.map((it, idx) => idx === i ? { ...it, ...patch } : it));
@@ -194,6 +201,8 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
                       <th className="py-1 text-right font-medium">Largo</th>
                       <th className="py-1 text-right font-medium">Cant.</th>
                       <th className="py-1 text-right font-medium">m²</th>
+                      <th className="py-1 text-right font-medium">$ / m²</th>
+                      <th className="py-1 text-right font-medium">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody className="font-mono">
@@ -206,9 +215,12 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
                         <td className="py-1 text-right">{it.largo} m</td>
                         <td className="py-1 text-right">{it.cantidad}</td>
                         <td className="py-1 text-right font-semibold">{it.m2.toFixed(2)}</td>
+                        <td className="py-1 text-right">{formatCLP(it.precio_m2)}</td>
+                        <td className="py-1 text-right font-semibold">{formatCLP(it.subtotal)}</td>
                       </tr>
                     ))}
                   </tbody>
+
                 </table>
               </div>
             </div>
@@ -255,7 +267,7 @@ export function CotizadorForm({ precio, colores, formFields }: { precio: number;
           <div className="min-w-0">
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Total estimado</div>
             <div className="font-display text-4xl text-primary">{formatCLP(total)}</div>
-            <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² × {formatCLP(precio)} / m²</div>
+            <div className="text-xs text-muted-foreground">{m2Total.toFixed(2)} m² · precio según el tipo de plancha</div>
           </div>
           <Button type="submit" variant="hero" size="lg" className="w-full sm:w-auto" disabled={mut.isPending}>
             {mut.isPending ? "Generando..." : "Generar cotización"}

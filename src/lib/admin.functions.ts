@@ -7,9 +7,13 @@ import {
   TipoEnum,
   ItemInputSchema as ItemSchema,
   buildItemsCalc as buildItemsCalcCore,
+  sumMetros2,
+  calcTotalItems,
+  precioPromedio,
   type ItemInput,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+
 
 export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
 
@@ -36,9 +40,11 @@ type DbClientLike = { from: (table: string) => any };
 async function buildItemsCalc(
   supabase: DbClientLike,
   items: ItemInput[],
+  precioBase = 0,
 ) {
-  return buildItemsCalcCore(supabase, items);
+  return buildItemsCalcCore(supabase, items, { precioBase });
 }
+
 
 
 export const listCotizaciones = createServerFn({ method: "GET" })
@@ -46,7 +52,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, rut, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
+      .select("*, cliente:clientes(nombre, rut, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2)")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -197,11 +203,13 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, data.precio_m2);
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
     if (cErr) throw new Error(cErr.message);
-    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
-    const total = Math.round(metros2 * data.precio_m2);
+    const metros2 = sumMetros2(itemsCalc);
+    const total = calcTotalItems(itemsCalc);
+    const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
+
     const first = itemsCalc[0];
     const numero = "FV-" + Date.now().toString().slice(-7);
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
@@ -211,7 +219,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const { data: cot, error } = await context.supabase.from("cotizaciones").insert({
       numero, cliente_id: cliente.id,
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
-      metros2, precio_m2: data.precio_m2, total, saldo: total,
+      metros2, precio_m2: precioCabecera, total, saldo: total,
       color_id: first.color_id, color_nombre: colorNombreCot, created_by: context.userId,
       estado: "cotizacion_creada", plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
@@ -952,10 +960,12 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
-    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
-    const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, data.precio_m2);
+    const metros2 = sumMetros2(itemsCalc);
+    const total = calcTotalItems(itemsCalc, data.descuento);
+    const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
     const saldo = Math.max(0, total - data.pago_recibido);
+
     const first = itemsCalc[0];
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
     const { error: cErr } = await context.supabase.from("clientes").update({
@@ -967,7 +977,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
     const { error } = await context.supabase.from("cotizaciones").update({
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
-      precio_m2: data.precio_m2, descuento: data.descuento,
+      precio_m2: precioCabecera, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_id: first.color_id, color_nombre: colorNombreCot, estado: data.estado,
       responsable_nombre: data.responsable_nombre ?? null,
@@ -1115,7 +1125,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, rut, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm)")
+      .select("*, cliente:clientes(nombre, rut, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2)")
       .order("created_at", { ascending: false })
       .limit(200);
 
@@ -1448,5 +1458,54 @@ export const deleteVentaChatarra = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await context.supabase.from("ventas_chatarra").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ============= Precios por tipo de plancha =============
+// Una sola fuente de precios base: el Portal del Cliente y el Panel Administrativo
+// leen esta tabla. En cada cotización el administrador puede ajustar el precio de
+// una línea sin alterar estos valores base.
+
+export const listPreciosTipo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("precios_tipo")
+      .select("id, tipo, precio_m2")
+      .order("tipo", { ascending: true });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const updatePreciosTipo = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    precios: z.array(z.object({
+      tipo: TipoEnum,
+      precio_m2: z.number().min(0).max(100_000_000),
+    })).min(1).max(50),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const email = (context.claims?.email ?? "").toLowerCase();
+    assertSuperadmin(email);
+    const { data: prev } = await context.supabase.from("precios_tipo").select("tipo, precio_m2");
+    const prevMap = new Map((prev ?? []).map((r) => [r.tipo as string, Number(r.precio_m2)]));
+    const { error } = await context.supabase
+      .from("precios_tipo")
+      .upsert(
+        data.precios.map((p) => ({ tipo: p.tipo, precio_m2: p.precio_m2 })),
+        { onConflict: "tipo" },
+      );
+    if (error) throw new Error(error.message);
+    const rows = data.precios
+      .filter((p) => prevMap.get(p.tipo) !== p.precio_m2)
+      .map((p) => ({
+        user_id: context.userId, user_email: email,
+        entidad: "precios_tipo", accion: "update",
+        cambio: `Precio por m² de ${p.tipo} actualizado`,
+        valor_antes: prevMap.has(p.tipo) ? String(prevMap.get(p.tipo)) : null,
+        valor_despues: String(p.precio_m2),
+      }));
+    if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
     return { ok: true };
   });

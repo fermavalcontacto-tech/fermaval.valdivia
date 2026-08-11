@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo,
 } from "@/lib/admin.functions";
-import { friendlyValidationMessage, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -277,8 +277,8 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo };
-type ItemErrors = { largo?: string; cantidad?: string; color_id?: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string };
+type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string };
 type FormErrors = {
   nombre?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
   precio_m2?: string; descuento?: string; pago_recibido?: string;
@@ -290,11 +290,18 @@ function parseLargo(s: string): number {
   return parseDecimal(s);
 }
 
-function calcItems(items: ItemForm[]) {
+function calcItems(items: ItemForm[], precios: PreciosPorTipo = {}, precioBase = 0) {
   return items.map((it) => {
     const l = parseLargo(it.largo);
     const n = parseDecimal(it.cantidad);
-    return { largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2: Number((l * 1 * n).toFixed(2)) };
+    const m2 = Number((l * 1 * n).toFixed(2));
+    const manual = (it.precio ?? "").trim() ? parseDecimal(it.precio) : 0;
+    const precio_m2 = resolvePrecioItem({ tipo: it.tipo, precio_m2: manual || null }, precios, precioBase);
+    return {
+      largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2,
+      precio_m2, subtotal: Math.round(m2 * precio_m2),
+      precio_manual: manual > 0 ? manual : null,
+    };
   });
 }
 
@@ -345,6 +352,11 @@ function validateCotizacion(
     if (!it.cantidad || !Number.isInteger(n) || n < 1) e.cantidad = "Mínimo 1";
     else if (n > 1000) e.cantidad = "Máximo 1000";
     if (!it.color_id) e.color_id = "Selecciona color";
+    if ((it.precio ?? "").trim()) {
+      const pr = parseDecimal(it.precio, NaN);
+      if (Number.isNaN(pr) || pr <= 0) e.precio = "Precio > 0";
+      else if (pr > 10_000_000) e.precio = "Precio fuera de rango";
+    }
     return e;
   });
   if (itemErrs.some((e) => Object.keys(e).length)) errors.items = itemErrs;
@@ -356,9 +368,10 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
 }
 
-function ItemsEditor({ items, setItems, colores, errors, generalError }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string }) {
-  const calc = calcItems(items);
+function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0 }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number }) {
+  const calc = calcItems(items, precios, precioBase);
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
+  const totalPesos = calc.reduce((s, x) => s + x.subtotal, 0);
   return (
     <div className="w-full min-w-0 space-y-3 col-span-2">
       <div className="space-y-1">
@@ -427,22 +440,56 @@ function ItemsEditor({ items, setItems, colores, errors, generalError }: { items
             </Select>
             <FieldError msg={er.color_id} />
           </div>
+
+          <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
+            <div className="w-full min-w-0 space-y-1">
+              <Label className="text-[10px]">Precio / m² de esta plancha</Label>
+              <Input {...DECIMAL_INPUT_PROPS} className="w-full" aria-invalid={!!er.precio}
+                placeholder={`Precio de ${it.tipo}: ${formatCLP(calc[i].precio_m2)}`}
+                value={it.precio ?? ""}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, precio: sanitizeDecimalInput(e.target.value) } : x))} />
+              <FieldError msg={er.precio} />
+              <p className="text-[10px] text-muted-foreground">
+                Vacío usa el precio base del tipo. Ajustarlo aquí solo afecta esta cotización.
+              </p>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-background px-3 py-2 text-sm md:justify-end md:gap-3 md:bg-transparent md:px-0">
+              <span className="text-[10px] uppercase text-muted-foreground">Subtotal</span>
+              <span className="font-mono font-semibold">{formatCLP(calc[i].subtotal)}</span>
+            </div>
+          </div>
         </div>
       );})}
       <div className="flex w-full flex-col items-stretch justify-between gap-2 md:flex-row md:items-center">
         <Button type="button" variant="outline" size="sm" className="quote-mobile-button" onClick={() => setItems([...items, { largo: "", cantidad: "1", color_id: colores[0]?.id ?? "", tipo: "Ondulado" }])}>
           <Plus className="mr-1 h-4 w-4" /> Agregar otra plancha
         </Button>
-        <div className="text-sm">Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span></div>
+        <div className="text-sm">
+          Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span>
+          <span className="mx-2 text-muted-foreground">·</span>
+          Subtotal: <span className="font-mono font-semibold">{formatCLP(totalPesos)}</span>
+        </div>
       </div>
     </div>
   );
 }
 
+/** Precios base por tipo, compartidos con el Portal del Cliente. */
+function usePreciosTipo() {
+  const { data = [] } = useQuery({ queryKey: ["precios-tipo"], queryFn: () => listPreciosTipo() });
+  const map: PreciosPorTipo = {};
+  for (const row of data as Array<{ tipo: string; precio_m2: number }>) {
+    const p = Number(row.precio_m2);
+    if (Number.isFinite(p) && p > 0) map[row.tipo] = p;
+  }
+  return map;
+}
+
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const precios = usePreciosTipo();
   const [form, setForm] = useState({
     nombre: "", rut: "", telefono: "", correo: "", direccion: "",
     color: "", precio_m2: "0", responsable: "",
@@ -465,15 +512,16 @@ function EditarCotizacionDialog({
       setItems(its.map((it) => ({
         largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
         color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
+        precio: it.precio_m2 == null ? "" : String(Number(it.precio_m2)),
       })));
     } else {
       setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "", tipo: "Ondulado" }]);
     }
   }, [cot]);
 
-  const itemsCalc = calcItems(items);
+  const itemsCalc = calcItems(items, precios, parseDecimal(form.precio_m2));
   const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
-  const total = Math.max(0, Math.round(m2 * parseDecimal(form.precio_m2) - parseDecimal(form.descuento)));
+  const total = Math.max(0, Math.round(itemsCalc.reduce((s, x) => s + x.subtotal, 0) - parseDecimal(form.descuento)));
   const saldo = Math.max(0, total - parseDecimal(form.pago_recibido));
 
   const mut = useMutation({
@@ -485,7 +533,7 @@ function EditarCotizacionDialog({
         telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       descuento: parseDecimal(form.descuento), pago_recibido: parseDecimal(form.pago_recibido),
       estado: form.estado,
@@ -505,8 +553,8 @@ function EditarCotizacionDialog({
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Descuento (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.descuento} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.pago_recibido} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2">
@@ -554,6 +602,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     responsable: PERSONAS_INTERNAS[0] as string,
   });
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const precios = usePreciosTipo();
   const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
   const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
@@ -562,13 +611,14 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, colores.length]);
-  const itemsCalc = calcItems(items);
+  const itemsCalc = calcItems(items, precios, parseDecimal(form.precio_m2));
   const m2Total = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
-  const totalCalc = Math.max(0, Math.round(m2Total * (parseDecimal(form.precio_m2) || 0)));
+  const totalCalc = Math.max(0, itemsCalc.reduce((s, x) => s + x.subtotal, 0));
+  const precioPromedioCalc = m2Total > 0 ? Math.round(totalCalc / m2Total) : parseDecimal(form.precio_m2);
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
       responsable_nombre: form.responsable,
@@ -577,7 +627,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const its = itemsCalc.map((it) => {
         const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
-        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4 };
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 };
       });
       const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null, tipo: "Ondulado", espesor_mm: 0.4 };
       const pdfData: CotizacionPDF = {
@@ -587,7 +637,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2Total,
         items: its,
         color_nombre: form.color || null,
-        precio_m2: parseDecimal(form.precio_m2),
+        precio_m2: precioPromedioCalc,
         descuento: 0, total: totalCalc, pago_recibido: 0, saldo: totalCalc,
         estado: "Cotización creada",
         aprobador_nombre: form.responsable,
@@ -634,8 +684,8 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
               <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
@@ -696,7 +746,9 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                       <div className="col-span-2 inline-flex min-w-0 items-center gap-1"><span className="h-3 w-3 shrink-0 rounded" style={{ background: it.color_hex }} /><span className="truncate">{it.color_nombre}</span></div>
                       <div><span className="text-muted-foreground">Largo:</span> <span className="font-mono">{it.largo.toFixed(2)} m</span></div>
                       <div><span className="text-muted-foreground">Cant.:</span> <span className="font-mono">{it.cantidad}</span></div>
-                      <div className="col-span-2"><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
+                      <div><span className="text-muted-foreground">$ / m²:</span> <span className="font-mono">{formatCLP(it.precio_m2)}</span></div>
+                      <div className="col-span-2"><span className="text-muted-foreground">Subtotal:</span> <span className="font-mono font-semibold">{formatCLP(it.subtotal)}</span></div>
                     </div>
                   ))}
                 </div>
@@ -708,7 +760,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border bg-muted/30 p-3">
                 <div className="flex justify-between"><span>Total m²:</span><span className="font-mono font-semibold">{m2Total.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Precio / m²:</span><span className="font-mono">{formatCLP(parseDecimal(form.precio_m2) || 0)}</span></div>
+                <div className="flex justify-between"><span>Precio / m² promedio:</span><span className="font-mono">{formatCLP(precioPromedioCalc)}</span></div>
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 

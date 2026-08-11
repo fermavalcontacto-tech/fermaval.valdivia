@@ -284,6 +284,7 @@ export type Database = {
           largo_m: number
           metros2: number
           position: number
+          precio_m2: number | null
           tipo: Database["public"]["Enums"]["tipo_producto"]
         }
         Insert: {
@@ -298,6 +299,7 @@ export type Database = {
           largo_m: number
           metros2: number
           position?: number
+          precio_m2?: number | null
           tipo?: Database["public"]["Enums"]["tipo_producto"]
         }
         Update: {
@@ -312,6 +314,7 @@ export type Database = {
           largo_m?: number
           metros2?: number
           position?: number
+          precio_m2?: number | null
           tipo?: Database["public"]["Enums"]["tipo_producto"]
         }
         Relationships: [
@@ -600,6 +603,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      precios_tipo: {
+        Row: {
+          created_at: string
+          id: string
+          precio_m2: number
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          precio_m2?: number
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          precio_m2?: number
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Relationships: []
       }
       solicitudes_egreso: {
         Row: {

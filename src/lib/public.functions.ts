@@ -7,9 +7,12 @@ import {
   buildItemsCalc,
   sumMetros2,
   calcTotal,
+  calcTotalItems,
+  precioPromedio,
   publicQuoteErrorMessage,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+
 
 
 const CreateQuoteSchema = z.object({
@@ -44,17 +47,22 @@ export const createPublicQuote = createServerFn({ method: "POST" })
 
       // Propagar color_id global a cada item si no lo trae, para que buildItemsCalc
       // (fuente única de cálculo) lo resuelva junto al resto.
+      // El precio por m² lo resuelve el servidor según el tipo: nunca se confía
+      // en un precio enviado desde el navegador del cliente.
       const itemsInput = data.items.map((it) => ({
         ...it,
+        precio_m2: null,
         color_id: it.color_id ?? data.color_id ?? null,
       }));
-      const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput);
+      const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput, { precioBase: precio });
 
       const metros2Total = sumMetros2(itemsCalc);
-      const total = calcTotal(metros2Total, precio);
+      const total = calcTotalItems(itemsCalc);
+      const precioCabecera = precioPromedio(itemsCalc, precio);
       const first = itemsCalc[0];
       const color_nombre = first.color_nombre;
       const color_id_cot = first.color_id;
+
 
 
       const { data: cliente, error: ceErr } = await supabaseAdmin
@@ -75,7 +83,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
           largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
           cantidad_planchas: first.cantidad_planchas,
           metros2: metros2Total, color_id: color_id_cot, color_nombre,
-          precio_m2: precio, total, saldo: total,
+          precio_m2: precioCabecera, total, saldo: total,
           estado: "cotizacion_creada", plazo_horas: 72,
           access_token, origen: "cliente",
           responsable_nombre: null,
@@ -97,6 +105,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_nombre: it.color_nombre,
         tipo: it.tipo,
         espesor_mm: it.espesor_mm,
+        precio_m2: it.precio_m2,
+
       }));
 
       const { error: itErr } = await supabaseAdmin
@@ -222,8 +232,17 @@ export const getPublicConfig = createServerFn({ method: "GET" }).handler(async (
     .select("id, nombre, hex, imagen_url, activo, orden")
     .eq("activo", true)
     .order("orden", { ascending: true });
-  return { cfg, colores: colores ?? [] };
+  const { data: precios } = await supabaseAdmin
+    .from("precios_tipo")
+    .select("tipo, precio_m2");
+  const preciosTipo: Record<string, number> = {};
+  for (const row of (precios ?? [])) {
+    const p = Number(row.precio_m2);
+    if (Number.isFinite(p) && p > 0) preciosTipo[row.tipo as string] = p;
+  }
+  return { cfg, colores: colores ?? [], preciosTipo };
 });
+
 
 // Historial público del cliente: dos pasos.
 // 1) `requestQuoteHistoryCode` genera un código de 6 dígitos y lo envía al correo
