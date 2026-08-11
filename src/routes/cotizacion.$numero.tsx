@@ -42,7 +42,7 @@ const getQuote = createServerFn({ method: "GET" })
       ok = diff === 0;
     }
     let safeCot: unknown = null;
-    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number }> = [];
+    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; tipo: string | null; espesor_mm: number | null; color_nombre: string | null; precio_m2: number | null }> = [];
     if (cot && ok) {
       const c = cot.cliente as { nombre?: string; rut?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
