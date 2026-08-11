@@ -44,17 +44,22 @@ export const createPublicQuote = createServerFn({ method: "POST" })
 
       // Propagar color_id global a cada item si no lo trae, para que buildItemsCalc
       // (fuente única de cálculo) lo resuelva junto al resto.
+      // El precio por m² lo resuelve el servidor según el tipo: nunca se confía
+      // en un precio enviado desde el navegador del cliente.
       const itemsInput = data.items.map((it) => ({
         ...it,
+        precio_m2: null,
         color_id: it.color_id ?? data.color_id ?? null,
       }));
-      const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput);
+      const itemsCalc = await buildItemsCalc(supabaseAdmin as never, itemsInput, { precioBase: precio });
 
       const metros2Total = sumMetros2(itemsCalc);
-      const total = calcTotal(metros2Total, precio);
+      const total = calcTotalItems(itemsCalc);
+      const precioCabecera = precioPromedio(itemsCalc, precio);
       const first = itemsCalc[0];
       const color_nombre = first.color_nombre;
       const color_id_cot = first.color_id;
+
 
 
       const { data: cliente, error: ceErr } = await supabaseAdmin
