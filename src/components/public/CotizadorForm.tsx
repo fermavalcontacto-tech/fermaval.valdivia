@@ -201,6 +201,8 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                       <th className="py-1 text-right font-medium">Largo</th>
                       <th className="py-1 text-right font-medium">Cant.</th>
                       <th className="py-1 text-right font-medium">m²</th>
+                      <th className="py-1 text-right font-medium">$ / m²</th>
+                      <th className="py-1 text-right font-medium">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody className="font-mono">
@@ -213,9 +215,12 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                         <td className="py-1 text-right">{it.largo} m</td>
                         <td className="py-1 text-right">{it.cantidad}</td>
                         <td className="py-1 text-right font-semibold">{it.m2.toFixed(2)}</td>
+                        <td className="py-1 text-right">{formatCLP(it.precio_m2)}</td>
+                        <td className="py-1 text-right font-semibold">{formatCLP(it.subtotal)}</td>
                       </tr>
                     ))}
                   </tbody>
+
                 </table>
               </div>
             </div>
