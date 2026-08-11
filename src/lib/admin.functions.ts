@@ -199,11 +199,13 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, data.precio_m2);
     const { data: cliente, error: cErr } = await context.supabase.from("clientes").insert({ ...data.cliente }).select("id").single();
     if (cErr) throw new Error(cErr.message);
-    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
-    const total = Math.round(metros2 * data.precio_m2);
+    const metros2 = sumMetros2(itemsCalc);
+    const total = calcTotalItems(itemsCalc);
+    const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
+
     const first = itemsCalc[0];
     const numero = "FV-" + Date.now().toString().slice(-7);
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
