@@ -9,8 +9,8 @@ import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { acceptQuoteAndPay } from "@/lib/public.functions";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, ArrowLeft, Download } from "lucide-react";
-import { downloadCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { CheckCircle2, Clock, ArrowLeft, Download, Printer } from "lucide-react";
+import { downloadCotizacionPDF, printCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 
 function maskCorreo(c: string | null | undefined): string {
   if (!c) return "—";
@@ -54,7 +54,7 @@ const getQuote = createServerFn({ method: "GET" })
       };
       const { data: its } = await supabaseAdmin
         .from("cotizacion_items")
-        .select("position, largo_m, ancho_m, cantidad_planchas, metros2")
+        .select("position, largo_m, ancho_m, cantidad_planchas, metros2, tipo, espesor_mm, color_nombre, precio_m2")
         .eq("cotizacion_id", cot.id)
         .order("position", { ascending: true });
       items = (its ?? []).map((r) => ({
@@ -63,6 +63,10 @@ const getQuote = createServerFn({ method: "GET" })
         ancho_m: Number(r.ancho_m),
         cantidad_planchas: Number(r.cantidad_planchas),
         metros2: Number(r.metros2),
+        tipo: (r.tipo as string | null) ?? null,
+        espesor_mm: r.espesor_mm == null ? null : Number(r.espesor_mm),
+        color_nombre: (r.color_nombre as string | null) ?? null,
+        precio_m2: r.precio_m2 == null ? null : Number(r.precio_m2),
       }));
     }
     const { data: cfg } = await supabaseAdmin
@@ -124,9 +128,16 @@ function QuotePage() {
   const cliente = cot.cliente as { nombre: string; rut?: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
-  function handleDownload() {
+  function buildPdf(): CotizacionPDF {
     const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }])
-      .map((it) => ({ largo_m: Number(it.largo_m), ancho_m: 1, cantidad_planchas: Number(it.cantidad_planchas), metros2: Number(it.metros2) }));
+      .map((it) => ({
+        largo_m: Number(it.largo_m), ancho_m: 1,
+        cantidad_planchas: Number(it.cantidad_planchas), metros2: Number(it.metros2),
+        tipo: ("tipo" in it ? it.tipo : null) ?? null,
+        espesor_mm: ("espesor_mm" in it ? it.espesor_mm : null) ?? null,
+        color_nombre: ("color_nombre" in it ? it.color_nombre : null) ?? null,
+        precio_m2: ("precio_m2" in it ? it.precio_m2 : null) ?? null,
+      }));
     const pdf: CotizacionPDF = {
       numero: cot.numero,
       fecha: cot.created_at,
@@ -139,8 +150,11 @@ function QuotePage() {
       aprobador_nombre: "", aprobador_email: "", aprobado_at: "",
       origen: "cliente",
     };
-    downloadCotizacionPDF(pdf);
+    return pdf;
   }
+
+  function handleDownload() { void downloadCotizacionPDF(buildPdf()); }
+  function handlePrint() { printCotizacionPDF(buildPdf()); }
 
   return (
     <div className="min-h-screen bg-background">
@@ -148,9 +162,14 @@ function QuotePage() {
       <div className="container mx-auto max-w-3xl px-4 py-10">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Button asChild variant="ghost" size="sm"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Volver</Link></Button>
-          <Button onClick={handleDownload} variant="hero" size="sm">
-            <Download className="mr-1 h-4 w-4" /> Descargar PDF
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={handlePrint} variant="outline" size="sm">
+              <Printer className="mr-1 h-4 w-4" /> Imprimir
+            </Button>
+            <Button onClick={handleDownload} variant="hero" size="sm">
+              <Download className="mr-1 h-4 w-4" /> Descargar PDF
+            </Button>
+          </div>
         </div>
 
 
