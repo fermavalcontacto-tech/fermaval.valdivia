@@ -960,10 +960,12 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
     assertSuperadmin(email);
-    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items);
-    const metros2 = Number(itemsCalc.reduce((s, x) => s + x.metros2, 0).toFixed(2));
-    const total = Math.max(0, Math.round(metros2 * data.precio_m2 - data.descuento));
+    const itemsCalc = await buildItemsCalc(context.supabase as never, data.items, data.precio_m2);
+    const metros2 = sumMetros2(itemsCalc);
+    const total = calcTotalItems(itemsCalc, data.descuento);
+    const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
     const saldo = Math.max(0, total - data.pago_recibido);
+
     const first = itemsCalc[0];
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
     const { error: cErr } = await context.supabase.from("clientes").update({
