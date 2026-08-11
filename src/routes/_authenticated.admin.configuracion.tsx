@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba, listPreciosTipo, updatePreciosTipo, TIPOS_PRODUCTO } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DECIMAL_INPUT_PROPS } from "@/lib/domain/quotes.core";
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal, friendlyValidationMessage } from "@/lib/domain/quotes.core";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -148,6 +148,8 @@ function ConfiguracionPage() {
         <div className="md:col-span-2"><Label>Mapa (embed URL)</Label><Input {...f("mapa_embed")} /></div>
       </Card>
 
+      <PreciosTipoCard />
+
       {/* Editor del formulario de cotización */}
       <Card className="p-6">
         <h2 className="mb-1 font-display text-2xl text-primary">FORMULARIO DE COTIZACIÓN (PÚBLICO)</h2>
@@ -189,6 +191,60 @@ function ConfiguracionPage() {
       <HerramientasPrueba />
       <AuditLogCard />
     </div>
+  );
+}
+
+/**
+ * Precio por m² de cada tipo de plancha. Es la fuente única de precios base:
+ * el Portal del Cliente y el Panel Administrativo usan estos valores, y el
+ * administrador puede ajustar el precio de una línea dentro de cada cotización.
+ */
+function PreciosTipoCard() {
+  const qc = useQueryClient();
+  const { data = [] } = useQuery({ queryKey: ["precios-tipo"], queryFn: () => listPreciosTipo() });
+  const [vals, setVals] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const t of TIPOS_PRODUCTO) next[t] = "0";
+    for (const row of data as Array<{ tipo: string; precio_m2: number }>) {
+      next[row.tipo] = String(Number(row.precio_m2));
+    }
+    setVals(next);
+  }, [data]);
+
+  const mut = useMutation({
+    mutationFn: () => updatePreciosTipo({ data: {
+      precios: TIPOS_PRODUCTO.map((t) => ({ tipo: t, precio_m2: parseDecimal(vals[t]) })),
+    } }),
+    onSuccess: () => {
+      toast.success("Precios por tipo actualizados");
+      void qc.invalidateQueries({ queryKey: ["precios-tipo"] });
+      void qc.invalidateQueries({ queryKey: ["public-config"] });
+    },
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudieron guardar los precios.")),
+  });
+
+  return (
+    <Card className="p-6">
+      <h2 className="mb-1 font-display text-2xl text-primary">PRECIO POR TIPO DE PLANCHA</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Precio por m² de cada tipo. Se usa en el cotizador público y en el panel. En cada cotización
+        el administrador puede ajustar el precio de una plancha sin cambiar estos valores base.
+      </p>
+      <div className="grid gap-4 md:grid-cols-3">
+        {TIPOS_PRODUCTO.map((t) => (
+          <div key={t}>
+            <Label>{t}</Label>
+            <Input {...DECIMAL_INPUT_PROPS} value={vals[t] ?? ""}
+              onChange={(e) => setVals({ ...vals, [t]: sanitizeDecimalInput(e.target.value) })} />
+          </div>
+        ))}
+      </div>
+      <Button className="mt-4" variant="hero" onClick={() => mut.mutate()} disabled={mut.isPending}>
+        {mut.isPending ? "Guardando..." : "Guardar precios"}
+      </Button>
+    </Card>
   );
 }
 
