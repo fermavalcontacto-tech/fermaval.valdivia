@@ -977,7 +977,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
     const { error } = await context.supabase.from("cotizaciones").update({
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2,
-      precio_m2: data.precio_m2, descuento: data.descuento,
+      precio_m2: precioCabecera, descuento: data.descuento,
       total, pago_recibido: data.pago_recibido, saldo,
       color_id: first.color_id, color_nombre: colorNombreCot, estado: data.estado,
       responsable_nombre: data.responsable_nombre ?? null,
