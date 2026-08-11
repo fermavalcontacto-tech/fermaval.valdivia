@@ -602,6 +602,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     responsable: PERSONAS_INTERNAS[0] as string,
   });
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
+  const precios = usePreciosTipo();
   const [items, setItems] = useState<ItemForm[]>([{ largo: "", cantidad: "1", color_id: "", tipo: "Ondulado" }]);
   const [errors, setErrors] = useState<FormErrors>({});
   useEffect(() => {
@@ -610,13 +611,14 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, colores.length]);
-  const itemsCalc = calcItems(items);
+  const itemsCalc = calcItems(items, precios, parseDecimal(form.precio_m2));
   const m2Total = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
-  const totalCalc = Math.max(0, Math.round(m2Total * (parseDecimal(form.precio_m2) || 0)));
+  const totalCalc = Math.max(0, itemsCalc.reduce((s, x) => s + x.subtotal, 0));
+  const precioPromedioCalc = m2Total > 0 ? Math.round(totalCalc / m2Total) : parseDecimal(form.precio_m2);
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
       responsable_nombre: form.responsable,
@@ -625,7 +627,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const its = itemsCalc.map((it) => {
         const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
-        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4 };
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 };
       });
       const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null, tipo: "Ondulado", espesor_mm: 0.4 };
       const pdfData: CotizacionPDF = {
@@ -635,7 +637,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2Total,
         items: its,
         color_nombre: form.color || null,
-        precio_m2: parseDecimal(form.precio_m2),
+        precio_m2: precioPromedioCalc,
         descuento: 0, total: totalCalc, pago_recibido: 0, saldo: totalCalc,
         estado: "Cotización creada",
         aprobador_nombre: form.responsable,
@@ -682,8 +684,8 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} />
-              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
               <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
