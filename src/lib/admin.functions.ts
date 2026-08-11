@@ -7,9 +7,13 @@ import {
   TipoEnum,
   ItemInputSchema as ItemSchema,
   buildItemsCalc as buildItemsCalcCore,
+  sumMetros2,
+  calcTotalItems,
+  precioPromedio,
   type ItemInput,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+
 
 export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
 
