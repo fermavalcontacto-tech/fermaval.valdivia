@@ -219,7 +219,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const { data: cot, error } = await context.supabase.from("cotizaciones").insert({
       numero, cliente_id: cliente.id,
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
-      metros2, precio_m2: data.precio_m2, total, saldo: total,
+      metros2, precio_m2: precioCabecera, total, saldo: total,
       color_id: first.color_id, color_nombre: colorNombreCot, created_by: context.userId,
       estado: "cotizacion_creada", plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
