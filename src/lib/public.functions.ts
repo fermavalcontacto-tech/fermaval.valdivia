@@ -105,6 +105,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         color_nombre: it.color_nombre,
         tipo: it.tipo,
         espesor_mm: it.espesor_mm,
+        precio_m2: it.precio_m2,
+
       }));
 
       const { error: itErr } = await supabaseAdmin
