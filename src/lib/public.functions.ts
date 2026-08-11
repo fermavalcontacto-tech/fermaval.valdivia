@@ -83,7 +83,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
           largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
           cantidad_planchas: first.cantidad_planchas,
           metros2: metros2Total, color_id: color_id_cot, color_nombre,
-          precio_m2: precio, total, saldo: total,
+          precio_m2: precioCabecera, total, saldo: total,
           estado: "cotizacion_creada", plazo_horas: 72,
           access_token, origen: "cliente",
           responsable_nombre: null,
