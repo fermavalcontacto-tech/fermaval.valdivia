@@ -76,6 +76,7 @@ function CotizacionesPage() {
       fecha: c.created_at,
       cliente: {
         nombre: c.cliente?.nombre ?? "—",
+        giro: c.cliente?.giro ?? "",
         rut: c.cliente?.rut ?? "",
         correo: c.cliente?.correo ?? "",
         telefono: c.cliente?.telefono ?? "—",
