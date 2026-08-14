@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listBoletas, createBoleta, updateBoleta, deleteBoleta } from "@/lib/admin.functions";
+import { listBoletas, createBoleta, updateBoleta, deleteBoleta, getColores } from "@/lib/admin.functions";
+import {
+  DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal,
+  metrosUtiles, perdidaBobina, costoM2Bobina,
+} from "@/lib/domain/quotes.core";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
