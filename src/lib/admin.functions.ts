@@ -52,7 +52,7 @@ export const listCotizaciones = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, giro, rut, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2)")
+      .select("*, cliente:clientes(nombre, giro, rut, correo, telefono), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2, bobina_id, bobina:bobinas(proveedor, costo_m2))")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -1175,7 +1175,7 @@ export const searchCotizaciones = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     let query = context.supabase
       .from("cotizaciones")
-      .select("*, cliente:clientes(nombre, giro, rut, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2)")
+      .select("*, cliente:clientes(nombre, giro, rut, correo, telefono, direccion), items:cotizacion_items(id, position, largo_m, ancho_m, cantidad_planchas, metros2, color_id, color_nombre, tipo, espesor_mm, precio_m2, bobina_id, bobina:bobinas(proveedor, costo_m2))")
       .order("created_at", { ascending: false })
       .limit(200);
 
