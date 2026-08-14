@@ -222,6 +222,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                   </tbody>
 
                 </table>
+                <p className="mt-2 text-[10px] text-muted-foreground">Precios netos, no incluyen IVA.</p>
               </div>
             </div>
           )}
