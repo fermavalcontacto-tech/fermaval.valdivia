@@ -136,7 +136,10 @@ function Dashboard() {
         </div>
       </Card>
 
+      <UtilidadM2Section />
+
       <AnalyticsSection />
+
     </div>
   );
 }
