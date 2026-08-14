@@ -264,7 +264,11 @@ function AlertsCard() {
       </div>
       <ul className="space-y-2 max-h-72 overflow-auto">
         {alertas.map((a, i) => (
-          <li key={`${a.tipo}-${a.registro_id}-${i}`} className={`rounded-md border px-3 py-2 text-sm ${color(a.severidad)}`}>
+          <li key={`${a.tipo}-${a.registro_id}-${i}`}>
+            <Link
+              {...alertaDestino(a)}
+              className={`block rounded-md border px-3 py-2 text-sm transition hover:brightness-95 hover:shadow-sm ${color(a.severidad)}`}
+            >
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">{a.mensaje}</span>
               <span className="text-[10px] uppercase tracking-wider">{a.tipo.replace(/_/g, " ")}</span>

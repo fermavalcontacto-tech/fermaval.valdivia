@@ -32,6 +32,9 @@ type ColorOption = { id: string; nombre: string; hex: string; activo: boolean; s
 type Tipo = typeof TIPOS_PRODUCTO[number];
 
 export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    cot: typeof search.cot === "string" && search.cot.trim() ? search.cot.trim() : undefined,
+  }),
   component: CotizacionesPage,
 });
 
@@ -53,6 +56,8 @@ type Cotizacion = {
 
 function CotizacionesPage() {
   const { auth } = Route.useRouteContext();
+  const { cot: cotBuscada } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
   const [editing, setEditing] = useState<Cotizacion | null>(null);
@@ -172,6 +177,12 @@ function CotizacionesPage() {
           <NuevaCotizacionDialog onCreated={() => qc.invalidateQueries({ queryKey: ["cotizaciones"] })} onPreview={(d) => setPreview({ data: d })} />
         </div>
       </div>
+      {cotBuscada && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-400/50 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+          <span>Mostrando solo la cotización <strong className="font-mono">{cotBuscada}</strong>.</span>
+          <Button size="sm" variant="outline" onClick={() => navigate({ search: {} })}>Ver todas</Button>
+        </div>
+      )}
       <Card className="overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-sm">
@@ -186,11 +197,16 @@ function CotizacionesPage() {
             </thead>
             <tbody>
               {isLoading && <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Cargando...</td></tr>}
-              {((data ?? []) as Cotizacion[]).map((c) => {
+              {!isLoading && cotBuscada && ((data ?? []) as Cotizacion[]).filter((c) => c.numero === cotBuscada).length === 0 && (
+                <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No se encontró la cotización {cotBuscada}.</td></tr>
+              )}
+              {((data ?? []) as Cotizacion[])
+                .filter((c) => !cotBuscada || c.numero === cotBuscada)
+                .map((c) => {
                 const cli = c.cliente as { nombre?: string } | null;
                 const origen = (c as { origen?: string }).origen ?? "cliente";
                 return (
-                <tr key={c.id} className="border-b last:border-0">
+                <tr key={c.id} className={`border-b last:border-0 ${cotBuscada === c.numero ? "bg-amber-50 dark:bg-amber-950/30" : ""}`}>
                   <td className="p-3 font-mono">{c.numero}</td>
                   <td className="p-3">{cli?.nombre ?? "—"}</td>
                   <td className="p-3 text-xs">{c.responsable_nombre ?? "—"}</td>
