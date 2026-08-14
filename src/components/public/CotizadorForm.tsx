@@ -179,6 +179,12 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                     ))}
                   </div>
                 </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">Precio {it.tipo}</span>
+                  <span className="font-mono font-semibold">{formatCLP(calc.precio_m2)} neto / m²</span>
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-mono font-semibold text-primary">{formatCLP(calc.subtotal)}</span>
+                </div>
               </div>
             );
           })}
