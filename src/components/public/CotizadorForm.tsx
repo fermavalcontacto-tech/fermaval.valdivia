@@ -201,7 +201,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                       <th className="py-1 text-right font-medium">Largo</th>
                       <th className="py-1 text-right font-medium">Cant.</th>
                       <th className="py-1 text-right font-medium">m²</th>
-                      <th className="py-1 text-right font-medium">$ / m²</th>
+                      <th className="py-1 text-right font-medium">$ / m² neto</th>
                       <th className="py-1 text-right font-medium">Subtotal</th>
                     </tr>
                   </thead>
