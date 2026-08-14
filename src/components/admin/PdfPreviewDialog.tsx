@@ -15,15 +15,22 @@ type Props = {
 
 export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props) {
   const [url, setUrl] = useState<string | null>(null);
+  const [conMargen, setConMargen] = useState(false);
   const open = !!data;
   const isMobile = useIsMobile();
 
+  /** Datos efectivos: agrega (o no) el anexo interno de margen por plancha. */
+  const doc = useMemo<CotizacionPDF | null>(
+    () => (data ? { ...data, mostrar_margen: conMargen } : null),
+    [data, conMargen],
+  );
+
   useEffect(() => {
-    if (!data) { setUrl(null); return; }
-    const u = cotizacionPdfBlobUrl(data);
+    if (!doc) { setUrl(null); return; }
+    const u = cotizacionPdfBlobUrl(doc);
     setUrl(u);
     return () => URL.revokeObjectURL(u);
-  }, [data]);
+  }, [doc]);
 
   async function handleDownload(d: CotizacionPDF) {
     try {
