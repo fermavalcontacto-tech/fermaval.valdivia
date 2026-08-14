@@ -60,6 +60,12 @@ function CotizacionesPage() {
   const navigate = Route.useNavigate();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
+  const { data: costosMes = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const periodoMes = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const costoMensualPorTipo: Record<string, number> = {};
+  for (const row of costosMes as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
+    if (String(row.periodo).slice(0, 7) === periodoMes) costoMensualPorTipo[row.tipo] = Number(row.costo_m2);
+  }
   const [editing, setEditing] = useState<Cotizacion | null>(null);
   const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
   const [enviarCorreoAuto, setEnviarCorreoAuto] = useState(true);
