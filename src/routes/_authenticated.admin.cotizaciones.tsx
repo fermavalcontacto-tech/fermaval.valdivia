@@ -585,20 +585,28 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
                 <div className="px-3 py-2 font-mono font-bold">{formatCLP(ivaBreakdown(calc[i].subtotal).bruto)}</div>
               </div>
               {(() => {
-                const costo = costoPorTipo[it.tipo] ?? 0;
-                if (!costo) return (
+                if (!costoLinea) return (
                   <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
-                    Define el costo por m² en Configuración para ver el % de ganancia.
+                    Asigna una bobina o define el costo por m² en Configuración para ver el % de ganancia.
                   </div>
                 );
-                const m = margenM2(calc[i].precio_m2, costo);
+                const m = margenM2(calc[i].precio_m2, costoLinea);
+                const gan = Math.round(m.ganancia * calc[i].m2);
                 return (
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2 text-[11px]">
-                    <span className="text-muted-foreground">Costo {formatCLP(costo)} / m²</span>
-                    <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
-                      Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
-                    </span>
-                    <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                  <div className="space-y-1 border-t bg-muted/20 px-3 py-2 text-[11px]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Costo {formatCLP(costoLinea)} / m²</span>
+                      <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
+                        Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
+                      </span>
+                      <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {estado.bobina
+                        ? `Costo real de la bobina ${estado.bobina.proveedor}`
+                        : "Costo mensual del tipo (sin bobina asignada)"}
+                      {" · "}Ganancia de la línea: <span className="font-mono">{formatCLP(gan)}</span>
+                    </p>
                   </div>
                 );
               })()}
