@@ -4,8 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Trash2, Layers, AlertTriangle } from "lucide-react";
 import {
-  listBobinas, createBobina, deleteBobina, listPerdidas, getColores,
-  fetchPreciosPorTipoAdmin,
+  listBobinas, createBobina, deleteBobina, listPerdidas, getColores, listPreciosTipo,
 } from "@/lib/admin.functions";
 import {
   DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal,
@@ -40,7 +39,7 @@ function BobinasPage() {
   const bobinas = useQuery({ queryKey: ["bobinas"], queryFn: () => listBobinas() });
   const perdidas = useQuery({ queryKey: ["perdidas-m2"], queryFn: () => listPerdidas() });
   const colores = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
-  const precios = useQuery({ queryKey: ["precios-tipo"], queryFn: () => fetchPreciosPorTipoAdmin() });
+  const precios = useQuery({ queryKey: ["precios-tipo"], queryFn: () => listPreciosTipo() });
 
   const del = useMutation({
     mutationFn: (id: string) => deleteBobina({ data: { id } }),
@@ -56,7 +55,7 @@ function BobinasPage() {
   const totalSaldo = rows.reduce((s, b) => s + Number(b.saldo_m), 0);
   const totalPerdida = rows.reduce((s, b) => s + Number(b.metros_perdida), 0);
   const totalInvertido = rows.reduce((s, b) => s + Number(b.valor_total), 0);
-  const precioRef = Math.max(0, ...Object.values(precios.data ?? {}).map((v) => Number(v) || 0));
+  const precioRef = Math.max(0, ...(precios.data ?? []).map((p) => Number(p.precio_m2) || 0));
 
   return (
     <div className="space-y-6">
