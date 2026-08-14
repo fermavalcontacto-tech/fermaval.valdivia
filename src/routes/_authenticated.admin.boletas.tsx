@@ -271,11 +271,18 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
+  const [bob, setBob] = useState({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
+  const esBobina = mencionaBobina(descripcion);
 
   async function submit() {
     if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
     if (!monto) { toast.error("Ingresa el monto"); return; }
     if (!responsable) { toast.error("Selecciona el responsable (Boleta subida por)"); return; }
+    if (esBobina) {
+      if (!bob.proveedor.trim()) { toast.error("Escribe el proveedor de la bobina"); return; }
+      if (!bob.color_id) { toast.error("Selecciona el color de la bobina"); return; }
+      if (parseDecimal(bob.metros) <= 0) { toast.error("Ingresa los metros comprados de la bobina"); return; }
+    }
     setUploading(true);
     try {
       let archivo_path: string | null = null;
@@ -288,10 +295,18 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
         archivo_nombre = file.name;
       }
       const fechaFinal = isSuper ? fecha : today;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path, archivo_nombre, responsable } });
-      toast.success(file ? "Boleta subida" : "Gasto registrado sin archivo");
+      await createBoleta({ data: {
+        tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal,
+        archivo_path, archivo_nombre, responsable,
+        proveedor: esBobina ? bob.proveedor.trim() : null,
+        bobina_color_id: esBobina ? bob.color_id : null,
+        bobina_metros: esBobina ? parseDecimal(bob.metros) : null,
+        bobina_defectuosos: esBobina ? parseDecimal(bob.defectuosos) : 0,
+      } });
+      toast.success(esBobina ? "Boleta guardada y bobina agregada al stock" : (file ? "Boleta subida" : "Gasto registrado sin archivo"));
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
+      setBob({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message);
@@ -299,6 +314,7 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
       setUploading(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
