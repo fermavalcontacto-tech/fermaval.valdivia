@@ -359,3 +359,13 @@ export const RutSchema = z
   .refine((v) => isValidRut(v), RUT_INVALID_MESSAGE)
   .optional()
   .default("");
+
+/** IVA chileno: 19%. El total guardado en la cotización es NETO. */
+export const IVA_RATE = 0.19;
+
+/** Devuelve el desglose neto / IVA / bruto a partir de un monto neto. */
+export function ivaBreakdown(neto: number): { neto: number; iva: number; bruto: number } {
+  const base = Math.max(0, Math.round(Number(neto) || 0));
+  const iva = Math.round(base * IVA_RATE);
+  return { neto: base, iva, bruto: base + iva };
+}
