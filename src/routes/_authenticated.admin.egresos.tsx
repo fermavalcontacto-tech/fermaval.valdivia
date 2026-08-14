@@ -256,13 +256,20 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
   const isSuper = auth.email.toLowerCase() === "fermaval.contacto@gmail.com";
   const today = new Date().toISOString().slice(0,10);
   const [open, setOpen] = useState(false);
+  const colores = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const [form, setForm] = useState({
     tipo: "materiales" as const,
     descripcion: "",
     monto: "",
     fecha: today,
     solicitado_por: "Freddy" as Persona,
+    proveedor: "",
+    valor: "",
+    bobina_color_id: "",
+    bobina_metros: "",
   });
+  const metrosNum = parseDecimal(form.bobina_metros, 0);
+  const valorNum = parseDecimal(form.valor, 0) || Number(form.monto) || 0;
   const mut = useMutation({
     mutationFn: () => createEgreso({ data: {
       tipo: form.tipo,
@@ -271,6 +278,10 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
       fecha: isSuper ? form.fecha : today,
       solicitado_por: form.solicitado_por,
       boleta_subida_por: null,
+      proveedor: form.proveedor.trim() || null,
+      valor: parseDecimal(form.valor, 0) || null,
+      bobina_color_id: form.bobina_color_id || null,
+      bobina_metros: metrosNum > 0 ? metrosNum : null,
     } }),
     onSuccess: () => { toast.success("Solicitud creada"); onCreated(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
@@ -278,7 +289,7 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild><Button variant="hero"><Plus className="mr-1 h-4 w-4" /> Nueva solicitud</Button></DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Nueva solicitud de egreso</DialogTitle></DialogHeader>
         <div className="grid gap-3">
           <div>
@@ -305,6 +316,52 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Proveedor (opcional)</Label>
+              <Input value={form.proveedor} onChange={(e)=>setForm({...form, proveedor: e.target.value})} placeholder="Ej: Acesco" />
+            </div>
+            <div>
+              <Label>Valor neto (opcional)</Label>
+              <Input {...DECIMAL_INPUT_PROPS} value={form.valor} onChange={(e)=>setForm({...form, valor: sanitizeDecimalInput(e.target.value)})} placeholder="Si difiere del monto" />
+            </div>
+          </div>
+          <div className="rounded-md border bg-muted/30 p-3">
+            <p className="text-xs font-semibold uppercase text-muted-foreground">Compra de bobina (opcional)</p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Si esta compra es una bobina, al aprobarse se creará automáticamente y el stock del color se
+              actualizará con el 99% de los metros (1% se registra como pérdida).
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <div>
+                <Label>Color de la bobina</Label>
+                <select
+                  className="mt-1 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={form.bobina_color_id}
+                  onChange={(e)=>setForm({...form, bobina_color_id: e.target.value})}
+                >
+                  <option value="">Sin bobina</option>
+                  {(colores.data ?? []).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <Label>Metros comprados</Label>
+                <Input
+                  {...DECIMAL_INPUT_PROPS}
+                  value={form.bobina_metros}
+                  onChange={(e)=>setForm({...form, bobina_metros: sanitizeDecimalInput(e.target.value)})}
+                  placeholder="Ej: 1000"
+                />
+              </div>
+            </div>
+            {metrosNum > 0 && (
+              <div className="mt-2 text-xs">
+                <p>Ingresarán al stock <strong>{metrosUtiles(metrosNum).toFixed(2)} m</strong> útiles.</p>
+                <p className="text-destructive">Pérdida 1%: <strong>{perdidaBobina(metrosNum).toFixed(2)} m²</strong></p>
+                <p>Costo estimado por m² neto: <strong>{formatCLP(costoM2Bobina(valorNum, metrosNum))}</strong></p>
+              </div>
+            )}
+          </div>
           <div>
             <Label>Creador de la Solicitud *</Label>
             <Select value={form.solicitado_por} onValueChange={(v) => setForm({ ...form, solicitado_por: v as Persona })}>
@@ -323,6 +380,7 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
     </Dialog>
   );
 }
+
 
 function LatasDialog({ id, initial, onSaved }: { id: string; initial: LataItem[]; onSaved: () => void }) {
   const [open, setOpen] = useState(false);
