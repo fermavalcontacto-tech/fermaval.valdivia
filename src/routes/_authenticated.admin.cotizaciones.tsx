@@ -412,6 +412,37 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
   }
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   const totalPesos = calc.reduce((s, x) => s + x.subtotal, 0);
+
+  const lineasEnAlerta = items
+    .map((it, i) => ({ i, it, estado: evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null) }))
+    .filter((x) => x.estado.excede);
+
+  function aplicarFifoATodas() {
+    const next = [...items];
+    const resueltas: string[] = [];
+    const pendientes: string[] = [];
+    for (const { i, estado } of lineasEnAlerta) {
+      const alt = alternativasFifo(bobinas, next[i].color_id, calc[i].m2, estado.bobina?.id ?? null);
+      const elegida = alt[0];
+      if (elegida) {
+        next[i] = { ...next[i], bobina_id: elegida.id };
+        resueltas.push(`Línea ${i + 1} → ${elegida.proveedor} (${elegida.saldo_m.toFixed(2)} m)`);
+      } else {
+        const parciales = bobinasDeColor(bobinas, next[i].color_id)
+          .filter((b) => b.id !== (estado.bobina?.id ?? null) && b.saldo_m > 0)
+          .slice(0, 2)
+          .map((b) => `${b.proveedor} ${b.saldo_m.toFixed(2)} m`);
+        pendientes.push(
+          `Línea ${i + 1}: faltan ${estado.faltante.toFixed(2)} m` +
+          (parciales.length ? ` — alternativas parciales: ${parciales.join(", ")}` : " — sin bobinas con saldo para este color"),
+        );
+      }
+    }
+    if (resueltas.length) setItems(next);
+    if (resueltas.length) toast.success(`FIFO aplicado a ${resueltas.length} línea(s). ${resueltas.join(" · ")}`);
+    if (pendientes.length) toast.error(`Sin bobina suficiente. ${pendientes.join(" · ")}`);
+  }
+
   return (
     <div className="w-full min-w-0 space-y-3 col-span-2">
       <div className="space-y-1">
@@ -419,6 +450,16 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
         <p className="text-xs text-muted-foreground">Agrega cada medida en una línea independiente.</p>
       </div>
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
+      {lineasEnAlerta.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-md border border-destructive bg-destructive/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[11px] font-semibold text-destructive" role="alert">
+            {lineasEnAlerta.length} línea(s) exceden el saldo de su bobina (líneas {lineasEnAlerta.map((x) => x.i + 1).join(", ")}).
+          </p>
+          <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 text-[11px]" onClick={aplicarFifoATodas}>
+            Aplicar FIFO a todas las líneas con alerta
+          </Button>
+        </div>
+      )}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
         const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
