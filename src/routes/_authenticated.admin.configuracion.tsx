@@ -227,9 +227,9 @@ function PreciosTipoCard() {
 
   return (
     <Card className="p-6">
-      <h2 className="mb-1 font-display text-2xl text-primary">PRECIO POR TIPO DE PLANCHA</h2>
+      <h2 className="mb-1 font-display text-2xl text-primary">PRECIO POR TIPO DE PLANCHA (NETO)</h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Precio por m² de cada tipo. Se usa en el cotizador público y en el panel. En cada cotización
+        Precio neto por m² de cada tipo (sin IVA). Se usa en el cotizador público y en el panel. En cada cotización
         el administrador puede ajustar el precio de una plancha sin cambiar estos valores base.
       </p>
       <div className="grid gap-4 md:grid-cols-3">
