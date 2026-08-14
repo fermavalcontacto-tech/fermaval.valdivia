@@ -443,7 +443,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
 
           <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
             <div className="w-full min-w-0 space-y-1">
-              <Label className="text-[10px]">Precio / m² de esta plancha</Label>
+              <Label className="text-[10px]">Precio / m² neto de esta plancha</Label>
               <Input {...DECIMAL_INPUT_PROPS} className="w-full" aria-invalid={!!er.precio}
                 placeholder={`Precio de ${it.tipo}: ${formatCLP(calc[i].precio_m2)}`}
                 value={it.precio ?? ""}
