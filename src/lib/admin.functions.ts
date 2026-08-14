@@ -427,6 +427,10 @@ export const createBoleta = createServerFn({ method: "POST" })
     archivo_path: z.string().optional().nullable(),
     archivo_nombre: z.string().optional().nullable(),
     responsable: personaSchema,
+    proveedor: z.string().trim().max(120).optional().nullable(),
+    bobina_color_id: z.string().uuid().optional().nullable(),
+    bobina_metros: z.number().min(0).max(1_000_000).optional().nullable(),
+    bobina_defectuosos: z.number().min(0).max(1_000_000).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -436,6 +440,10 @@ export const createBoleta = createServerFn({ method: "POST" })
       archivo_path: data.archivo_path ?? null, archivo_nombre: data.archivo_nombre ?? null,
       responsable: data.responsable,
       subido_por: context.userId,
+      proveedor: data.proveedor?.trim() || null,
+      bobina_color_id: data.bobina_color_id ?? null,
+      bobina_metros: data.bobina_metros ?? null,
+      bobina_defectuosos: data.bobina_defectuosos ?? 0,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
