@@ -41,33 +41,33 @@ function Home() {
 
       {/* HERO */}
       <section className="industrial-stripes relative overflow-hidden border-b border-border">
-        <div className="container mx-auto grid gap-10 px-4 py-16 md:grid-cols-2 md:py-24">
+        <div className="container mx-auto grid gap-8 px-4 py-10 sm:py-14 md:grid-cols-2 md:py-24">
           <div className="flex flex-col justify-center">
             <span className="inline-flex items-center gap-2 self-start rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-accent">
               <span className="h-2 w-2 rounded-full bg-accent" /> Fabricación en Valdivia
             </span>
-            <h1 className="mt-4 font-display text-5xl leading-none text-primary sm:text-6xl md:text-7xl">
+            <h1 className="mt-4 font-display text-4xl leading-[1.05] text-primary sm:text-6xl md:text-7xl">
               {cfg.hero_h1_linea1}<br/>{cfg.hero_h1_linea2}<br/>
               <span className="text-accent">{cfg.hero_h1_linea3}</span>
             </h1>
-            <p className="mt-6 max-w-lg text-base text-muted-foreground">
+            <p className="mt-4 max-w-lg text-sm text-muted-foreground sm:text-base">
               {cfg.hero_subtitulo}
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild variant="hero" size="lg"><a href="#cotizador">Cotizar ahora</a></Button>
+            <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap">
+              <Button asChild variant="hero" size="lg" className="w-full sm:w-auto"><a href="#cotizador">Cotizar ahora</a></Button>
               {cfg.linktree_url && (
-                <Button asChild variant="outline" size="lg">
+                <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
                   <a href={cfg.linktree_url} target="_blank" rel="noreferrer">
                     Linktree <ExternalLink className="ml-1 h-4 w-4" />
                   </a>
                 </Button>
               )}
             </div>
-            <div className="mt-10 flex items-center gap-6 border-t border-border pt-6">
+            <div className="mt-8 flex flex-wrap items-center gap-4 border-t border-border pt-6 sm:gap-6">
               <div>
                 <div className="text-xs uppercase tracking-wider text-muted-foreground">Desde</div>
-                <div className="font-display text-4xl text-primary">{formatCLP(Number(cfg.precio_m2))}<span className="text-base text-muted-foreground"> / m²</span></div>
+                <div className="font-display text-3xl text-primary sm:text-4xl">{formatCLP(Number(cfg.precio_m2))}<span className="text-base text-muted-foreground"> / m²</span></div>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4 text-accent" /> Entrega máximo 72 h
@@ -76,17 +76,17 @@ function Home() {
           </div>
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 bg-gradient-to-br from-accent/20 to-transparent blur-2xl" />
-            <img src={cfg.hero_url || productos.url} alt="Productos FERMAVAL" className="relative max-h-[520px] w-auto rounded-lg object-contain shadow-2xl" />
+            <img src={cfg.hero_url || productos.url} alt="Productos FERMAVAL" className="relative max-h-[260px] w-auto rounded-lg object-contain shadow-2xl sm:max-h-[380px] md:max-h-[520px]" />
           </div>
         </div>
       </section>
 
       {/* PRODUCTOS / COLORES */}
-      <section id="productos" className="container mx-auto px-4 py-20">
-        <div className="mb-10 flex items-end justify-between gap-4">
+      <section id="productos" className="container mx-auto px-4 py-12 md:py-20">
+        <div className="mb-8 flex items-end justify-between gap-4 md:mb-10">
           <div>
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Nuestros productos</div>
-            <h2 className="font-display text-4xl text-primary md:text-5xl">{cfg.productos_titulo}</h2>
+            <h2 className="font-display text-3xl text-primary sm:text-4xl md:text-5xl">{cfg.productos_titulo}</h2>
           </div>
           <p className="hidden max-w-sm text-sm text-muted-foreground md:block">
             Imágenes referenciales de color. Consulta por otros colores.
@@ -96,9 +96,9 @@ function Home() {
           {colores.map((c) => (
             <div key={c.id} className="group overflow-hidden rounded-lg border border-border bg-card transition hover:border-accent/50 hover:shadow-xl">
               {c.imagen_url ? (
-                <img src={c.imagen_url} alt={c.nombre} className="h-56 w-full object-cover" />
+                <img src={c.imagen_url} alt={c.nombre} className="h-44 w-full object-cover sm:h-56" />
               ) : (
-                <div className="h-56 w-full" style={{ background: `linear-gradient(135deg, ${c.hex}, color-mix(in oklab, ${c.hex} 70%, black))` }} />
+                <div className="h-44 w-full sm:h-56" style={{ background: `linear-gradient(135deg, ${c.hex}, color-mix(in oklab, ${c.hex} 70%, black))` }} />
               )}
               <div className="flex items-center justify-between bg-primary p-4 text-primary-foreground">
                 <div>
@@ -113,11 +113,11 @@ function Home() {
       </section>
 
       {/* COTIZADOR */}
-      <section id="cotizador" className="bg-muted/40 py-20">
+      <section id="cotizador" className="bg-muted/40 py-12 md:py-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Cotizador instantáneo</div>
-            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">{cfg.cotizador_titulo}</h2>
+            <h2 className="mt-1 font-display text-3xl text-primary sm:text-4xl md:text-5xl">{cfg.cotizador_titulo}</h2>
             <p className="mt-3 text-sm text-muted-foreground">
               Ingresa medidas, elige color y obtén tu cotización al instante. {cfg.info_comercial}
             </p>
@@ -129,11 +129,11 @@ function Home() {
       </section>
 
       {/* UBICACIÓN */}
-      <section id="ubicacion" className="container mx-auto px-4 py-20">
+      <section id="ubicacion" className="container mx-auto px-4 py-12 md:py-20">
         <div className="grid gap-10 md:grid-cols-2">
           <div className="flex flex-col justify-center">
             <div className="text-xs font-semibold uppercase tracking-wider text-accent">Visítanos</div>
-            <h2 className="mt-1 font-display text-4xl text-primary md:text-5xl">FÁBRICA EN VALDIVIA</h2>
+            <h2 className="mt-1 font-display text-3xl text-primary sm:text-4xl md:text-5xl">FÁBRICA EN VALDIVIA</h2>
             <p className="mt-4 text-muted-foreground">{cfg.direccion}</p>
             <p className="text-muted-foreground">Tel: {cfg.telefono}</p>
             <p className="text-muted-foreground">
@@ -151,7 +151,7 @@ function Home() {
             <iframe
               src={cfg.mapa_embed}
               title="Mapa FERMAVAL"
-              className="h-80 w-full"
+              className="h-64 w-full sm:h-80"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
@@ -160,12 +160,12 @@ function Home() {
       </section>
 
       {/* MARCA */}
-      <section className="border-t border-border bg-muted/30 py-16">
+      <section className="border-t border-border bg-muted/30 py-12 md:py-16">
         <div className="container mx-auto flex flex-col items-center px-4 text-center">
           <img
             src={logoFull.url}
             alt="FERMAVAL — Cubiertas y Revestimientos"
-            className="h-56 w-auto md:h-72"
+            className="h-36 w-auto sm:h-56 md:h-72"
             loading="lazy"
           />
           <p className="mt-6 max-w-xl text-sm text-muted-foreground">
