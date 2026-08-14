@@ -409,6 +409,8 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
+        const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
+        const costoLinea = costoM2Linea(estado.bobina, costoPorTipo[it.tipo] ?? 0);
         return (
         <div key={i} className="w-full min-w-0 space-y-3 overflow-hidden rounded-md border bg-muted/20 p-3">
           <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
