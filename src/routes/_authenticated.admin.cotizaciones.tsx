@@ -473,14 +473,16 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
 
           {(() => {
             const opciones = bobinasDeColor(bobinas, it.color_id);
-            const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
             const sug = sugerenciaFifo(bobinas, it.color_id, calc[i].m2);
+            const alternativas = alternativasFifo(bobinas, it.color_id, calc[i].m2, estado.bobina?.id ?? null);
+            const siguiente = siguienteBobinaFifo(bobinas, it.color_id, calc[i].m2, estado.bobina?.id ?? null);
+            const asignar = (id: string) => setItems(items.map((x, idx) => idx === i ? { ...x, bobina_id: id } : x));
             return (
               <div className={`w-full min-w-0 space-y-1 rounded-md border p-3 ${estado.excede ? "border-destructive bg-destructive/10" : "bg-background"}`}>
                 <Label className="text-[10px]">Bobina (proveedor · FIFO)</Label>
                 <select
                   value={it.bobina_id ?? ""}
-                  onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, bobina_id: e.target.value } : x))}
+                  onChange={(e) => asignar(e.target.value)}
                   className={`h-9 w-full rounded-md border bg-background px-3 text-xs shadow-sm outline-none focus:ring-1 focus:ring-ring ${estado.excede ? "border-destructive text-destructive" : "border-input"}`}
                 >
                   <option value="">
@@ -488,25 +490,70 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
                   </option>
                   {opciones.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.proveedor} · {new Date(b.fecha_ingreso).toLocaleDateString("es-CL")} · saldo {b.saldo_m.toFixed(2)} m
+                      {b.proveedor} · {new Date(b.fecha_ingreso).toLocaleDateString("es-CL")} · saldo {b.saldo_m.toFixed(2)} m · costo {formatCLP(b.costo_m2)}/m²
                     </option>
                   ))}
                 </select>
                 {estado.excede ? (
-                  <p className="text-[11px] font-semibold text-destructive" role="alert">
-                    Stock insuficiente: faltan {estado.faltante.toFixed(2)} m en esta bobina
-                    (saldo {estado.saldo.toFixed(2)} m). Cambia de bobina o proveedor, o reduce los metros.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold text-destructive" role="alert">
+                      Stock insuficiente: faltan {estado.faltante.toFixed(2)} m en esta bobina
+                      (saldo {estado.saldo.toFixed(2)} m). Cambia de bobina o proveedor, o reduce los metros.
+                    </p>
+                    {siguiente ? (
+                      <>
+                        <Button
+                          type="button" size="sm" variant="outline"
+                          className="h-8 w-full text-[11px] md:w-auto"
+                          onClick={() => {
+                            asignar(siguiente.id);
+                            toast.success(
+                              `Línea ${i + 1}: bobina cambiada a ${siguiente.proveedor} (saldo ${siguiente.saldo_m.toFixed(2)} m).`,
+                            );
+                          }}
+                        >
+                          Usar siguiente bobina FIFO: {siguiente.proveedor} · {siguiente.saldo_m.toFixed(2)} m
+                        </Button>
+                        {alternativas.length > 1 && (
+                          <div className="flex flex-wrap gap-1">
+                            {alternativas.slice(1, 4).map((b) => (
+                              <button
+                                key={b.id} type="button"
+                                onClick={() => { asignar(b.id); toast.success(`Línea ${i + 1}: bobina ${b.proveedor} asignada.`); }}
+                                className="rounded-full border bg-background px-2 py-1 text-[10px] hover:bg-muted"
+                              >
+                                {b.proveedor} · {b.saldo_m.toFixed(2)} m
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {siguiente.saldo_m < calc[i].m2 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Ninguna bobina de este color cubre {calc[i].m2.toFixed(2)} m² completos; la alternativa
+                            con mayor saldo es {siguiente.proveedor} ({siguiente.saldo_m.toFixed(2)} m). Divide la
+                            plancha en dos líneas o ingresa una nueva bobina.
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">
+                        No hay otra bobina de este color con saldo. Registra una compra en Egresos o reduce los metros.
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-[10px] text-muted-foreground">
                     {opciones.length === 0
                       ? "No hay bobinas registradas para este color."
                       : `Saldo disponible en la bobina asignada: ${estado.saldo.toFixed(2)} m`}
+                    {estado.bobina ? ` · ${estado.bobina.proveedor} · costo ${formatCLP(estado.bobina.costo_m2)}/m²` : ""}
                   </p>
                 )}
               </div>
             );
           })()}
+
+
 
 
           <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
