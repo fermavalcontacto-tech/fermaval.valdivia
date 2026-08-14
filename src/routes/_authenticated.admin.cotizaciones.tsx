@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo,
 } from "@/lib/admin.functions";
-import { friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -573,8 +573,10 @@ function EditarCotizacionDialog({
           </div>
           <div className="w-full min-w-0 rounded-md border bg-muted/30 p-3 text-sm col-span-2">
             <div className="flex justify-between"><span>Total m²:</span><span className="font-mono">{m2.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span>Total:</span><span className="font-mono font-semibold">{formatCLP(total)}</span></div>
-            <div className="flex justify-between"><span>Saldo:</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
+            <div className="flex justify-between"><span>Neto:</span><span className="font-mono font-semibold">{formatCLP(ivaBreakdown(total).neto)}</span></div>
+            <div className="flex justify-between text-muted-foreground"><span>IVA 19%:</span><span className="font-mono">{formatCLP(ivaBreakdown(total).iva)}</span></div>
+            <div className="flex justify-between"><span>Bruto (con IVA):</span><span className="font-mono font-bold">{formatCLP(ivaBreakdown(total).bruto)}</span></div>
+            <div className="flex justify-between"><span>Saldo (neto):</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
           </div>
         </div>
         <DialogFooter className="w-full gap-2">
@@ -680,7 +682,6 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
             <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
               <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>RUT (opcional)</Label><Input className="w-full" placeholder="12345678-5" value={form.rut} aria-invalid={!!errors.rut} onChange={(e)=>setForm({...form, rut: sanitizeRutInput(e.target.value)})} /><FieldError msg={errors.rut} /></div>
-          <div className="w-full min-w-0 space-y-1"><Label>RUT (opcional)</Label><Input className="w-full" placeholder="12345678-5" value={form.rut} aria-invalid={!!errors.rut} onChange={(e)=>setForm({...form, rut: sanitizeRutInput(e.target.value)})} /><FieldError msg={errors.rut} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
@@ -761,7 +762,9 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <section className="rounded-md border bg-muted/30 p-3">
                 <div className="flex justify-between"><span>Total m²:</span><span className="font-mono font-semibold">{m2Total.toFixed(2)}</span></div>
                 <div className="flex justify-between"><span>Precio / m² promedio (neto):</span><span className="font-mono">{formatCLP(precioPromedioCalc)}</span></div>
-                <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
+                <div className="flex justify-between"><span>Neto:</span><span className="font-mono font-semibold">{formatCLP(ivaBreakdown(totalCalc).neto)}</span></div>
+                <div className="flex justify-between text-muted-foreground"><span>IVA 19%:</span><span className="font-mono">{formatCLP(ivaBreakdown(totalCalc).iva)}</span></div>
+                <div className="flex justify-between text-base"><span className="font-semibold">Bruto (con IVA):</span><span className="font-mono font-bold">{formatCLP(ivaBreakdown(totalCalc).bruto)}</span></div>
               </section>
 
               <section className="quote-mobile-grid grid gap-2 rounded-md border p-3 md:grid-cols-2">
