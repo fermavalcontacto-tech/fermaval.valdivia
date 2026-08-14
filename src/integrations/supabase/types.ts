@@ -817,6 +817,7 @@ export type Database = {
       solicitudes_egreso: {
         Row: {
           bobina_color_id: string | null
+          bobina_defectuosos: number
           bobina_metros: number | null
           boleta_subida_por: string | null
           created_at: string
@@ -836,6 +837,7 @@ export type Database = {
         }
         Insert: {
           bobina_color_id?: string | null
+          bobina_defectuosos?: number
           bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
@@ -855,6 +857,7 @@ export type Database = {
         }
         Update: {
           bobina_color_id?: string | null
+          bobina_defectuosos?: number
           bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
