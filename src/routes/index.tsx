@@ -123,7 +123,7 @@ function Home() {
             </p>
           </div>
           <div className="mx-auto max-w-3xl">
-            <CotizadorForm precio={Number(cfg.precio_m2)} preciosTipo={data.preciosTipo} colores={colores} formFields={cfg.form_fields as never} />
+            <CotizadorForm precio={Number(cfg.precio_m2)} preciosTipo={data.preciosTipo} colores={colores} formFields={cfg.form_fields as never} precioModo={(cfg as { precio_cliente_modo?: string }).precio_cliente_modo ?? "neto"} />
           </div>
         </div>
       </section>
