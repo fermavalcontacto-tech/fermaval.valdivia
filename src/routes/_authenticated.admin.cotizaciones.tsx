@@ -658,7 +658,7 @@ function usePreciosTipo() {
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null; bobina_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const precios = usePreciosTipo();
   const [form, setForm] = useState({
@@ -684,6 +684,7 @@ function EditarCotizacionDialog({
         largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
         color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
         precio: it.precio_m2 == null ? "" : String(Number(it.precio_m2)),
+        bobina_id: it.bobina_id ?? "",
       })));
     } else {
       setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "", tipo: "Ondulado" }]);
