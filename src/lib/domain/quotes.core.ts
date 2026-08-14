@@ -370,3 +370,45 @@ export function ivaBreakdown(neto: number): { neto: number; iva: number; bruto: 
   const iva = Math.round(base * IVA_RATE);
   return { neto: base, iva, bruto: base + iva };
 }
+
+/** Neto a partir de un valor bruto (con IVA incluido). */
+export function netoFromBruto(bruto: number): number {
+  const b = Math.max(0, Number(bruto) || 0);
+  return Math.round(b / (1 + IVA_RATE));
+}
+
+/** Bruto (con IVA) a partir de un valor neto. */
+export function brutoFromNeto(neto: number): number {
+  return ivaBreakdown(neto).bruto;
+}
+
+/** Modo de precio visible para el cliente. */
+export type PrecioClienteModo = "neto" | "bruto";
+
+export function normalizePrecioModo(v: unknown): PrecioClienteModo {
+  return v === "bruto" ? "bruto" : "neto";
+}
+
+/** Etiqueta corta según el modo de precio visible. */
+export function precioModoLabel(modo: PrecioClienteModo): string {
+  return modo === "bruto" ? "IVA incluido" : "neto";
+}
+
+/** Valor a mostrar al cliente según el modo configurado. */
+export function precioParaCliente(neto: number, modo: PrecioClienteModo): number {
+  return modo === "bruto" ? brutoFromNeto(neto) : Math.round(Math.max(0, Number(neto) || 0));
+}
+
+/** Margen por m²: ganancia en $ y % sobre el precio neto de venta. */
+export function margenM2(precioNetoM2: number, costoNetoM2: number): { ganancia: number; pct: number | null } {
+  const precio = Number(precioNetoM2) || 0;
+  const costo = Number(costoNetoM2) || 0;
+  const ganancia = precio - costo;
+  return { ganancia, pct: precio > 0 ? (ganancia / precio) * 100 : null };
+}
+
+export function formatPct(pct: number | null): string {
+  if (pct == null || !Number.isFinite(pct)) return "—";
+  return `${pct.toFixed(1)}%`;
+}
+

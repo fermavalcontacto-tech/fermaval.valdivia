@@ -775,6 +775,8 @@ export const updateConfig = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({
     precio_m2: z.number().positive(),
+    precio_cliente_modo: z.enum(["neto", "bruto"]).optional(),
+
     hero_titulo: z.string().min(1).max(120),
     hero_subtitulo: z.string().min(1).max(200),
     hero_h1_linea1: z.string().min(1).max(60),
@@ -810,7 +812,7 @@ export const updateConfig = createServerFn({ method: "POST" })
     }).eq("id", 1);
     if (error) throw new Error(error.message);
     const fields: Array<keyof typeof data> = [
-      "precio_m2","hero_titulo","hero_subtitulo","hero_h1_linea1","hero_h1_linea2","hero_h1_linea3",
+      "precio_m2","precio_cliente_modo","hero_titulo","hero_subtitulo","hero_h1_linea1","hero_h1_linea2","hero_h1_linea3",
       "marca_texto","productos_titulo","cotizador_titulo",
       "info_comercial","linktree_url","mapa_url","mapa_embed","telefono","direccion","instagram","logo_url","hero_url","form_fields",
     ];
@@ -1543,3 +1545,43 @@ export const upsertUtilidadM2 = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Costo neto por m² por tipo de plancha, editable mes a mes (referencia planilla APU). */
+export const listCostosM2 = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("costos_m2")
+      .select("id, periodo, tipo, costo_m2, nota, updated_at")
+      .order("periodo", { ascending: false })
+      .limit(400);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const upsertCostoM2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    periodo: z.string().regex(/^\d{4}-\d{2}$/, "Periodo inválido (YYYY-MM)"),
+    tipo: z.string().min(1),
+    costo_m2: z.number().min(0).max(100_000_000),
+    nota: z.string().max(300).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const periodo = `${data.periodo}-01`;
+    const { error } = await context.supabase
+      .from("costos_m2")
+      .upsert(
+        {
+          periodo,
+          tipo: data.tipo as never,
+          costo_m2: data.costo_m2,
+          nota: data.nota ?? null,
+          created_by: context.userId,
+        },
+        { onConflict: "periodo,tipo" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+

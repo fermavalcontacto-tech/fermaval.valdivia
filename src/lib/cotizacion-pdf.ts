@@ -43,6 +43,9 @@ export type CotizacionPDF = {
   creado_por_email?: string;
   origen?: string;
   responsable_nombre?: string | null;
+  /** Modo de precio visible para el cliente: neto (default) o bruto (IVA incluido). */
+  precio_modo?: "neto" | "bruto";
+
 };
 
 const NAVY: [number, number, number] = [20, 40, 80];
@@ -340,13 +343,18 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     ? c.items
     : [{ largo_m: c.largo_m, ancho_m: c.ancho_m, cantidad_planchas: c.cantidad_planchas ?? 1, metros2: c.metros2, color_nombre: c.color_nombre }];
 
+  const modo = c.precio_modo === "bruto" ? "bruto" : "neto";
+  const conv = (v: number) => (modo === "bruto" ? Math.round(v * 1.19) : Math.round(v));
+  const sufijo = modo === "bruto" ? "c/IVA" : "neto";
+
   const cols = [
     { x: 15, w: 10, label: "#", align: "left" as const },
     { x: 25, w: 80, label: "Descripción", align: "left" as const },
     { x: 105, w: 18, label: "Cant.", align: "right" as const },
-    { x: 123, w: 32, label: "$ / m² neto", align: "right" as const },
+    { x: 123, w: 32, label: `$ / m² ${sufijo}`, align: "right" as const },
     { x: 155, w: 40, label: "Total", align: "right" as const },
   ];
+
   const tableX = 15;
   const tableW = W - 30;
 
@@ -385,8 +393,9 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
     doc.text(descLines, cols[1].x + 2, y + 4);
     doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(`${formatCLP(precioLinea)} neto`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
+    doc.text(`${formatCLP(conv(precioLinea))} ${sufijo}`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
+    doc.text(formatCLP(conv(subtotal)), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
+
     y += rowH;
   });
 
@@ -403,13 +412,20 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const totalsX = W - 95;
   const totalsW = 80;
 
-  const totRows: Array<[string, string, boolean]> = [
-    ["Subtotal", formatCLP(subtotal), false],
-    ["Descuento", `- ${formatCLP(c.descuento || 0)}`, false],
-    ["Neto", formatCLP(neto), false],
-    ["IVA 19%", formatCLP(iva), false],
-    ["TOTAL", formatCLP(totalConIva), true],
-  ];
+  const totRows: Array<[string, string, boolean]> = modo === "bruto"
+    ? [
+        ["Subtotal (c/IVA)", formatCLP(conv(subtotal)), false],
+        ["Descuento", `- ${formatCLP(conv(c.descuento || 0))}`, false],
+        ["TOTAL (IVA incluido)", formatCLP(totalConIva), true],
+      ]
+    : [
+        ["Subtotal", formatCLP(subtotal), false],
+        ["Descuento", `- ${formatCLP(c.descuento || 0)}`, false],
+        ["Neto", formatCLP(neto), false],
+        ["IVA 19%", formatCLP(iva), false],
+        ["TOTAL", formatCLP(totalConIva), true],
+      ];
+
   totRows.forEach(([k, v, strong]) => {
     if (strong) {
       doc.setFillColor(...NAVY);
@@ -436,7 +452,15 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFont("helvetica", "italic");
   doc.setFontSize(8);
   doc.setTextColor(...GREY_DARK);
-  doc.text("Valores expresados en pesos, netos (sin IVA incluido).", totalsX + totalsW, y + 4, { align: "right" });
+  doc.text(
+    modo === "bruto"
+      ? "Valores expresados en pesos, con IVA incluido."
+      : "Valores expresados en pesos, netos (sin IVA incluido).",
+    totalsX + totalsW,
+    y + 4,
+    { align: "right" },
+  );
+
   doc.setFont("helvetica", "normal");
 
   y += 10;

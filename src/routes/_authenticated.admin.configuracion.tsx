@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
-import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba, listPreciosTipo, updatePreciosTipo, TIPOS_PRODUCTO } from "@/lib/admin.functions";
+import { getConfig, updateConfig, listConfigAudit, limpiarDatosPrueba, listPreciosTipo, updatePreciosTipo, TIPOS_PRODUCTO, listCostosM2, upsertCostoM2 } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal, friendlyValidationMessage } from "@/lib/domain/quotes.core";
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal, friendlyValidationMessage, margenM2, formatPct } from "@/lib/domain/quotes.core";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Upload, ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { formatCLP } from "@/lib/format";
 
 const q = queryOptions({ queryKey: ["config"], queryFn: () => getConfig() });
 const qAudit = queryOptions({ queryKey: ["config-audit"], queryFn: () => listConfigAudit() });
@@ -35,6 +36,7 @@ const DEFAULT_FIELDS: FormFields = {
 
 type FormState = {
   precio_m2: string;
+  precio_cliente_modo: "neto" | "bruto";
   hero_titulo: string; hero_subtitulo: string;
   hero_h1_linea1: string; hero_h1_linea2: string; hero_h1_linea3: string;
   marca_texto: string; productos_titulo: string; cotizador_titulo: string;
@@ -45,11 +47,13 @@ type FormState = {
   form_fields: FormFields;
 };
 
+
 function ConfiguracionPage() {
   const qc = useQueryClient();
   const { data } = useQuery(q);
   const [form, setForm] = useState<FormState>({
     precio_m2: "7990",
+    precio_cliente_modo: "neto",
     hero_titulo: "", hero_subtitulo: "",
     hero_h1_linea1: "", hero_h1_linea2: "", hero_h1_linea3: "",
     marca_texto: "", productos_titulo: "", cotizador_titulo: "",
@@ -64,6 +68,7 @@ function ConfiguracionPage() {
       const ff = (data.form_fields as Partial<FormFields> | null) ?? null;
       setForm({
         precio_m2: String(data.precio_m2),
+        precio_cliente_modo: (data as { precio_cliente_modo?: string }).precio_cliente_modo === "bruto" ? "bruto" : "neto",
         hero_titulo: data.hero_titulo, hero_subtitulo: data.hero_subtitulo,
         hero_h1_linea1: data.hero_h1_linea1, hero_h1_linea2: data.hero_h1_linea2, hero_h1_linea3: data.hero_h1_linea3,
         marca_texto: data.marca_texto, productos_titulo: data.productos_titulo, cotizador_titulo: data.cotizador_titulo,
@@ -140,6 +145,18 @@ function ConfiguracionPage() {
       <Card className="grid gap-4 p-6 md:grid-cols-2">
         <h2 className="md:col-span-2 font-display text-2xl text-primary">CONTACTO Y ENLACES</h2>
         <div><Label>Precio por m² (CLP)</Label><Input {...DECIMAL_INPUT_PROPS} {...f("precio_m2")} /></div>
+        <div>
+          <Label>Precio visible para el cliente</Label>
+          <select
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            value={form.precio_cliente_modo}
+            onChange={(e) => setForm({ ...form, precio_cliente_modo: e.target.value === "bruto" ? "bruto" : "neto" })}
+          >
+            <option value="neto">Neto (sin IVA)</option>
+            <option value="bruto">Bruto (IVA 19% incluido)</option>
+          </select>
+          <p className="mt-1 text-xs text-muted-foreground">Define cómo se muestran los precios en el cotizador público, la cotización web y el PDF.</p>
+        </div>
         <div><Label>Teléfono</Label><Input {...f("telefono")} /></div>
         <div><Label>Dirección</Label><Input {...f("direccion")} /></div>
         <div><Label>Instagram</Label><Input {...f("instagram")} /></div>
@@ -149,6 +166,8 @@ function ConfiguracionPage() {
       </Card>
 
       <PreciosTipoCard />
+
+      <CostosM2Card />
 
       {/* Editor del formulario de cotización */}
       <Card className="p-6">
@@ -384,6 +403,93 @@ function AuditLogCard() {
           </tbody>
         </table>
       </div>
+    </Card>
+  );
+}
+
+
+/**
+ * Costo neto por m² (referencia planilla APU) editable mes a mes. Con el precio
+ * de venta por tipo permite ver la ganancia por m² y el % de margen de cada plancha.
+ */
+function CostosM2Card() {
+  const qc = useQueryClient();
+  const now = new Date();
+  const [periodo, setPeriodo] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const { data: costos = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const { data: precios = [] } = useQuery({ queryKey: ["precios-tipo"], queryFn: () => listPreciosTipo() });
+  const [vals, setVals] = useState<Record<string, string>>({});
+
+  const precioPorTipo: Record<string, number> = {};
+  for (const row of precios as Array<{ tipo: string; precio_m2: number }>) precioPorTipo[row.tipo] = Number(row.precio_m2);
+
+  useEffect(() => {
+    const next: Record<string, string> = {};
+    for (const t of TIPOS_PRODUCTO) next[t] = "0";
+    for (const row of costos as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
+      if (String(row.periodo).slice(0, 7) === periodo) next[row.tipo] = String(Number(row.costo_m2));
+    }
+    setVals(next);
+  }, [costos, periodo]);
+
+  const mut = useMutation({
+    mutationFn: async () => {
+      for (const t of TIPOS_PRODUCTO) {
+        await upsertCostoM2({ data: { periodo, tipo: t, costo_m2: parseDecimal(vals[t]) } });
+      }
+    },
+    onSuccess: () => {
+      toast.success("Costos por m² actualizados");
+      void qc.invalidateQueries({ queryKey: ["costos-m2"] });
+    },
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e, "No se pudieron guardar los costos.")),
+  });
+
+  return (
+    <Card className="p-6">
+      <h2 className="mb-1 font-display text-2xl text-primary">COSTO POR m² Y % DE GANANCIA</h2>
+      <p className="mb-4 text-sm text-muted-foreground">
+        Costo neto por m² de cada tipo de plancha (referencia planilla APU), editable mes a mes. El margen se calcula
+        contra el precio de venta neto por tipo.
+      </p>
+      <div className="mb-4 max-w-xs">
+        <Label>Periodo</Label>
+        <Input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} />
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-left text-xs uppercase text-muted-foreground">
+            <tr className="border-b">
+              <th className="py-2 pr-3">Tipo</th>
+              <th className="py-2 pr-3">Costo / m² neto</th>
+              <th className="py-2 pr-3 text-right">Precio / m² neto</th>
+              <th className="py-2 pr-3 text-right">Ganancia / m²</th>
+              <th className="py-2 pr-3 text-right">% ganancia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {TIPOS_PRODUCTO.map((t) => {
+              const precio = precioPorTipo[t] ?? 0;
+              const m = margenM2(precio, parseDecimal(vals[t]));
+              return (
+                <tr key={t} className="border-b last:border-0">
+                  <td className="py-2 pr-3 font-medium">{t}</td>
+                  <td className="py-2 pr-3">
+                    <Input {...DECIMAL_INPUT_PROPS} value={vals[t] ?? ""}
+                      onChange={(e) => setVals({ ...vals, [t]: sanitizeDecimalInput(e.target.value) })} />
+                  </td>
+                  <td className="py-2 pr-3 text-right">{formatCLP(precio)}</td>
+                  <td className={`py-2 pr-3 text-right ${m.ganancia >= 0 ? "" : "text-destructive"}`}>{formatCLP(m.ganancia)}</td>
+                  <td className={`py-2 pr-3 text-right font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <Button className="mt-4" variant="hero" onClick={() => mut.mutate()} disabled={mut.isPending}>
+        {mut.isPending ? "Guardando..." : "Guardar costos"}
+      </Button>
     </Card>
   );
 }

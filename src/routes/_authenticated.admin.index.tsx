@@ -21,13 +21,13 @@ export const Route = createFileRoute("/_authenticated/admin/")({
   component: Dashboard,
 });
 
-function Stat({ icon: Icon, label, value, accent, tone }: { icon: typeof TrendingUp; label: string; value: string; accent?: boolean; tone?: "pos" | "neg" }) {
+function Stat({ icon: Icon, label, value, accent, tone, to }: { icon: typeof TrendingUp; label: string; value: string; accent?: boolean; tone?: "pos" | "neg"; to?: string }) {
   const valueColor =
     tone === "pos" ? "text-green-600 dark:text-green-400"
     : tone === "neg" ? "text-destructive"
     : "text-primary";
-  return (
-    <Card className={`p-5 ${accent ? "border-accent/40 bg-accent/5" : ""}`}>
+  const card = (
+    <Card className={`p-5 ${accent ? "border-accent/40 bg-accent/5" : ""} ${to ? "transition-colors hover:border-primary/50 hover:bg-muted/40" : ""}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
         <Icon className={`h-4 w-4 ${accent ? "text-accent" : "text-muted-foreground"}`} />
@@ -35,7 +35,10 @@ function Stat({ icon: Icon, label, value, accent, tone }: { icon: typeof Trendin
       <div className={`mt-2 font-display text-3xl ${valueColor}`}>{value}</div>
     </Card>
   );
+  if (!to) return card;
+  return <Link to={to} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg">{card}</Link>;
 }
+
 
 function Dashboard() {
   const { data } = useSuspenseQuery(q);
@@ -84,11 +87,12 @@ function Dashboard() {
 
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
-        <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
-        <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} />
-        <Stat icon={Wallet} label="Utilidades (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} />
-        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" />
+        <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent to="/admin/finanzas" />
+        <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} to="/admin/cotizaciones" />
+        <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} to="/admin/pedidos" />
+        <Stat icon={Wallet} label="Utilidades (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} to="/admin/finanzas" />
+        <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" to="/admin/egresos" />
+
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
