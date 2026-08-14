@@ -375,3 +375,52 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
     </Dialog>
   );
 }
+
+type BobForm = { proveedor: string; color_id: string; metros: string; defectuosos: string };
+
+function mencionaBobina(texto: string | null | undefined): boolean {
+  return /bobina/i.test(texto ?? "");
+}
+
+function BobinaFields({ value, onChange, monto }: { value: BobForm; onChange: (v: BobForm) => void; monto: number }) {
+  const { data: colores = [] } = useQuery({ queryKey: ["colores"], queryFn: () => getColores() });
+  const metros = parseDecimal(value.metros);
+  const def = parseDecimal(value.defectuosos);
+  const utiles = metrosUtiles(metros, def);
+  const perdida = perdidaBobina(metros, def);
+  const costo = costoM2Bobina(monto, metros, def);
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <p className="text-xs font-medium">Compra de bobina — se agrega al stock del color (FIFO)</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Proveedor <span className="text-destructive">*</span></Label>
+          <Input value={value.proveedor} onChange={(e) => onChange({ ...value, proveedor: e.target.value })} placeholder="Ej: Multiaceros" />
+        </div>
+        <div>
+          <Label>Color de la bobina <span className="text-destructive">*</span></Label>
+          <Select value={value.color_id || undefined} onValueChange={(v) => onChange({ ...value, color_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+            <SelectContent>
+              {colores.map((c: { id: string; nombre: string }) => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Metros comprados <span className="text-destructive">*</span></Label>
+          <Input {...DECIMAL_INPUT_PROPS} value={value.metros} onChange={(e) => onChange({ ...value, metros: sanitizeDecimalInput(e.target.value) })} />
+        </div>
+        <div>
+          <Label>Metros defectuosos a simple vista</Label>
+          <Input {...DECIMAL_INPUT_PROPS} value={value.defectuosos} onChange={(e) => onChange({ ...value, defectuosos: sanitizeDecimalInput(e.target.value) })} />
+        </div>
+      </div>
+      {metros > 0 && (
+        <div className="text-xs text-muted-foreground">
+          Útiles: <strong>{utiles.toLocaleString("es-CL")} m</strong> · Pérdida (1% + defectuosos): <strong>{perdida.toLocaleString("es-CL")} m</strong> · Costo: <strong>${Math.round(costo).toLocaleString("es-CL")}/m² neto</strong>
+        </div>
+      )}
+    </div>
+  );
+}
