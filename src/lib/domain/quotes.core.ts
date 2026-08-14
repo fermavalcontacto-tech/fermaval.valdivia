@@ -131,6 +131,8 @@ export async function buildItemsCalc(
       tipo,
       espesor_mm: espesor,
       precio_m2: resolvePrecioItem({ tipo, precio_m2: it.precio_m2 ?? null }, precios, precioBase),
+      bobina_id: it.bobina_id ?? null,
+
     };
   });
 }
