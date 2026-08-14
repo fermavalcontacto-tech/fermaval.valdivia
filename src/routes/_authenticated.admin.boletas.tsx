@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listBoletas, createBoleta, updateBoleta, deleteBoleta } from "@/lib/admin.functions";
+import { listBoletas, createBoleta, updateBoleta, deleteBoleta, getColores } from "@/lib/admin.functions";
+import {
+  DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal,
+  metrosUtiles, perdidaBobina, costoM2Bobina,
+} from "@/lib/domain/quotes.core";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -271,11 +275,18 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
+  const [bob, setBob] = useState({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
+  const esBobina = mencionaBobina(descripcion);
 
   async function submit() {
     if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
     if (!monto) { toast.error("Ingresa el monto"); return; }
     if (!responsable) { toast.error("Selecciona el responsable (Boleta subida por)"); return; }
+    if (esBobina) {
+      if (!bob.proveedor.trim()) { toast.error("Escribe el proveedor de la bobina"); return; }
+      if (!bob.color_id) { toast.error("Selecciona el color de la bobina"); return; }
+      if (parseDecimal(bob.metros) <= 0) { toast.error("Ingresa los metros comprados de la bobina"); return; }
+    }
     setUploading(true);
     try {
       let archivo_path: string | null = null;
@@ -288,10 +299,18 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
         archivo_nombre = file.name;
       }
       const fechaFinal = isSuper ? fecha : today;
-      await createBoleta({ data: { tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal, archivo_path, archivo_nombre, responsable } });
-      toast.success(file ? "Boleta subida" : "Gasto registrado sin archivo");
+      await createBoleta({ data: {
+        tipo_gasto: tipo, descripcion: descripcion || null, monto: Number(monto), fecha: fechaFinal,
+        archivo_path, archivo_nombre, responsable,
+        proveedor: esBobina ? bob.proveedor.trim() : null,
+        bobina_color_id: esBobina ? bob.color_id : null,
+        bobina_metros: esBobina ? parseDecimal(bob.metros) : null,
+        bobina_defectuosos: esBobina ? parseDecimal(bob.defectuosos) : 0,
+      } });
+      toast.success(esBobina ? "Boleta guardada y bobina agregada al stock" : (file ? "Boleta subida" : "Gasto registrado sin archivo"));
       onCreated(); setOpen(false);
       setFile(null); setMonto(""); setDescripcion("");
+      setBob({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
     } catch (e) {
       const err = e as Error;
       toast.error(err.message);
@@ -299,6 +318,7 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
       setUploading(false);
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -321,7 +341,13 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
             </Select>
           </div>
 
-          <div><Label>Descripción</Label><Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} /></div>
+          <div>
+            <Label>Descripción</Label>
+            <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder='Escribe "bobina" para enlazar la compra al stock' />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Si la descripción incluye la palabra <strong>bobina</strong>, se enlaza automáticamente con el stock del color.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
             <div>
@@ -330,6 +356,13 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
+          {esBobina && (
+            <BobinaFields
+              value={bob}
+              onChange={setBob}
+              monto={Number(monto) || 0}
+            />
+          )}
           <div>
             <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
@@ -340,5 +373,54 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
         <DialogFooter><Button onClick={submit} disabled={uploading} variant="hero">{uploading ? "Subiendo..." : "Guardar"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+type BobForm = { proveedor: string; color_id: string; metros: string; defectuosos: string };
+
+function mencionaBobina(texto: string | null | undefined): boolean {
+  return /bobina/i.test(texto ?? "");
+}
+
+function BobinaFields({ value, onChange, monto }: { value: BobForm; onChange: (v: BobForm) => void; monto: number }) {
+  const { data: colores = [] } = useQuery({ queryKey: ["colores"], queryFn: () => getColores() });
+  const metros = parseDecimal(value.metros);
+  const def = parseDecimal(value.defectuosos);
+  const utiles = metrosUtiles(metros, def);
+  const perdida = perdidaBobina(metros, def);
+  const costo = costoM2Bobina(monto, metros, def);
+
+  return (
+    <div className="grid gap-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
+      <p className="text-xs font-medium">Compra de bobina — se agrega al stock del color (FIFO)</p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <Label>Proveedor <span className="text-destructive">*</span></Label>
+          <Input value={value.proveedor} onChange={(e) => onChange({ ...value, proveedor: e.target.value })} placeholder="Ej: Multiaceros" />
+        </div>
+        <div>
+          <Label>Color de la bobina <span className="text-destructive">*</span></Label>
+          <Select value={value.color_id || undefined} onValueChange={(v) => onChange({ ...value, color_id: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecciona color" /></SelectTrigger>
+            <SelectContent>
+              {colores.map((c: { id: string; nombre: string }) => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Metros comprados <span className="text-destructive">*</span></Label>
+          <Input {...DECIMAL_INPUT_PROPS} value={value.metros} onChange={(e) => onChange({ ...value, metros: sanitizeDecimalInput(e.target.value) })} />
+        </div>
+        <div>
+          <Label>Metros defectuosos a simple vista</Label>
+          <Input {...DECIMAL_INPUT_PROPS} value={value.defectuosos} onChange={(e) => onChange({ ...value, defectuosos: sanitizeDecimalInput(e.target.value) })} />
+        </div>
+      </div>
+      {metros > 0 && (
+        <div className="text-xs text-muted-foreground">
+          Útiles: <strong>{utiles.toLocaleString("es-CL")} m</strong> · Pérdida (1% + defectuosos): <strong>{perdida.toLocaleString("es-CL")} m</strong> · Costo: <strong>${Math.round(costo).toLocaleString("es-CL")}/m² neto</strong>
+        </div>
+      )}
+    </div>
   );
 }

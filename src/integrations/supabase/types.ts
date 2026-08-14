@@ -191,11 +191,16 @@ export type Database = {
         Row: {
           archivo_nombre: string | null
           archivo_path: string | null
+          bobina_color_id: string | null
+          bobina_defectuosos: number
+          bobina_id: string | null
+          bobina_metros: number | null
           created_at: string
           descripcion: string | null
           fecha: string
           id: string
           monto: number
+          proveedor: string | null
           responsable: string | null
           solicitud_id: string | null
           subido_por: string
@@ -204,11 +209,16 @@ export type Database = {
         Insert: {
           archivo_nombre?: string | null
           archivo_path?: string | null
+          bobina_color_id?: string | null
+          bobina_defectuosos?: number
+          bobina_id?: string | null
+          bobina_metros?: number | null
           created_at?: string
           descripcion?: string | null
           fecha?: string
           id?: string
           monto: number
+          proveedor?: string | null
           responsable?: string | null
           solicitud_id?: string | null
           subido_por: string
@@ -217,17 +227,43 @@ export type Database = {
         Update: {
           archivo_nombre?: string | null
           archivo_path?: string | null
+          bobina_color_id?: string | null
+          bobina_defectuosos?: number
+          bobina_id?: string | null
+          bobina_metros?: number | null
           created_at?: string
           descripcion?: string | null
           fecha?: string
           id?: string
           monto?: number
+          proveedor?: string | null
           responsable?: string | null
           solicitud_id?: string | null
           subido_por?: string
           tipo_gasto?: Database["public"]["Enums"]["expense_type"]
         }
         Relationships: [
+          {
+            foreignKeyName: "boletas_bobina_color_id_fkey"
+            columns: ["bobina_color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletas_bobina_color_id_fkey"
+            columns: ["bobina_color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "boletas_bobina_id_fkey"
+            columns: ["bobina_id"]
+            isOneToOne: false
+            referencedRelation: "bobinas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "boletas_solicitud_id_fkey"
             columns: ["solicitud_id"]
@@ -416,36 +452,50 @@ export type Database = {
       }
       costos_m2: {
         Row: {
+          bobina_id: string | null
           costo_m2: number
           created_at: string
           created_by: string | null
           id: string
           nota: string | null
           periodo: string
+          proveedor: string
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at: string
         }
         Insert: {
+          bobina_id?: string | null
           costo_m2?: number
           created_at?: string
           created_by?: string | null
           id?: string
           nota?: string | null
           periodo: string
+          proveedor?: string
           tipo: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
         }
         Update: {
+          bobina_id?: string | null
           costo_m2?: number
           created_at?: string
           created_by?: string | null
           id?: string
           nota?: string | null
           periodo?: string
+          proveedor?: string
           tipo?: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "costos_m2_bobina_id_fkey"
+            columns: ["bobina_id"]
+            isOneToOne: false
+            referencedRelation: "bobinas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cotizacion_items: {
         Row: {

@@ -427,6 +427,10 @@ export const createBoleta = createServerFn({ method: "POST" })
     archivo_path: z.string().optional().nullable(),
     archivo_nombre: z.string().optional().nullable(),
     responsable: personaSchema,
+    proveedor: z.string().trim().max(120).optional().nullable(),
+    bobina_color_id: z.string().uuid().optional().nullable(),
+    bobina_metros: z.number().min(0).max(1_000_000).optional().nullable(),
+    bobina_defectuosos: z.number().min(0).max(1_000_000).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -436,6 +440,10 @@ export const createBoleta = createServerFn({ method: "POST" })
       archivo_path: data.archivo_path ?? null, archivo_nombre: data.archivo_nombre ?? null,
       responsable: data.responsable,
       subido_por: context.userId,
+      proveedor: data.proveedor?.trim() || null,
+      bobina_color_id: data.bobina_color_id ?? null,
+      bobina_metros: data.bobina_metros ?? null,
+      bobina_defectuosos: data.bobina_defectuosos ?? 0,
     });
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -1078,6 +1086,10 @@ export const updateBoleta = createServerFn({ method: "POST" })
     monto: z.number().positive(),
     fecha: z.string(),
     responsable: personaSchema.nullable().optional(),
+    proveedor: z.string().trim().max(120).nullable().optional(),
+    bobina_color_id: z.string().uuid().nullable().optional(),
+    bobina_metros: z.number().min(0).max(1_000_000).nullable().optional(),
+    bobina_defectuosos: z.number().min(0).max(1_000_000).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
@@ -1087,6 +1099,10 @@ export const updateBoleta = createServerFn({ method: "POST" })
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha: data.fecha,
       responsable: data.responsable ?? null,
+      proveedor: data.proveedor?.trim() || null,
+      bobina_color_id: data.bobina_color_id ?? null,
+      bobina_metros: data.bobina_metros ?? null,
+      bobina_defectuosos: data.bobina_defectuosos ?? 0,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
@@ -1592,15 +1608,18 @@ export const upsertUtilidadM2 = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Costo neto por m² por tipo de plancha, editable mes a mes (referencia planilla APU). */
+/**
+ * Costo neto por m² por tipo de plancha y proveedor (referencia planilla APU).
+ * Pueden coexistir varios registros en un mismo mes: uno por proveedor/compra de bobina.
+ */
 export const listCostosM2 = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("costos_m2")
-      .select("id, periodo, tipo, costo_m2, nota, updated_at")
+      .select("id, periodo, tipo, proveedor, bobina_id, costo_m2, nota, updated_at")
       .order("periodo", { ascending: false })
-      .limit(400);
+      .limit(1000);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -1610,23 +1629,46 @@ export const upsertCostoM2 = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     periodo: z.string().regex(/^\d{4}-\d{2}$/, "Periodo inválido (YYYY-MM)"),
     tipo: z.string().min(1),
+    proveedor: z.string().trim().max(120).optional().nullable(),
+    bobina_id: z.string().uuid().optional().nullable(),
     costo_m2: z.number().min(0).max(100_000_000),
     nota: z.string().max(300).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const periodo = `${data.periodo}-01`;
-    const { error } = await context.supabase
-      .from("costos_m2")
-      .upsert(
-        {
-          periodo,
-          tipo: data.tipo as never,
-          costo_m2: data.costo_m2,
-          nota: data.nota ?? null,
-          created_by: context.userId,
-        },
-        { onConflict: "periodo,tipo" },
-      );
+    const proveedor = (data.proveedor ?? "").trim();
+    let q = context.supabase
+      .from("costos_m2").select("id")
+      .eq("periodo", periodo).eq("tipo", data.tipo as never).eq("proveedor", proveedor);
+    q = data.bobina_id ? q.eq("bobina_id", data.bobina_id) : q.is("bobina_id", null);
+    const { data: existing } = await q.maybeSingle();
+
+    if (existing?.id) {
+      const { error } = await context.supabase
+        .from("costos_m2")
+        .update({ costo_m2: data.costo_m2, nota: data.nota ?? null })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase.from("costos_m2").insert({
+      periodo,
+      tipo: data.tipo as never,
+      proveedor,
+      bobina_id: data.bobina_id ?? null,
+      costo_m2: data.costo_m2,
+      nota: data.nota ?? null,
+      created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCostoM2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("costos_m2").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
