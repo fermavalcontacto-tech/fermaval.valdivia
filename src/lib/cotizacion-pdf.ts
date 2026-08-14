@@ -343,7 +343,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     { x: 15, w: 10, label: "#", align: "left" as const },
     { x: 25, w: 80, label: "Descripción", align: "left" as const },
     { x: 105, w: 18, label: "Cant.", align: "right" as const },
-    { x: 123, w: 32, label: "Precio Unit.", align: "right" as const },
+    { x: 123, w: 32, label: "$ / m² neto", align: "right" as const },
     { x: 155, w: 40, label: "Total", align: "right" as const },
   ];
   const tableX = 15;
@@ -384,7 +384,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
     doc.text(descLines, cols[1].x + 2, y + 4);
     doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(precioLinea), cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
+    doc.text(`${formatCLP(precioLinea)} neto`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
     doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
     y += rowH;
   });
@@ -432,7 +432,13 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     }
   });
 
-  y += 8;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(...GREY_DARK);
+  doc.text("Valores expresados en pesos, netos (sin IVA incluido).", totalsX + totalsW, y + 4, { align: "right" });
+  doc.setFont("helvetica", "normal");
+
+  y += 10;
 
   // Validez 7 días
   y = drawNewPageIfNeeded(doc, y, 18);
@@ -534,19 +540,6 @@ export function pdfsForCotizacion(c: CotizacionPDF) {
  */
 export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
   const blob: Blob = doc.output("blob");
-  const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
-
-  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
-  if (file && nav?.share && nav.canShare?.({ files: [file] })) {
-    try {
-      await nav.share({ files: [file], title: filename });
-      return;
-    } catch (e) {
-      // usuario canceló o falló: seguimos con la descarga clásica
-      if ((e as Error)?.name === "AbortError") return;
-    }
-  }
-
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement("a");
@@ -564,11 +557,34 @@ export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Hoja nativa de compartir/guardar (solo cuando el usuario lo pide). Devuelve false si no está disponible. */
+export async function sharePdf(doc: jsPDF, filename: string): Promise<boolean> {
+  const blob: Blob = doc.output("blob");
+  const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
+  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
+  if (file && nav?.share && nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: filename });
+      return true;
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return true;
+      return false;
+    }
+  }
+  return false;
+}
+
 export function downloadCotizacionPDF(c: CotizacionPDF) {
   return deliverPdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
 }
 export function downloadPagoPDF(c: CotizacionPDF) {
   return deliverPdf(buildPagoPDF(c), `Comprobante-Pago-${c.numero}.pdf`);
+}
+export function shareCotizacionPDF(c: CotizacionPDF) {
+  return sharePdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
+}
+export function cotizacionPdfFilename(c: Pick<CotizacionPDF, "numero">) {
+  return `Cotizacion-${c.numero}.pdf`;
 }
 
 export function cotizacionPdfBlobUrl(c: CotizacionPDF): string {

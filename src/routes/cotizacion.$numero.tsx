@@ -9,8 +9,8 @@ import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { acceptQuoteAndPay } from "@/lib/public.functions";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, ArrowLeft, Download, Printer } from "lucide-react";
-import { downloadCotizacionPDF, printCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
+import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 
 function maskCorreo(c: string | null | undefined): string {
   if (!c) return "—";
@@ -153,7 +153,20 @@ function QuotePage() {
     return pdf;
   }
 
-  function handleDownload() { void downloadCotizacionPDF(buildPdf()); }
+  async function handleDownload() {
+    const pdf = buildPdf();
+    try {
+      await downloadCotizacionPDF(pdf);
+      toast.success(`Descargando ${cotizacionPdfFilename(pdf)}`);
+    } catch {
+      toast.error("No se pudo descargar el PDF. Intenta con \"Compartir\".");
+    }
+  }
+  async function handleShare() {
+    const pdf = buildPdf();
+    const ok = await shareCotizacionPDF(pdf);
+    if (!ok) { await handleDownload(); }
+  }
   function handlePrint() { printCotizacionPDF(buildPdf()); }
 
   return (
@@ -166,7 +179,10 @@ function QuotePage() {
             <Button onClick={handlePrint} variant="outline" size="sm">
               <Printer className="mr-1 h-4 w-4" /> Imprimir
             </Button>
-            <Button onClick={handleDownload} variant="hero" size="sm">
+            <Button onClick={() => void handleShare()} variant="outline" size="sm">
+              <Share2 className="mr-1 h-4 w-4" /> Compartir
+            </Button>
+            <Button onClick={() => void handleDownload()} variant="hero" size="sm">
               <Download className="mr-1 h-4 w-4" /> Descargar PDF
             </Button>
           </div>
@@ -201,7 +217,7 @@ function QuotePage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
                 <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m²</dt><dd>{formatCLP(Number(cot.precio_m2))}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m² (neto)</dt><dd>{formatCLP(Number(cot.precio_m2))} neto</dd></div>
                 <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>

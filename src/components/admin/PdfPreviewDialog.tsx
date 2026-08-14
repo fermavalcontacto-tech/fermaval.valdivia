@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, ExternalLink, FileText, MessageCircle, Printer, X } from "lucide-react";
-import { cotizacionPdfBlobUrl, downloadCotizacionPDF, printCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { Download, ExternalLink, FileText, MessageCircle, Printer, Share2, X } from "lucide-react";
+import { cotizacionPdfBlobUrl, cotizacionPdfFilename, downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatCLP } from "@/lib/format";
 
@@ -23,6 +24,19 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
     setUrl(u);
     return () => URL.revokeObjectURL(u);
   }, [data]);
+
+  async function handleDownload(d: CotizacionPDF) {
+    try {
+      await downloadCotizacionPDF(d);
+      toast.success(`Descargando ${cotizacionPdfFilename(d)}`);
+    } catch {
+      toast.error("No se pudo descargar el PDF. Intenta con \"Compartir\".");
+    }
+  }
+  async function handleShare(d: CotizacionPDF) {
+    const ok = await shareCotizacionPDF(d);
+    if (!ok) await handleDownload(d);
+  }
 
   const title = useMemo(() => data ? `Vista previa — Cotización ${data.numero}` : "", [data]);
 
@@ -46,8 +60,13 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
             )}
             <div className="mt-4 grid gap-2">
               {data && (
-                <Button variant="hero" size="lg" onClick={() => downloadCotizacionPDF(data)}>
+                <Button variant="hero" size="lg" onClick={() => void handleDownload(data)}>
                   <Download className="mr-1 h-4 w-4" /> Descargar PDF
+                </Button>
+              )}
+              {data && (
+                <Button variant="outline" size="lg" onClick={() => void handleShare(data)}>
+                  <Share2 className="mr-1 h-4 w-4" /> Compartir archivo
                 </Button>
               )}
               {data && (
@@ -91,7 +110,7 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
             </Button>
           )}
           {!isMobile && data && (
-            <Button variant="hero" onClick={() => downloadCotizacionPDF(data)}>
+            <Button variant="hero" onClick={() => void handleDownload(data)}>
               <Download className="mr-1 h-4 w-4" /> Descargar PDF
             </Button>
           )}
