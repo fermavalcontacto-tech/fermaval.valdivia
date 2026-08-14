@@ -337,7 +337,13 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
             </Select>
           </div>
 
-          <div><Label>Descripción</Label><Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} /></div>
+          <div>
+            <Label>Descripción</Label>
+            <Input value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder='Escribe "bobina" para enlazar la compra al stock' />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Si la descripción incluye la palabra <strong>bobina</strong>, se enlaza automáticamente con el stock del color.
+            </p>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
             <div>
@@ -346,6 +352,13 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
+          {esBobina && (
+            <BobinaFields
+              value={bob}
+              onChange={setBob}
+              monto={Number(monto) || 0}
+            />
+          )}
           <div>
             <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
