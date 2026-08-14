@@ -40,6 +40,8 @@ export const ItemInputSchema = z.object({
   // Precio por m² específico de esta línea (ajuste manual del administrador).
   // Si no viene, se usa el precio del tipo y, en última instancia, el precio general.
   precio_m2: decimalFromInput.pipe(z.number().min(0).max(100_000_000)).nullable().optional(),
+  // Bobina (lote de proveedor) preferida para consumir el stock de esta línea.
+  bobina_id: z.string().uuid().nullable().optional(),
 });
 export type ItemInput = z.infer<typeof ItemInputSchema>;
 
@@ -53,7 +55,9 @@ export type ItemCalc = {
   tipo: TipoProducto;
   espesor_mm: number;
   precio_m2: number;
+  bobina_id: string | null;
 };
+
 
 type DbClientLike = { from: (table: string) => any };
 
@@ -127,6 +131,8 @@ export async function buildItemsCalc(
       tipo,
       espesor_mm: espesor,
       precio_m2: resolvePrecioItem({ tipo, precio_m2: it.precio_m2 ?? null }, precios, precioBase),
+      bobina_id: it.bobina_id ?? null,
+
     };
   });
 }
@@ -412,3 +418,82 @@ export function formatPct(pct: number | null): string {
   return `${pct.toFixed(1)}%`;
 }
 
+
+// ============= BOBINAS (lotes de proveedor) =============
+/** Ancho útil de la bobina en metros: 1 metro lineal = 1 m². */
+export const ANCHO_UTIL_M = 1;
+/** Merma estándar por bobina comprada (1%). */
+export const MERMA_BOBINA = 0.01;
+
+/** Metros realmente utilizables de una bobina (99% de lo comprado). */
+export function metrosUtiles(metrosComprados: number): number {
+  const m = Number(metrosComprados);
+  if (!Number.isFinite(m) || m <= 0) return 0;
+  return Number((m * (1 - MERMA_BOBINA)).toFixed(2));
+}
+
+/** Metros (y m², ancho útil = 1 m) que se pierden por bobina. */
+export function perdidaBobina(metrosComprados: number): number {
+  const m = Number(metrosComprados);
+  if (!Number.isFinite(m) || m <= 0) return 0;
+  return Number((m * MERMA_BOBINA).toFixed(2));
+}
+
+/** Costo neto por m² de una bobina: valor pagado / metros útiles. */
+export function costoM2Bobina(valorTotal: number, metrosComprados: number): number {
+  const utiles = metrosUtiles(metrosComprados);
+  const valor = Number(valorTotal);
+  if (!utiles || !Number.isFinite(valor)) return 0;
+  return Number((valor / utiles).toFixed(2));
+}
+
+export type BobinaSaldo = {
+  id: string;
+  proveedor: string;
+  color_id: string | null;
+  color_nombre: string | null;
+  saldo_m: number;
+  costo_m2: number;
+  fecha_ingreso: string;
+};
+
+/** Bobinas del color indicado, ordenadas FIFO (la más antigua primero). */
+export function bobinasDeColor(bobinas: BobinaSaldo[], colorId: string | null | undefined): BobinaSaldo[] {
+  if (!colorId) return [];
+  return bobinas
+    .filter((b) => b.color_id === colorId)
+    .sort((a, b) => (a.fecha_ingreso < b.fecha_ingreso ? -1 : a.fecha_ingreso > b.fecha_ingreso ? 1 : 0));
+}
+
+/** Sugerencia FIFO: primera bobina del color con saldo suficiente; si no hay, la más antigua con saldo. */
+export function sugerenciaFifo(
+  bobinas: BobinaSaldo[],
+  colorId: string | null | undefined,
+  metros: number,
+): BobinaSaldo | null {
+  const list = bobinasDeColor(bobinas, colorId).filter((b) => b.saldo_m > 0);
+  return list.find((b) => b.saldo_m >= metros) ?? list[0] ?? null;
+}
+
+export type StockLineaEstado = {
+  /** true cuando los metros pedidos exceden el saldo de la bobina asignada. */
+  excede: boolean;
+  faltante: number;
+  saldo: number;
+  bobina: BobinaSaldo | null;
+};
+
+/** Estado de stock de una línea contra la bobina asignada (o la sugerencia FIFO). */
+export function evaluarStockLinea(
+  bobinas: BobinaSaldo[],
+  colorId: string | null | undefined,
+  metros: number,
+  bobinaId?: string | null,
+): StockLineaEstado {
+  const need = Number(metros) || 0;
+  const asignada = bobinaId ? bobinas.find((b) => b.id === bobinaId) ?? null : null;
+  const bobina = asignada ?? sugerenciaFifo(bobinas, colorId, need);
+  const saldo = bobina ? Number(bobina.saldo_m) : 0;
+  const faltante = Number(Math.max(0, need - saldo).toFixed(2));
+  return { excede: need > 0 && faltante > 0, faltante, saldo, bobina };
+}
