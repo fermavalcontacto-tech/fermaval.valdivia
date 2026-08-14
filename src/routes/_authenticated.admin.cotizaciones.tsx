@@ -305,9 +305,11 @@ function calcItems(items: ItemForm[], precios: PreciosPorTipo = {}, precioBase =
       largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2,
       precio_m2, subtotal: Math.round(m2 * precio_m2),
       precio_manual: manual > 0 ? manual : null,
+      bobina_id: it.bobina_id ?? "",
     };
   });
 }
+
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[+0-9\s()-]{6,20}$/;
