@@ -1629,3 +1629,140 @@ export const upsertCostoM2 = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+// ============= BOBINAS (lotes por proveedor, consumo FIFO) =============
+export const listBobinas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("bobinas")
+      .select("id, proveedor, color_id, color_nombre, metros_comprados, metros_utiles, metros_perdida, saldo_m, valor_total, costo_m2, fecha_ingreso, egreso_id, nota, created_at")
+      .order("fecha_ingreso", { ascending: false })
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+/** Saldos por bobina para el selector del cotizador (orden FIFO). */
+export const listBobinasSaldos = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("bobinas")
+      .select("id, proveedor, color_id, color_nombre, saldo_m, costo_m2, fecha_ingreso")
+      .order("fecha_ingreso", { ascending: true })
+      .order("created_at", { ascending: true });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((b) => ({ ...b, saldo_m: Number(b.saldo_m), costo_m2: Number(b.costo_m2) }));
+  });
+
+export const createBobina = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    proveedor: z.string().trim().min(2).max(160),
+    color_id: z.string().uuid(),
+    metros_comprados: z.number().positive().max(1_000_000),
+    valor_total: z.number().min(0).max(1_000_000_000),
+    fecha_ingreso: z.string().optional(),
+    nota: z.string().trim().max(300).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const fecha = enforceFecha(context.claims?.email, data.fecha_ingreso);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: id, error } = await supabaseAdmin.rpc("crear_bobina", {
+      _proveedor: data.proveedor,
+      _color_id: data.color_id,
+      _metros: data.metros_comprados,
+      _valor: data.valor_total,
+      _fecha: fecha,
+      _egreso_id: null,
+      _nota: data.nota ?? null,
+      _created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, id };
+  });
+
+export const updateBobina = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    id: z.string().uuid(),
+    proveedor: z.string().trim().min(2).max(160).optional(),
+    valor_total: z.number().min(0).max(1_000_000_000).optional(),
+    nota: z.string().trim().max(300).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: prev } = await context.supabase
+      .from("bobinas").select("metros_utiles, valor_total, proveedor").eq("id", data.id).single();
+    if (!prev) throw new Error("Bobina no encontrada");
+    const patch: Record<string, unknown> = {};
+    if (data.proveedor) patch.proveedor = data.proveedor;
+    if (data.nota !== undefined) patch.nota = data.nota;
+    if (data.valor_total !== undefined) {
+      patch.valor_total = data.valor_total;
+      const utiles = Number(prev.metros_utiles) || 0;
+      patch.costo_m2 = utiles > 0 ? Number((data.valor_total / utiles).toFixed(2)) : 0;
+    }
+    const { error } = await context.supabase.from("bobinas").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteBobina = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { count } = await context.supabase
+      .from("bobina_consumos").select("id", { count: "exact", head: true }).eq("bobina_id", data.id);
+    if ((count ?? 0) > 0) {
+      throw new Error(`No se puede eliminar: la bobina ya tiene ${count} consumo(s) registrados.`);
+    }
+    const { data: prev } = await context.supabase
+      .from("bobinas").select("proveedor, color_id, color_nombre, saldo_m").eq("id", data.id).single();
+    const { error } = await context.supabase.from("bobinas").delete().eq("id", data.id);
+    if (error) throw new Error(error.message);
+    if (prev?.color_id && Number(prev.saldo_m) > 0) {
+      const { data: col } = await context.supabase
+        .from("colores").select("stock_m").eq("id", prev.color_id).single();
+      if (col) {
+        const nuevo = Math.max(0, Number(col.stock_m) - Number(prev.saldo_m));
+        await context.supabase.from("colores").update({ stock_m: nuevo }).eq("id", prev.color_id);
+        await context.supabase.from("stock_movimientos").insert({
+          color_id: prev.color_id, color_nombre: prev.color_nombre,
+          metros: -Number(prev.saldo_m),
+          motivo: `Bobina eliminada (${prev.proveedor})`,
+          user_id: context.userId, user_email: (context.claims?.email ?? "").toLowerCase(),
+        });
+      }
+    }
+    return { ok: true };
+  });
+
+export const listPerdidas = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("v_perdidas_m2").select("*").order("periodo", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r) => ({
+      periodo: String(r.periodo),
+      color_nombre: r.color_nombre as string | null,
+      proveedor: r.proveedor as string | null,
+      metros_perdida: Number(r.metros_perdida ?? 0),
+      m2_perdida: Number(r.m2_perdida ?? 0),
+      costo_perdida: Number(r.costo_perdida ?? 0),
+    }));
+  });
+
+export const listConsumosBobina = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ bobina_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: rows, error } = await context.supabase
+      .from("bobina_consumos")
+      .select("id, metros, costo_m2_snapshot, motivo, created_at, cotizacion:cotizaciones(numero)")
+      .eq("bobina_id", data.bobina_id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
