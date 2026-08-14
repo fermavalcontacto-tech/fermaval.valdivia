@@ -239,6 +239,17 @@ function AnalyticsSection() {
   );
 }
 
+/** Destino de navegación de cada alerta del dashboard. */
+function alertaDestino(a: Alerta): { to: string; search?: Record<string, string> } {
+  const numero = typeof a.meta?.numero === "string" ? a.meta.numero : undefined;
+  if (a.tipo === "cotizacion_vencida" || a.tipo === "saldo_pendiente") {
+    return numero ? { to: "/admin/cotizaciones", search: { cot: numero } } : { to: "/admin/cotizaciones" };
+  }
+  if (a.tipo === "stock_bajo") return { to: "/admin/bobinas" };
+  if (a.tipo === "egreso_pendiente") return { to: "/admin/egresos" };
+  return { to: "/admin/cotizaciones" };
+}
+
 type Alerta = { tipo: string; severidad: string; registro_id: string; mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null> };
 
 function AlertsCard() {
@@ -273,6 +284,7 @@ function AlertsCard() {
               <span className="font-medium">{a.mensaje}</span>
               <span className="text-[10px] uppercase tracking-wider">{a.tipo.replace(/_/g, " ")}</span>
             </div>
+            </Link>
           </li>
         ))}
       </ul>
