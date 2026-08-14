@@ -15,15 +15,22 @@ type Props = {
 
 export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props) {
   const [url, setUrl] = useState<string | null>(null);
+  const [conMargen, setConMargen] = useState(false);
   const open = !!data;
   const isMobile = useIsMobile();
 
+  /** Datos efectivos: agrega (o no) el anexo interno de margen por plancha. */
+  const doc = useMemo<CotizacionPDF | null>(
+    () => (data ? { ...data, mostrar_margen: conMargen } : null),
+    [data, conMargen],
+  );
+
   useEffect(() => {
-    if (!data) { setUrl(null); return; }
-    const u = cotizacionPdfBlobUrl(data);
+    if (!doc) { setUrl(null); return; }
+    const u = cotizacionPdfBlobUrl(doc);
     setUrl(u);
     return () => URL.revokeObjectURL(u);
-  }, [data]);
+  }, [doc]);
 
   async function handleDownload(d: CotizacionPDF) {
     try {
@@ -46,6 +53,16 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        <label className="flex cursor-pointer items-start gap-2 rounded-md border bg-muted/40 px-3 py-2 text-xs">
+          <input type="checkbox" className="mt-0.5 h-4 w-4" checked={conMargen}
+            onChange={(e) => setConMargen(e.target.checked)} />
+          <span>
+            <span className="font-medium">Incluir anexo interno de margen</span>
+            <span className="block text-muted-foreground">
+              Agrega una hoja con costo real por bobina, ganancia y % por m². Uso interno: no la envíes al cliente.
+            </span>
+          </span>
+        </label>
         {isMobile ? (
           <div className="rounded-md border bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold">
@@ -59,23 +76,23 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
               </dl>
             )}
             <div className="mt-4 grid gap-2">
-              {data && (
-                <Button variant="hero" size="lg" onClick={() => void handleDownload(data)}>
+              {doc && (
+                <Button variant="hero" size="lg" onClick={() => void handleDownload(doc)}>
                   <Download className="mr-1 h-4 w-4" /> Descargar PDF
                 </Button>
               )}
-              {data && (
-                <Button variant="outline" size="lg" onClick={() => void handleShare(data)}>
+              {doc && (
+                <Button variant="outline" size="lg" onClick={() => void handleShare(doc)}>
                   <Share2 className="mr-1 h-4 w-4" /> Compartir archivo
                 </Button>
               )}
-              {data && (
-                <Button variant="outline" size="lg" onClick={() => printCotizacionPDF(data)}>
+              {doc && (
+                <Button variant="outline" size="lg" onClick={() => printCotizacionPDF(doc)}>
                   <Printer className="mr-1 h-4 w-4" /> Imprimir
                 </Button>
               )}
-              {data && onShareWhatsApp && (
-                <Button variant="outline" size="lg" onClick={() => onShareWhatsApp(data)}>
+              {doc && onShareWhatsApp && (
+                <Button variant="outline" size="lg" onClick={() => onShareWhatsApp(doc)}>
                   <MessageCircle className="mr-1 h-4 w-4 text-emerald-600" /> Compartir por WhatsApp
                 </Button>
               )}
@@ -99,18 +116,18 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="mr-1 h-4 w-4" /> Cerrar
           </Button>
-          {!isMobile && data && (
-            <Button variant="outline" onClick={() => printCotizacionPDF(data)}>
+          {!isMobile && doc && (
+            <Button variant="outline" onClick={() => printCotizacionPDF(doc)}>
               <Printer className="mr-1 h-4 w-4" /> Imprimir
             </Button>
           )}
-          {!isMobile && data && onShareWhatsApp && (
-            <Button variant="outline" onClick={() => onShareWhatsApp(data)}>
+          {!isMobile && doc && onShareWhatsApp && (
+            <Button variant="outline" onClick={() => onShareWhatsApp(doc)}>
               <MessageCircle className="mr-1 h-4 w-4 text-emerald-600" /> Compartir por WhatsApp
             </Button>
           )}
-          {!isMobile && data && (
-            <Button variant="hero" onClick={() => void handleDownload(data)}>
+          {!isMobile && doc && (
+            <Button variant="hero" onClick={() => void handleDownload(doc)}>
               <Download className="mr-1 h-4 w-4" /> Descargar PDF
             </Button>
           )}

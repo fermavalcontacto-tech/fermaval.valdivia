@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, type BobinaSaldo } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, type BobinaSaldo } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -60,12 +60,18 @@ function CotizacionesPage() {
   const navigate = Route.useNavigate();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["cotizaciones"], queryFn: () => listCotizaciones() });
+  const { data: costosMes = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const periodoMes = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const costoMensualPorTipo: Record<string, number> = {};
+  for (const row of costosMes as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
+    if (String(row.periodo).slice(0, 7) === periodoMes) costoMensualPorTipo[row.tipo] = Number(row.costo_m2);
+  }
   const [editing, setEditing] = useState<Cotizacion | null>(null);
   const [preview, setPreview] = useState<{ data: CotizacionPDF; cot?: Cotizacion } | null>(null);
   const [enviarCorreoAuto, setEnviarCorreoAuto] = useState(true);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null; precio_m2?: number | null; bobina?: { proveedor?: string | null; costo_m2?: number | null } | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
         largo_m: Number(it.largo_m), ancho_m: Number(it.ancho_m),
@@ -74,6 +80,12 @@ function CotizacionesPage() {
         color_nombre: it.color_nombre ?? null,
         tipo: it.tipo ?? "Ondulado",
         espesor_mm: Number(it.espesor_mm ?? 0.4),
+        precio_m2: Number(it.precio_m2) > 0 ? Number(it.precio_m2) : null,
+        // Costo real de la bobina asignada a la plancha (o el costo mensual del tipo).
+        costo_m2: Number(it.bobina?.costo_m2) > 0
+          ? Number(it.bobina?.costo_m2)
+          : (costoMensualPorTipo[it.tipo ?? ""] ?? null),
+        bobina_proveedor: it.bobina?.proveedor ?? null,
       }));
     const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
@@ -409,6 +421,8 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
       {generalError && <p className="text-xs text-destructive" role="alert">{generalError}</p>}
       {items.map((it, i) => {
         const er = errors?.[i] ?? {};
+        const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
+        const costoLinea = costoM2Linea(estado.bobina, costoPorTipo[it.tipo] ?? 0);
         return (
         <div key={i} className="w-full min-w-0 space-y-3 overflow-hidden rounded-md border bg-muted/20 p-3">
           <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_5rem_2.5rem] md:items-end">
@@ -471,14 +485,16 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
 
           {(() => {
             const opciones = bobinasDeColor(bobinas, it.color_id);
-            const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
             const sug = sugerenciaFifo(bobinas, it.color_id, calc[i].m2);
+            const alternativas = alternativasFifo(bobinas, it.color_id, calc[i].m2, estado.bobina?.id ?? null);
+            const siguiente = siguienteBobinaFifo(bobinas, it.color_id, calc[i].m2, estado.bobina?.id ?? null);
+            const asignar = (id: string) => setItems(items.map((x, idx) => idx === i ? { ...x, bobina_id: id } : x));
             return (
               <div className={`w-full min-w-0 space-y-1 rounded-md border p-3 ${estado.excede ? "border-destructive bg-destructive/10" : "bg-background"}`}>
                 <Label className="text-[10px]">Bobina (proveedor · FIFO)</Label>
                 <select
                   value={it.bobina_id ?? ""}
-                  onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, bobina_id: e.target.value } : x))}
+                  onChange={(e) => asignar(e.target.value)}
                   className={`h-9 w-full rounded-md border bg-background px-3 text-xs shadow-sm outline-none focus:ring-1 focus:ring-ring ${estado.excede ? "border-destructive text-destructive" : "border-input"}`}
                 >
                   <option value="">
@@ -486,25 +502,70 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
                   </option>
                   {opciones.map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.proveedor} · {new Date(b.fecha_ingreso).toLocaleDateString("es-CL")} · saldo {b.saldo_m.toFixed(2)} m
+                      {b.proveedor} · {new Date(b.fecha_ingreso).toLocaleDateString("es-CL")} · saldo {b.saldo_m.toFixed(2)} m · costo {formatCLP(b.costo_m2)}/m²
                     </option>
                   ))}
                 </select>
                 {estado.excede ? (
-                  <p className="text-[11px] font-semibold text-destructive" role="alert">
-                    Stock insuficiente: faltan {estado.faltante.toFixed(2)} m en esta bobina
-                    (saldo {estado.saldo.toFixed(2)} m). Cambia de bobina o proveedor, o reduce los metros.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-[11px] font-semibold text-destructive" role="alert">
+                      Stock insuficiente: faltan {estado.faltante.toFixed(2)} m en esta bobina
+                      (saldo {estado.saldo.toFixed(2)} m). Cambia de bobina o proveedor, o reduce los metros.
+                    </p>
+                    {siguiente ? (
+                      <>
+                        <Button
+                          type="button" size="sm" variant="outline"
+                          className="h-8 w-full text-[11px] md:w-auto"
+                          onClick={() => {
+                            asignar(siguiente.id);
+                            toast.success(
+                              `Línea ${i + 1}: bobina cambiada a ${siguiente.proveedor} (saldo ${siguiente.saldo_m.toFixed(2)} m).`,
+                            );
+                          }}
+                        >
+                          Usar siguiente bobina FIFO: {siguiente.proveedor} · {siguiente.saldo_m.toFixed(2)} m
+                        </Button>
+                        {alternativas.length > 1 && (
+                          <div className="flex flex-wrap gap-1">
+                            {alternativas.slice(1, 4).map((b) => (
+                              <button
+                                key={b.id} type="button"
+                                onClick={() => { asignar(b.id); toast.success(`Línea ${i + 1}: bobina ${b.proveedor} asignada.`); }}
+                                className="rounded-full border bg-background px-2 py-1 text-[10px] hover:bg-muted"
+                              >
+                                {b.proveedor} · {b.saldo_m.toFixed(2)} m
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {siguiente.saldo_m < calc[i].m2 && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Ninguna bobina de este color cubre {calc[i].m2.toFixed(2)} m² completos; la alternativa
+                            con mayor saldo es {siguiente.proveedor} ({siguiente.saldo_m.toFixed(2)} m). Divide la
+                            plancha en dos líneas o ingresa una nueva bobina.
+                          </p>
+                        )}
+                      </>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground">
+                        No hay otra bobina de este color con saldo. Registra una compra en Egresos o reduce los metros.
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-[10px] text-muted-foreground">
                     {opciones.length === 0
                       ? "No hay bobinas registradas para este color."
                       : `Saldo disponible en la bobina asignada: ${estado.saldo.toFixed(2)} m`}
+                    {estado.bobina ? ` · ${estado.bobina.proveedor} · costo ${formatCLP(estado.bobina.costo_m2)}/m²` : ""}
                   </p>
                 )}
               </div>
             );
           })()}
+
+
 
 
           <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
@@ -536,20 +597,28 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
                 <div className="px-3 py-2 font-mono font-bold">{formatCLP(ivaBreakdown(calc[i].subtotal).bruto)}</div>
               </div>
               {(() => {
-                const costo = costoPorTipo[it.tipo] ?? 0;
-                if (!costo) return (
+                if (!costoLinea) return (
                   <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
-                    Define el costo por m² en Configuración para ver el % de ganancia.
+                    Asigna una bobina o define el costo por m² en Configuración para ver el % de ganancia.
                   </div>
                 );
-                const m = margenM2(calc[i].precio_m2, costo);
+                const m = margenM2(calc[i].precio_m2, costoLinea);
+                const gan = Math.round(m.ganancia * calc[i].m2);
                 return (
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2 text-[11px]">
-                    <span className="text-muted-foreground">Costo {formatCLP(costo)} / m²</span>
-                    <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
-                      Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
-                    </span>
-                    <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                  <div className="space-y-1 border-t bg-muted/20 px-3 py-2 text-[11px]">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-muted-foreground">Costo {formatCLP(costoLinea)} / m²</span>
+                      <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
+                        Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
+                      </span>
+                      <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {estado.bobina
+                        ? `Costo real de la bobina ${estado.bobina.proveedor}`
+                        : "Costo mensual del tipo (sin bobina asignada)"}
+                      {" · "}Ganancia de la línea: <span className="font-mono">{formatCLP(gan)}</span>
+                    </p>
                   </div>
                 );
               })()}
@@ -589,7 +658,7 @@ function usePreciosTipo() {
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null; bobina_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const precios = usePreciosTipo();
   const [form, setForm] = useState({
@@ -615,6 +684,7 @@ function EditarCotizacionDialog({
         largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
         color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
         precio: it.precio_m2 == null ? "" : String(Number(it.precio_m2)),
+        bobina_id: it.bobina_id ?? "",
       })));
     } else {
       setItems([{ largo: String(cot.largo_m), cantidad: String(cot.cantidad_planchas ?? 1), color_id: "", tipo: "Ondulado" }]);

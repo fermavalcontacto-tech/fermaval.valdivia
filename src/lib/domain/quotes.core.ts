@@ -509,3 +509,45 @@ export function evaluarStockLinea(
   const faltante = Number(Math.max(0, need - saldo).toFixed(2));
   return { excede: need > 0 && faltante > 0, faltante, saldo, bobina };
 }
+
+/**
+ * Alternativas FIFO para una línea: bobinas del mismo color (idealmente de otro
+ * proveedor) con saldo suficiente, ordenadas por antigüedad de ingreso.
+ * Si ninguna alcanza los metros pedidos, devuelve las que tengan algo de saldo
+ * ordenadas de mayor a menor saldo para que el administrador decida.
+ */
+export function alternativasFifo(
+  bobinas: BobinaSaldo[],
+  colorId: string | null | undefined,
+  metros: number,
+  excluirId?: string | null,
+): BobinaSaldo[] {
+  const need = Number(metros) || 0;
+  const list = bobinasDeColor(bobinas, colorId).filter(
+    (b) => b.saldo_m > 0 && b.id !== (excluirId ?? ""),
+  );
+  const suficientes = list.filter((b) => b.saldo_m >= need);
+  if (suficientes.length) return suficientes;
+  return list.slice().sort((a, b) => b.saldo_m - a.saldo_m);
+}
+
+/** Siguiente bobina FIFO utilizable distinta de la actual (o null si no hay). */
+export function siguienteBobinaFifo(
+  bobinas: BobinaSaldo[],
+  colorId: string | null | undefined,
+  metros: number,
+  actualId?: string | null,
+): BobinaSaldo | null {
+  return alternativasFifo(bobinas, colorId, metros, actualId)[0] ?? null;
+}
+
+/**
+ * Costo real por m² de una línea: el de la bobina asignada (compra real del
+ * proveedor) y, si no hay bobina, el costo mensual configurado para el tipo.
+ */
+export function costoM2Linea(bobina: BobinaSaldo | null | undefined, costoTipo = 0): number {
+  const cb = Number(bobina?.costo_m2);
+  if (Number.isFinite(cb) && cb > 0) return cb;
+  const ct = Number(costoTipo);
+  return Number.isFinite(ct) && ct > 0 ? ct : 0;
+}
