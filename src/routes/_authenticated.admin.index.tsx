@@ -188,7 +188,7 @@ function AnalyticsSection() {
         <Stat icon={TrendingUp} label="Ventas totales" value={formatCLP(data?.ventas ?? 0)} accent />
         <Stat icon={Receipt} label="Gastos totales" value={formatCLP(data?.gastos ?? 0)} tone="neg" />
         <Stat icon={Calculator} label="IVA estimado (19%)" value={formatCLP(data?.iva ?? 0)} />
-        <Stat icon={Wallet} label="Balance del periodo" value={formatCLP(data?.balance ?? 0)} tone={(data?.balance ?? 0) >= 0 ? "pos" : "neg"} />
+        <Stat icon={Wallet} label="Utilidades del periodo" value={formatCLP(data?.balance ?? 0)} tone={(data?.balance ?? 0) >= 0 ? "pos" : "neg"} />
       </div>
 
       <Card className="p-5">
