@@ -457,15 +457,41 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
               </p>
             </div>
             <div className="w-full min-w-0 overflow-hidden rounded-md border bg-background text-sm">
-              <div className="grid grid-cols-2 border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="grid grid-cols-3 border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="border-r px-3 py-1.5"></div>
                 <div className="border-r px-3 py-1.5">Neto</div>
                 <div className="px-3 py-1.5">Bruto (c/IVA 19%)</div>
               </div>
-              <div className="grid grid-cols-2">
+              <div className="grid grid-cols-3 border-b text-xs">
+                <div className="border-r px-3 py-2 text-muted-foreground">$ / m²</div>
+                <div className="border-r px-3 py-2 font-mono">{formatCLP(calc[i].precio_m2)}</div>
+                <div className="px-3 py-2 font-mono">{formatCLP(brutoFromNeto(calc[i].precio_m2))}</div>
+              </div>
+              <div className="grid grid-cols-3">
+                <div className="border-r px-3 py-2 text-xs text-muted-foreground">Subtotal</div>
                 <div className="border-r px-3 py-2 font-mono font-semibold">{formatCLP(ivaBreakdown(calc[i].subtotal).neto)}</div>
                 <div className="px-3 py-2 font-mono font-bold">{formatCLP(ivaBreakdown(calc[i].subtotal).bruto)}</div>
               </div>
+              {(() => {
+                const costo = costoPorTipo[it.tipo] ?? 0;
+                if (!costo) return (
+                  <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
+                    Define el costo por m² en Configuración para ver el % de ganancia.
+                  </div>
+                );
+                const m = margenM2(calc[i].precio_m2, costo);
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2 text-[11px]">
+                    <span className="text-muted-foreground">Costo {formatCLP(costo)} / m²</span>
+                    <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
+                      Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
+                    </span>
+                    <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                  </div>
+                );
+              })()}
             </div>
+
           </div>
 
         </div>
