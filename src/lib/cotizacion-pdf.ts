@@ -12,6 +12,10 @@ export type CotizacionItem = {
   tipo?: string | null;
   espesor_mm?: number | null;
   precio_m2?: number | null;
+  /** Costo neto por m² (bobina asignada o costo mensual del tipo). Uso interno. */
+  costo_m2?: number | null;
+  /** Proveedor de la bobina asignada. Uso interno. */
+  bobina_proveedor?: string | null;
 };
 
 /** Precio por m² de la línea: el guardado en la línea o, si no hay, el de la cotización. */
@@ -45,6 +49,8 @@ export type CotizacionPDF = {
   responsable_nombre?: string | null;
   /** Modo de precio visible para el cliente: neto (default) o bruto (IVA incluido). */
   precio_modo?: "neto" | "bruto";
+  /** Cuando es true, agrega un bloque interno con costo, ganancia y % por m². */
+  mostrar_margen?: boolean;
 
 };
 
