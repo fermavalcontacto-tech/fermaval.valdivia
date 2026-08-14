@@ -65,7 +65,7 @@ function CotizacionesPage() {
   const [enviarCorreoAuto, setEnviarCorreoAuto] = useState(true);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null; precio_m2?: number | null; bobina?: { proveedor?: string | null; costo_m2?: number | null } | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
         largo_m: Number(it.largo_m), ancho_m: Number(it.ancho_m),
@@ -74,6 +74,12 @@ function CotizacionesPage() {
         color_nombre: it.color_nombre ?? null,
         tipo: it.tipo ?? "Ondulado",
         espesor_mm: Number(it.espesor_mm ?? 0.4),
+        precio_m2: Number(it.precio_m2) > 0 ? Number(it.precio_m2) : null,
+        // Costo real de la bobina asignada a la plancha (o el costo mensual del tipo).
+        costo_m2: Number(it.bobina?.costo_m2) > 0
+          ? Number(it.bobina?.costo_m2)
+          : (costoMensualPorTipo[it.tipo ?? ""] ?? null),
+        bobina_proveedor: it.bobina?.proveedor ?? null,
       }));
     const origen = (c as { origen?: string }).origen ?? "cliente";
     return {
