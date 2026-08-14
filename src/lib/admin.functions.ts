@@ -84,7 +84,7 @@ async function discountStockForCotizacion(
   if (!cot || cot.stock_descontado_at) return;
   const { data: items } = await supabase
     .from("cotizacion_items")
-    .select("color_id, color_nombre, tipo, espesor_mm, metros2")
+    .select("id, color_id, color_nombre, tipo, espesor_mm, metros2, bobina_id")
     .eq("cotizacion_id", cotId);
   const byColor = new Map<string, { color_id: string; color_nombre: string | null; tipo: string | null; espesor: number; metros: number }>();
   for (const it of items ?? []) {
@@ -118,7 +118,25 @@ async function discountStockForCotizacion(
       user_id: userId, user_email: userEmail,
     });
   }
+  // Consumo FIFO por bobina/proveedor: se descuenta primero la bobina más antigua
+  // del color (respetando la bobina asignada manualmente en la línea, si existe).
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    for (const it of items ?? []) {
+      if (!it.color_id || !Number(it.metros2)) continue;
+      await supabaseAdmin.rpc("consumir_stock_fifo", {
+        _color_id: it.color_id,
+        _metros: Number(it.metros2),
+        _cotizacion_id: cotId,
+        _item_id: it.id,
+        _bobina_preferida: it.bobina_id ?? null,
+      });
+    }
+  } catch (e) {
+    console.error("consumir_stock_fifo falló:", (e as Error).message);
+  }
   await supabase.from("cotizaciones").update({ stock_descontado_at: new Date().toISOString() }).eq("id", cotId);
+
 }
 
 async function restoreStockForCotizacion(
