@@ -201,7 +201,7 @@ function QuotePage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
                 <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m²</dt><dd>{formatCLP(Number(cot.precio_m2))}</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m² (neto)</dt><dd>{formatCLP(Number(cot.precio_m2))} neto</dd></div>
                 <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>
