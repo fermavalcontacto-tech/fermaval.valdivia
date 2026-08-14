@@ -1675,8 +1675,8 @@ export const createBobina = createServerFn({ method: "POST" })
       _metros: data.metros_comprados,
       _valor: data.valor_total,
       _fecha: fecha,
-      _egreso_id: null,
-      _nota: data.nota ?? null,
+      _egreso_id: undefined,
+      _nota: data.nota ?? undefined,
       _created_by: context.userId,
     });
     if (error) throw new Error(error.message);
@@ -1695,7 +1695,7 @@ export const updateBobina = createServerFn({ method: "POST" })
     const { data: prev } = await context.supabase
       .from("bobinas").select("metros_utiles, valor_total, proveedor").eq("id", data.id).single();
     if (!prev) throw new Error("Bobina no encontrada");
-    const patch: Record<string, unknown> = {};
+    const patch: { proveedor?: string; nota?: string | null; valor_total?: number; costo_m2?: number } = {};
     if (data.proveedor) patch.proveedor = data.proveedor;
     if (data.nota !== undefined) patch.nota = data.nota;
     if (data.valor_total !== undefined) {
