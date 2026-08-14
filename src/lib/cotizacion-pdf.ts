@@ -343,7 +343,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     { x: 15, w: 10, label: "#", align: "left" as const },
     { x: 25, w: 80, label: "Descripción", align: "left" as const },
     { x: 105, w: 18, label: "Cant.", align: "right" as const },
-    { x: 123, w: 32, label: "Precio Unit.", align: "right" as const },
+    { x: 123, w: 32, label: "$ / m² neto", align: "right" as const },
     { x: 155, w: 40, label: "Total", align: "right" as const },
   ];
   const tableX = 15;
