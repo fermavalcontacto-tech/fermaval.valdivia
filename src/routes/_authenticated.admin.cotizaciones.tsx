@@ -48,7 +48,7 @@ type Cotizacion = {
   descuento: number; total: number; pago_recibido: number; saldo: number;
   color_nombre: string | null; estado: Estado; cliente_id: string;
   responsable_nombre?: string | null;
-  cliente: { id?: string; nombre?: string; rut?: string; correo?: string; telefono?: string; direccion?: string } | null;
+  cliente: { id?: string; nombre?: string; giro?: string; rut?: string; correo?: string; telefono?: string; direccion?: string } | null;
 };
 
 function CotizacionesPage() {
@@ -76,6 +76,7 @@ function CotizacionesPage() {
       fecha: c.created_at,
       cliente: {
         nombre: c.cliente?.nombre ?? "—",
+        giro: c.cliente?.giro ?? "",
         rut: c.cliente?.rut ?? "",
         correo: c.cliente?.correo ?? "",
         telefono: c.cliente?.telefono ?? "—",
@@ -283,7 +284,7 @@ function CotizacionesPage() {
 type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string };
 type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string };
 type FormErrors = {
-  nombre?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
+  nombre?: string; giro?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
   precio_m2?: string; descuento?: string; pago_recibido?: string;
   responsable?: string; fecha_solicitud?: string;
   items?: ItemErrors[]; itemsGeneral?: string;
@@ -312,14 +313,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[+0-9\s()-]{6,20}$/;
 
 function validateCotizacion(
-  form: { nombre: string; rut?: string; telefono: string; correo: string; direccion?: string; precio_m2: string; descuento?: string; pago_recibido?: string; responsable?: string; fecha_solicitud?: string },
+  form: { nombre: string; giro?: string; rut?: string; telefono: string; correo: string; direccion?: string; precio_m2: string; descuento?: string; pago_recibido?: string; responsable?: string; fecha_solicitud?: string },
   items: ItemForm[],
   opts: { requireResponsable?: boolean; requireFecha?: boolean; today?: string; allowFuture?: boolean } = {},
 ): { ok: boolean; errors: FormErrors } {
   const errors: FormErrors = {};
   const nombre = form.nombre.trim();
-  if (!nombre) errors.nombre = "El nombre es obligatorio";
-  else if (nombre.length > 100) errors.nombre = "Máximo 100 caracteres";
+  if (nombre.length > 160) errors.nombre = "Máximo 160 caracteres";
   if (!isValidRut(form.rut ?? "")) errors.rut = RUT_INVALID_MESSAGE;
   const tel = form.telefono.trim();
   if (tel && !PHONE_RE.test(tel)) errors.telefono = "Teléfono inválido (6-20 dígitos)";
@@ -494,7 +494,7 @@ function EditarCotizacionDialog({
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const precios = usePreciosTipo();
   const [form, setForm] = useState({
-    nombre: "", rut: "", telefono: "", correo: "", direccion: "",
+    nombre: "", giro: "", rut: "", telefono: "", correo: "", direccion: "",
     color: "", precio_m2: "0", responsable: "",
     descuento: "0", pago_recibido: "0", estado: "cotizacion_creada" as Estado,
   });
@@ -503,7 +503,7 @@ function EditarCotizacionDialog({
   useEffect(() => {
     if (!cot) return;
     setForm({
-      nombre: cot.cliente?.nombre ?? "", rut: cot.cliente?.rut ?? "", telefono: cot.cliente?.telefono ?? "",
+      nombre: cot.cliente?.nombre ?? "", giro: cot.cliente?.giro ?? "", rut: cot.cliente?.rut ?? "", telefono: cot.cliente?.telefono ?? "",
       correo: cot.cliente?.correo ?? "", direccion: cot.cliente?.direccion ?? "",
       color: cot.color_nombre ?? "", precio_m2: String(cot.precio_m2),
       descuento: String(cot.descuento ?? 0), pago_recibido: String(cot.pago_recibido),
@@ -532,7 +532,7 @@ function EditarCotizacionDialog({
       id: cot!.id,
       cliente: {
         id: cot!.cliente_id,
-        nombre: form.nombre, rut: form.rut,
+        nombre: form.nombre, giro: form.giro, rut: form.rut,
         telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
@@ -551,8 +551,9 @@ function EditarCotizacionDialog({
       <DialogContent className={QUOTE_DIALOG_CLASS}>
         <DialogHeader><DialogTitle>Editar cotización {cot?.numero}</DialogTitle></DialogHeader>
         <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
-          <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Nombre o razón social (opcional)</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>RUT (opcional)</Label><Input className="w-full" placeholder="12345678-5" value={form.rut} aria-invalid={!!errors.rut} onChange={(e)=>setForm({...form, rut: sanitizeRutInput(e.target.value)})} /><FieldError msg={errors.rut} /></div>
+          <div className="w-full min-w-0 space-y-1"><Label>Giro o actividad (opcional)</Label><Input className="w-full" placeholder="Ej: Construcción" value={form.giro} onChange={(e)=>setForm({...form, giro: e.target.value})} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
@@ -602,7 +603,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const [open, setOpen] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [form, setForm] = useState({
-    nombre: "", rut: "", telefono: "", correo: "", direccion: "", color: "",
+    nombre: "", giro: "", rut: "", telefono: "", correo: "", direccion: "", color: "",
     precio_m2: "7990", fecha_solicitud: today,
     responsable: PERSONAS_INTERNAS[0] as string,
   });
@@ -622,7 +623,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const precioPromedioCalc = m2Total > 0 ? Math.round(totalCalc / m2Total) : parseDecimal(form.precio_m2);
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
-      cliente: { nombre: form.nombre, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
+      cliente: { nombre: form.nombre, giro: form.giro, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
       items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
@@ -638,7 +639,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       const pdfData: CotizacionPDF = {
         numero: r.numero,
         fecha: new Date().toISOString(),
-        cliente: { nombre: form.nombre, rut: form.rut, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
+        cliente: { nombre: form.nombre, giro: form.giro, rut: form.rut, correo: form.correo, telefono: form.telefono, direccion: form.direccion },
         largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas, metros2: m2Total,
         items: its,
         color_nombre: form.color || null,
@@ -683,8 +684,9 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         {!reviewing && (
           <>
             <div className="quote-mobile-grid grid w-full min-w-0 grid-cols-2 gap-3">
-              <div className="w-full min-w-0 space-y-1"><Label>Nombre *</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Nombre o razón social (opcional)</Label><Input className="w-full" value={form.nombre} aria-invalid={!!errors.nombre} onChange={(e)=>setForm({...form, nombre: e.target.value})} /><FieldError msg={errors.nombre} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>RUT (opcional)</Label><Input className="w-full" placeholder="12345678-5" value={form.rut} aria-invalid={!!errors.rut} onChange={(e)=>setForm({...form, rut: sanitizeRutInput(e.target.value)})} /><FieldError msg={errors.rut} /></div>
+              <div className="w-full min-w-0 space-y-1"><Label>Giro o actividad (opcional)</Label><Input className="w-full" placeholder="Ej: Construcción" value={form.giro} onChange={(e)=>setForm({...form, giro: e.target.value})} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
@@ -737,6 +739,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                   <div><span className="text-muted-foreground">Teléfono:</span> {form.telefono || "—"}</div>
                   <div><span className="text-muted-foreground">Correo:</span> {form.correo || "—"}</div>
                   <div><span className="text-muted-foreground">RUT:</span> {form.rut || "—"}</div>
+                  <div><span className="text-muted-foreground">Giro / actividad:</span> {form.giro || "—"}</div>
                   <div><span className="text-muted-foreground">Dirección:</span> {form.direccion || "—"}</div>
                 </div>
               </section>

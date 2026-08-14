@@ -186,7 +186,8 @@ export function isLegacyVariantStockError(error: unknown): boolean {
 // rojos con JSON técnico en el Portal del Cliente o en el Panel Administrativo.
 
 const FIELD_LABELS: Record<string, string> = {
-  nombre: "Nombre",
+  nombre: "Nombre o razón social",
+  giro: "Giro o actividad",
   rut: "RUT",
   telefono: "Teléfono",
   correo: "Correo",

@@ -23,7 +23,7 @@ function itemPrecio(it: CotizacionItem, c: { precio_m2: number }): number {
 export type CotizacionPDF = {
   numero: string;
   fecha: string;
-  cliente: { nombre: string; rut?: string; correo: string; telefono: string; direccion: string };
+  cliente: { nombre: string; giro?: string; rut?: string; correo: string; telefono: string; direccion: string };
   largo_m: number;
   ancho_m: number;
   cantidad_planchas?: number;
@@ -322,6 +322,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const endA = infoBlock(doc, 15, blockY, blockW, "Datos del cliente", [
     ["Cliente:", c.cliente.nombre || "No informado"],
     ["RUT:", c.cliente.rut || "No informado"],
+    ["Giro / actividad:", c.cliente.giro || "No informado"],
     ["Correo:", c.cliente.correo || "No informado"],
     ["Teléfono:", c.cliente.telefono || "No informado"],
     ["Dirección:", c.cliente.direccion || "No informado"],
