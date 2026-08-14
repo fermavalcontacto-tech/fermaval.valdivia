@@ -50,6 +50,140 @@ export type Database = {
         }
         Relationships: []
       }
+      bobina_consumos: {
+        Row: {
+          bobina_id: string
+          costo_m2_snapshot: number
+          cotizacion_id: string | null
+          cotizacion_item_id: string | null
+          created_at: string
+          id: string
+          metros: number
+          motivo: string
+        }
+        Insert: {
+          bobina_id: string
+          costo_m2_snapshot?: number
+          cotizacion_id?: string | null
+          cotizacion_item_id?: string | null
+          created_at?: string
+          id?: string
+          metros: number
+          motivo?: string
+        }
+        Update: {
+          bobina_id?: string
+          costo_m2_snapshot?: number
+          cotizacion_id?: string | null
+          cotizacion_item_id?: string | null
+          created_at?: string
+          id?: string
+          metros?: number
+          motivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bobina_consumos_bobina_id_fkey"
+            columns: ["bobina_id"]
+            isOneToOne: false
+            referencedRelation: "bobinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bobina_consumos_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bobina_consumos_cotizacion_item_id_fkey"
+            columns: ["cotizacion_item_id"]
+            isOneToOne: false
+            referencedRelation: "cotizacion_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bobinas: {
+        Row: {
+          color_id: string | null
+          color_nombre: string | null
+          costo_m2: number
+          created_at: string
+          created_by: string | null
+          egreso_id: string | null
+          fecha_ingreso: string
+          id: string
+          metros_comprados: number
+          metros_perdida: number
+          metros_utiles: number
+          nota: string | null
+          proveedor: string
+          saldo_m: number
+          updated_at: string
+          valor_total: number
+        }
+        Insert: {
+          color_id?: string | null
+          color_nombre?: string | null
+          costo_m2?: number
+          created_at?: string
+          created_by?: string | null
+          egreso_id?: string | null
+          fecha_ingreso?: string
+          id?: string
+          metros_comprados: number
+          metros_perdida?: number
+          metros_utiles?: number
+          nota?: string | null
+          proveedor: string
+          saldo_m?: number
+          updated_at?: string
+          valor_total?: number
+        }
+        Update: {
+          color_id?: string | null
+          color_nombre?: string | null
+          costo_m2?: number
+          created_at?: string
+          created_by?: string | null
+          egreso_id?: string | null
+          fecha_ingreso?: string
+          id?: string
+          metros_comprados?: number
+          metros_perdida?: number
+          metros_utiles?: number
+          nota?: string | null
+          proveedor?: string
+          saldo_m?: number
+          updated_at?: string
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bobinas_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bobinas_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bobinas_egreso_id_fkey"
+            columns: ["egreso_id"]
+            isOneToOne: false
+            referencedRelation: "solicitudes_egreso"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       boletas: {
         Row: {
           archivo_nombre: string | null
@@ -313,6 +447,7 @@ export type Database = {
       cotizacion_items: {
         Row: {
           ancho_m: number
+          bobina_id: string | null
           cantidad_planchas: number
           color_id: string | null
           color_nombre: string | null
@@ -328,6 +463,7 @@ export type Database = {
         }
         Insert: {
           ancho_m?: number
+          bobina_id?: string | null
           cantidad_planchas?: number
           color_id?: string | null
           color_nombre?: string | null
@@ -343,6 +479,7 @@ export type Database = {
         }
         Update: {
           ancho_m?: number
+          bobina_id?: string | null
           cantidad_planchas?: number
           color_id?: string | null
           color_nombre?: string | null
@@ -357,6 +494,13 @@ export type Database = {
           tipo?: Database["public"]["Enums"]["tipo_producto"]
         }
         Relationships: [
+          {
+            foreignKeyName: "cotizacion_items_bobina_id_fkey"
+            columns: ["bobina_id"]
+            isOneToOne: false
+            referencedRelation: "bobinas"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cotizacion_items_color_id_fkey"
             columns: ["color_id"]
@@ -669,6 +813,8 @@ export type Database = {
       }
       solicitudes_egreso: {
         Row: {
+          bobina_color_id: string | null
+          bobina_metros: number | null
           boleta_subida_por: string | null
           created_at: string
           decidido_at: string | null
@@ -679,11 +825,15 @@ export type Database = {
           id: string
           latas: Json
           monto: number
+          proveedor: string | null
           solicitado_por: string
           solicitante_id: string
           tipo: Database["public"]["Enums"]["expense_type"]
+          valor: number | null
         }
         Insert: {
+          bobina_color_id?: string | null
+          bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
           decidido_at?: string | null
@@ -694,11 +844,15 @@ export type Database = {
           id?: string
           latas?: Json
           monto: number
+          proveedor?: string | null
           solicitado_por: string
           solicitante_id: string
           tipo: Database["public"]["Enums"]["expense_type"]
+          valor?: number | null
         }
         Update: {
+          bobina_color_id?: string | null
+          bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
           decidido_at?: string | null
@@ -709,11 +863,28 @@ export type Database = {
           id?: string
           latas?: Json
           monto?: number
+          proveedor?: string | null
           solicitado_por?: string
           solicitante_id?: string
           tipo?: Database["public"]["Enums"]["expense_type"]
+          valor?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "solicitudes_egreso_bobina_color_id_fkey"
+            columns: ["bobina_color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "solicitudes_egreso_bobina_color_id_fkey"
+            columns: ["bobina_color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_movimientos: {
         Row: {
@@ -906,8 +1077,42 @@ export type Database = {
         }
         Relationships: []
       }
+      v_perdidas_m2: {
+        Row: {
+          color_nombre: string | null
+          costo_perdida: number | null
+          m2_perdida: number | null
+          metros_perdida: number | null
+          periodo: string | null
+          proveedor: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      consumir_stock_fifo: {
+        Args: {
+          _bobina_preferida?: string
+          _color_id: string
+          _cotizacion_id?: string
+          _item_id?: string
+          _metros: number
+        }
+        Returns: number
+      }
+      crear_bobina: {
+        Args: {
+          _color_id: string
+          _created_by?: string
+          _egreso_id?: string
+          _fecha?: string
+          _metros: number
+          _nota?: string
+          _proveedor: string
+          _valor: number
+        }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
