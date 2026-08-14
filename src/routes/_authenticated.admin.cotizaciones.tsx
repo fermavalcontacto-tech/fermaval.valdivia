@@ -747,7 +747,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
                       <div><span className="text-muted-foreground">Largo:</span> <span className="font-mono">{it.largo.toFixed(2)} m</span></div>
                       <div><span className="text-muted-foreground">Cant.:</span> <span className="font-mono">{it.cantidad}</span></div>
                       <div><span className="text-muted-foreground">m²:</span> <span className="font-mono font-semibold">{it.m2.toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground">$ / m²:</span> <span className="font-mono">{formatCLP(it.precio_m2)}</span></div>
+                      <div><span className="text-muted-foreground">$ / m² neto:</span> <span className="font-mono">{formatCLP(it.precio_m2)}</span></div>
                       <div className="col-span-2"><span className="text-muted-foreground">Subtotal:</span> <span className="font-mono font-semibold">{formatCLP(it.subtotal)}</span></div>
                     </div>
                   ))}
