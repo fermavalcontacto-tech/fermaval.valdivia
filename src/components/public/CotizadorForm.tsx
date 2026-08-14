@@ -196,7 +196,26 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
           {itemsCalc.some((x) => x.m2 > 0) && (
             <div className="w-full min-w-0 rounded-md border bg-background p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Detalle del pedido</div>
-              <div className="w-full overflow-x-auto">
+              <div className="space-y-2 md:hidden">
+                {itemsCalc.map((it, i) => (
+                  <div key={i} className="rounded-md border p-2 text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-semibold">#{i + 1} · {it.tipo}</span>
+                      <span className="font-mono font-semibold text-primary">{formatCLP(it.subtotal)}</span>
+                    </div>
+                    <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-muted-foreground">
+                      <div className="flex justify-between"><dt>Color</dt><dd className="font-mono text-foreground">{colorMap.get(it.color_id)?.nombre ?? "—"}</dd></div>
+                      <div className="flex justify-between"><dt>Espesor</dt><dd className="font-mono text-foreground">0,4 mm</dd></div>
+                      <div className="flex justify-between"><dt>Largo</dt><dd className="font-mono text-foreground">{it.largo} m</dd></div>
+                      <div className="flex justify-between"><dt>Cant.</dt><dd className="font-mono text-foreground">{it.cantidad}</dd></div>
+                      <div className="flex justify-between"><dt>m²</dt><dd className="font-mono text-foreground">{it.m2.toFixed(2)}</dd></div>
+                      <div className="flex justify-between"><dt>$ / m² neto</dt><dd className="font-mono text-foreground">{formatCLP(it.precio_m2)}</dd></div>
+                    </dl>
+                  </div>
+                ))}
+                <p className="text-[10px] text-muted-foreground">Precios netos, no incluyen IVA.</p>
+              </div>
+              <div className="hidden w-full overflow-x-auto md:block">
                 <table className="w-full text-sm">
                   <thead className="text-xs text-muted-foreground">
                     <tr className="border-b">
