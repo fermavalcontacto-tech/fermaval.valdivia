@@ -221,6 +221,7 @@ export type Database = {
           mapa_embed: string
           mapa_url: string
           marca_texto: string
+          precio_cliente_modo: string
           precio_m2: number
           productos_titulo: string
           telefono: string
@@ -244,6 +245,7 @@ export type Database = {
           mapa_embed?: string
           mapa_url?: string
           marca_texto?: string
+          precio_cliente_modo?: string
           precio_m2?: number
           productos_titulo?: string
           telefono?: string
@@ -267,9 +269,43 @@ export type Database = {
           mapa_embed?: string
           mapa_url?: string
           marca_texto?: string
+          precio_cliente_modo?: string
           precio_m2?: number
           productos_titulo?: string
           telefono?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      costos_m2: {
+        Row: {
+          costo_m2: number
+          created_at: string
+          created_by: string | null
+          id: string
+          nota: string | null
+          periodo: string
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at: string
+        }
+        Insert: {
+          costo_m2?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nota?: string | null
+          periodo: string
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Update: {
+          costo_m2?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nota?: string | null
+          periodo?: string
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
           updated_at?: string
         }
         Relationships: []

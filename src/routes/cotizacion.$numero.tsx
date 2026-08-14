@@ -11,6 +11,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
 import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
+import { normalizePrecioModo, precioModoLabel, precioParaCliente } from "@/lib/domain/quotes.core";
+
 
 function maskCorreo(c: string | null | undefined): string {
   if (!c) return "—";
@@ -70,7 +72,7 @@ const getQuote = createServerFn({ method: "GET" })
       }));
     }
     const { data: cfg } = await supabaseAdmin
-      .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url").eq("id", 1).single();
+      .from("configuracion_web").select("info_comercial, telefono, direccion, instagram, linktree_url, precio_cliente_modo").eq("id", 1).single();
     return { cot: safeCot as typeof cot | null, items, cfg };
   });
 
@@ -127,6 +129,10 @@ function QuotePage() {
   const cot = data.cot;
   const cliente = cot.cliente as { nombre: string; giro?: string; rut?: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
+  const modo = normalizePrecioModo(data.cfg?.precio_cliente_modo);
+  const modoLabel = precioModoLabel(modo);
+  const showP = (neto: number) => precioParaCliente(neto, modo);
+
 
   function buildPdf(): CotizacionPDF {
     const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2), tipo: null, espesor_mm: null, color_nombre: null, precio_m2: null }])
@@ -149,6 +155,8 @@ function QuotePage() {
       estado: ESTADO_LABEL[cot.estado] ?? cot.estado,
       aprobador_nombre: "", aprobador_email: "", aprobado_at: "",
       origen: "cliente",
+      precio_modo: modo,
+
     };
     return pdf;
   }
@@ -218,7 +226,7 @@ function QuotePage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
                 <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m² (neto)</dt><dd>{formatCLP(Number(cot.precio_m2))} neto</dd></div>
+                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m² ({modoLabel})</dt><dd>{formatCLP(showP(Number(cot.precio_m2)))} {modoLabel}</dd></div>
                 <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>
@@ -259,9 +267,10 @@ function QuotePage() {
 
           <div className="grid gap-4 border-t border-border p-6 md:grid-cols-3">
             <div className="rounded-md bg-muted p-4">
-              <div className="text-xs uppercase text-muted-foreground">Total</div>
-              <div className="font-display text-3xl text-primary">{formatCLP(Number(cot.total))}</div>
+              <div className="text-xs uppercase text-muted-foreground">Total ({modoLabel})</div>
+              <div className="font-display text-3xl text-primary">{formatCLP(showP(Number(cot.total)))}</div>
             </div>
+
             <div className="rounded-md bg-muted p-4">
               <div className="text-xs uppercase text-muted-foreground">Pagado</div>
               <div className="font-display text-3xl text-primary">{formatCLP(Number(cot.pago_recibido))}</div>

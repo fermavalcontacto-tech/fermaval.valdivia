@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { formatCLP } from "@/lib/format";
 import { createPublicQuote } from "@/lib/public.functions";
-import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage, resolvePrecioItem, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ESPESOR_FIJO_MM, TIPOS_PRODUCTO, isLegacyVariantStockError, publicQuoteErrorMessage, normalizePrecioModo, precioModoLabel, precioParaCliente, resolvePrecioItem, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 
@@ -36,7 +36,11 @@ function clearLegacyVariantToasts() {
   });
 }
 
-export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { precio: number; preciosTipo?: Record<string, number> | null; colores: Color[]; formFields?: Partial<FormFields> | null }) {
+export function CotizadorForm({ precio, preciosTipo, colores, formFields, precioModo }: { precio: number; preciosTipo?: Record<string, number> | null; colores: Color[]; formFields?: Partial<FormFields> | null; precioModo?: string | null }) {
+  const modo = normalizePrecioModo(precioModo);
+  const modoLabel = precioModoLabel(modo);
+  const showP = (neto: number) => precioParaCliente(neto, modo);
+  const notaPrecios = modo === "bruto" ? "Precios con IVA 19% incluido." : "{notaPrecios}";
   const ff: FormFields = {
     nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
     giro: { ...DEFAULT_FIELDS.giro, ...(formFields?.giro ?? {}) },
@@ -183,9 +187,9 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background px-3 py-2 text-xs">
                   <span className="text-muted-foreground">Precio {it.tipo}</span>
-                  <span className="font-mono font-semibold">{formatCLP(calc.precio_m2)} neto / m²</span>
+                  <span className="font-mono font-semibold">{formatCLP(showP(calc.precio_m2))} {modoLabel} / m²</span>
                   <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-mono font-semibold text-primary">{formatCLP(calc.subtotal)}</span>
+                  <span className="font-mono font-semibold text-primary">{formatCLP(showP(calc.subtotal))}</span>
                 </div>
               </div>
             );
@@ -203,7 +207,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                   <div key={i} className="rounded-md border p-2 text-xs">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-semibold">#{i + 1} · {it.tipo}</span>
-                      <span className="font-mono font-semibold text-primary">{formatCLP(it.subtotal)}</span>
+                      <span className="font-mono font-semibold text-primary">{formatCLP(showP(it.subtotal))}</span>
                     </div>
                     <dl className="mt-1 grid grid-cols-2 gap-x-3 gap-y-0.5 text-muted-foreground">
                       <div className="flex justify-between"><dt>Color</dt><dd className="font-mono text-foreground">{colorMap.get(it.color_id)?.nombre ?? "—"}</dd></div>
@@ -211,11 +215,11 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                       <div className="flex justify-between"><dt>Largo</dt><dd className="font-mono text-foreground">{it.largo} m</dd></div>
                       <div className="flex justify-between"><dt>Cant.</dt><dd className="font-mono text-foreground">{it.cantidad}</dd></div>
                       <div className="flex justify-between"><dt>m²</dt><dd className="font-mono text-foreground">{it.m2.toFixed(2)}</dd></div>
-                      <div className="flex justify-between"><dt>$ / m² neto</dt><dd className="font-mono text-foreground">{formatCLP(it.precio_m2)}</dd></div>
+                      <div className="flex justify-between"><dt>$ / m² {modoLabel}</dt><dd className="font-mono text-foreground">{formatCLP(showP(it.precio_m2))}</dd></div>
                     </dl>
                   </div>
                 ))}
-                <p className="text-[10px] text-muted-foreground">Precios netos, no incluyen IVA.</p>
+                <p className="text-[10px] text-muted-foreground">{notaPrecios}</p>
               </div>
               <div className="hidden w-full overflow-x-auto md:block">
                 <table className="w-full text-sm">
@@ -228,7 +232,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                       <th className="py-1 text-right font-medium">Largo</th>
                       <th className="py-1 text-right font-medium">Cant.</th>
                       <th className="py-1 text-right font-medium">m²</th>
-                      <th className="py-1 text-right font-medium">$ / m² neto</th>
+                      <th className="py-1 text-right font-medium">$ / m² {modoLabel}</th>
                       <th className="py-1 text-right font-medium">Subtotal</th>
                     </tr>
                   </thead>
@@ -242,14 +246,14 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields }: { pr
                         <td className="py-1 text-right">{it.largo} m</td>
                         <td className="py-1 text-right">{it.cantidad}</td>
                         <td className="py-1 text-right font-semibold">{it.m2.toFixed(2)}</td>
-                        <td className="py-1 text-right">{formatCLP(it.precio_m2)}</td>
-                        <td className="py-1 text-right font-semibold">{formatCLP(it.subtotal)}</td>
+                        <td className="py-1 text-right">{formatCLP(showP(it.precio_m2))}</td>
+                        <td className="py-1 text-right font-semibold">{formatCLP(showP(it.subtotal))}</td>
                       </tr>
                     ))}
                   </tbody>
 
                 </table>
-                <p className="mt-2 text-[10px] text-muted-foreground">Precios netos, no incluyen IVA.</p>
+                <p className="mt-2 text-[10px] text-muted-foreground">{notaPrecios}</p>
               </div>
             </div>
           )}

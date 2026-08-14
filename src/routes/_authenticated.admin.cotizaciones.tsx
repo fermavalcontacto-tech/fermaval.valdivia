@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -373,6 +373,12 @@ function FieldError({ msg }: { msg?: string }) {
 
 function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0 }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number }) {
   const calc = calcItems(items, precios, precioBase);
+  const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const { data: costos = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const costoPorTipo: Record<string, number> = {};
+  for (const row of costos as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
+    if (String(row.periodo).slice(0, 7) === periodoActual) costoPorTipo[row.tipo] = Number(row.costo_m2);
+  }
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   const totalPesos = calc.reduce((s, x) => s + x.subtotal, 0);
   return (
@@ -457,15 +463,41 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
               </p>
             </div>
             <div className="w-full min-w-0 overflow-hidden rounded-md border bg-background text-sm">
-              <div className="grid grid-cols-2 border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <div className="grid grid-cols-3 border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <div className="border-r px-3 py-1.5"></div>
                 <div className="border-r px-3 py-1.5">Neto</div>
                 <div className="px-3 py-1.5">Bruto (c/IVA 19%)</div>
               </div>
-              <div className="grid grid-cols-2">
+              <div className="grid grid-cols-3 border-b text-xs">
+                <div className="border-r px-3 py-2 text-muted-foreground">$ / m²</div>
+                <div className="border-r px-3 py-2 font-mono">{formatCLP(calc[i].precio_m2)}</div>
+                <div className="px-3 py-2 font-mono">{formatCLP(brutoFromNeto(calc[i].precio_m2))}</div>
+              </div>
+              <div className="grid grid-cols-3">
+                <div className="border-r px-3 py-2 text-xs text-muted-foreground">Subtotal</div>
                 <div className="border-r px-3 py-2 font-mono font-semibold">{formatCLP(ivaBreakdown(calc[i].subtotal).neto)}</div>
                 <div className="px-3 py-2 font-mono font-bold">{formatCLP(ivaBreakdown(calc[i].subtotal).bruto)}</div>
               </div>
+              {(() => {
+                const costo = costoPorTipo[it.tipo] ?? 0;
+                if (!costo) return (
+                  <div className="border-t px-3 py-2 text-[10px] text-muted-foreground">
+                    Define el costo por m² en Configuración para ver el % de ganancia.
+                  </div>
+                );
+                const m = margenM2(calc[i].precio_m2, costo);
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-3 py-2 text-[11px]">
+                    <span className="text-muted-foreground">Costo {formatCLP(costo)} / m²</span>
+                    <span className={m.ganancia >= 0 ? "" : "text-destructive"}>
+                      Ganancia <span className="font-mono font-semibold">{formatCLP(m.ganancia)}</span> / m²
+                    </span>
+                    <span className={`font-semibold ${(m.pct ?? 0) >= 0 ? "" : "text-destructive"}`}>{formatPct(m.pct)}</span>
+                  </div>
+                );
+              })()}
             </div>
+
           </div>
 
         </div>
