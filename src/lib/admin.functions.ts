@@ -1086,6 +1086,10 @@ export const updateBoleta = createServerFn({ method: "POST" })
     monto: z.number().positive(),
     fecha: z.string(),
     responsable: personaSchema.nullable().optional(),
+    proveedor: z.string().trim().max(120).nullable().optional(),
+    bobina_color_id: z.string().uuid().nullable().optional(),
+    bobina_metros: z.number().min(0).max(1_000_000).nullable().optional(),
+    bobina_defectuosos: z.number().min(0).max(1_000_000).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const email = (context.claims?.email ?? "").toLowerCase();
@@ -1095,6 +1099,10 @@ export const updateBoleta = createServerFn({ method: "POST" })
       tipo_gasto: data.tipo_gasto, descripcion: data.descripcion ?? null,
       monto: data.monto, fecha: data.fecha,
       responsable: data.responsable ?? null,
+      proveedor: data.proveedor?.trim() || null,
+      bobina_color_id: data.bobina_color_id ?? null,
+      bobina_metros: data.bobina_metros ?? null,
+      bobina_defectuosos: data.bobina_defectuosos ?? 0,
     }).eq("id", data.id);
     if (error) throw new Error(error.message);
     await context.supabase.from("config_audit_log").insert({
