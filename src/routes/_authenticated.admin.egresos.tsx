@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listEgresos, createEgreso, decideEgreso, deleteEgreso, updateEgresoLatas, COLORES_LATA, PERSONAS_INTERNAS } from "@/lib/admin.functions";
+import { listEgresos, createEgreso, decideEgreso, deleteEgreso, updateEgresoLatas, getColores, COLORES_LATA, PERSONAS_INTERNAS } from "@/lib/admin.functions";
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal, metrosUtiles, perdidaBobina, costoM2Bobina } from "@/lib/domain/quotes.core";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
