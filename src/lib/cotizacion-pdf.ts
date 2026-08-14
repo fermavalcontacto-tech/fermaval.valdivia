@@ -384,7 +384,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
     doc.text(descLines, cols[1].x + 2, y + 4);
     doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(precioLinea), cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
+    doc.text(`${formatCLP(precioLinea)} neto`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
     doc.text(formatCLP(subtotal), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
     y += rowH;
   });
