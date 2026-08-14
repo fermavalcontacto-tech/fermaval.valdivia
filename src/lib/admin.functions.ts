@@ -176,7 +176,24 @@ async function restoreStockForCotizacion(
       });
     }
   }
+  // Devolución del saldo a las bobinas consumidas por esta cotización.
+  try {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: consumos } = await supabaseAdmin
+      .from("bobina_consumos").select("id, bobina_id, metros").eq("cotizacion_id", cotId);
+    for (const c of consumos ?? []) {
+      const { data: b } = await supabaseAdmin
+        .from("bobinas").select("saldo_m, metros_utiles").eq("id", c.bobina_id).single();
+      if (!b) continue;
+      const nuevo = Math.min(Number(b.metros_utiles), Number(b.saldo_m) + Number(c.metros));
+      await supabaseAdmin.from("bobinas").update({ saldo_m: nuevo }).eq("id", c.bobina_id);
+      await supabaseAdmin.from("bobina_consumos").delete().eq("id", c.id);
+    }
+  } catch (e) {
+    console.error("devolución de bobinas falló:", (e as Error).message);
+  }
   await supabase.from("cotizaciones").update({ stock_descontado_at: null }).eq("id", cotId);
+
 }
 
 const ESTADOS_CON_PAGO = new Set(["pago_parcial", "pedido_confirmado", "pedido_terminado"]);
