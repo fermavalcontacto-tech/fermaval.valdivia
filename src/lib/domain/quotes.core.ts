@@ -425,27 +425,39 @@ export const ANCHO_UTIL_M = 1;
 /** Merma estándar por bobina comprada (1%). */
 export const MERMA_BOBINA = 0.01;
 
-/** Metros realmente utilizables de una bobina (99% de lo comprado). */
-export function metrosUtiles(metrosComprados: number): number {
+/** Metros defectuosos válidos (no negativos, nunca más de lo comprado). */
+export function metrosDefectuososValidos(metrosComprados: number, defectuosos = 0): number {
   const m = Number(metrosComprados);
+  const d = Number(defectuosos);
   if (!Number.isFinite(m) || m <= 0) return 0;
-  return Number((m * (1 - MERMA_BOBINA)).toFixed(2));
+  if (!Number.isFinite(d) || d <= 0) return 0;
+  return Number(Math.min(d, m).toFixed(2));
 }
 
-/** Metros (y m², ancho útil = 1 m) que se pierden por bobina. */
-export function perdidaBobina(metrosComprados: number): number {
+/** Metros realmente utilizables: comprados − 1% de merma − metros defectuosos. */
+export function metrosUtiles(metrosComprados: number, defectuosos = 0): number {
   const m = Number(metrosComprados);
   if (!Number.isFinite(m) || m <= 0) return 0;
-  return Number((m * MERMA_BOBINA).toFixed(2));
+  const d = metrosDefectuososValidos(m, defectuosos);
+  return Number(Math.max(m * (1 - MERMA_BOBINA) - d, 0).toFixed(2));
+}
+
+/** Metros (y m², ancho útil = 1 m) que se pierden por bobina: merma + defectuosos. */
+export function perdidaBobina(metrosComprados: number, defectuosos = 0): number {
+  const m = Number(metrosComprados);
+  if (!Number.isFinite(m) || m <= 0) return 0;
+  const d = metrosDefectuososValidos(m, defectuosos);
+  return Number((m * MERMA_BOBINA + d).toFixed(2));
 }
 
 /** Costo neto por m² de una bobina: valor pagado / metros útiles. */
-export function costoM2Bobina(valorTotal: number, metrosComprados: number): number {
-  const utiles = metrosUtiles(metrosComprados);
+export function costoM2Bobina(valorTotal: number, metrosComprados: number, defectuosos = 0): number {
+  const utiles = metrosUtiles(metrosComprados, defectuosos);
   const valor = Number(valorTotal);
   if (!utiles || !Number.isFinite(valor)) return 0;
   return Number((valor / utiles).toFixed(2));
 }
+
 
 export type BobinaSaldo = {
   id: string;
