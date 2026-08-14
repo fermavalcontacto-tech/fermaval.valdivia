@@ -767,6 +767,36 @@ export type Database = {
         }
         Relationships: []
       }
+      utilidad_m2: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          nota: string | null
+          periodo: string
+          updated_at: string
+          utilidad_m2: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nota?: string | null
+          periodo: string
+          updated_at?: string
+          utilidad_m2?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nota?: string | null
+          periodo?: string
+          updated_at?: string
+          utilidad_m2?: number
+        }
+        Relationships: []
+      }
       ventas_chatarra: {
         Row: {
           created_at: string

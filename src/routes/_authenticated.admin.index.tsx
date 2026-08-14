@@ -1,13 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { getDashboard, getAnalytics, listAlertas } from "@/lib/admin.functions";
+import { useSuspenseQuery, queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDashboard, getAnalytics, listAlertas, listUtilidadM2, upsertUtilidadM2 } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal } from "@/lib/domain/quotes.core";
 import { formatCLP } from "@/lib/format";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2, Calculator, CalendarRange } from "lucide-react";
+import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2, Calculator, CalendarRange, Coins } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 
 const q = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
@@ -82,7 +87,7 @@ function Dashboard() {
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} />
         <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} />
-        <Stat icon={Wallet} label="Balance neto (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} />
+        <Stat icon={Wallet} label="Utilidades (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} />
         <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" />
       </div>
 
@@ -136,7 +141,10 @@ function Dashboard() {
         </div>
       </Card>
 
+      <UtilidadM2Section />
+
       <AnalyticsSection />
+
     </div>
   );
 }
@@ -188,7 +196,7 @@ function AnalyticsSection() {
         <Stat icon={TrendingUp} label="Ventas totales" value={formatCLP(data?.ventas ?? 0)} accent />
         <Stat icon={Receipt} label="Gastos totales" value={formatCLP(data?.gastos ?? 0)} tone="neg" />
         <Stat icon={Calculator} label="IVA estimado (19%)" value={formatCLP(data?.iva ?? 0)} />
-        <Stat icon={Wallet} label="Balance del periodo" value={formatCLP(data?.balance ?? 0)} tone={(data?.balance ?? 0) >= 0 ? "pos" : "neg"} />
+        <Stat icon={Wallet} label="Utilidades del periodo" value={formatCLP(data?.balance ?? 0)} tone={(data?.balance ?? 0) >= 0 ? "pos" : "neg"} />
       </div>
 
       <Card className="p-5">
@@ -260,6 +268,81 @@ function AlertsCard() {
           </li>
         ))}
       </ul>
+    </Card>
+  );
+}
+
+type UtilidadRow = { id: string; periodo: string; utilidad_m2: number; nota: string | null };
+
+function UtilidadM2Section() {
+  const qc = useQueryClient();
+  const now = new Date();
+  const [periodo, setPeriodo] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`);
+  const [valor, setValor] = useState("");
+  const [nota, setNota] = useState("");
+
+  const { data = [] } = useQuery<UtilidadRow[]>({
+    queryKey: ["utilidad-m2"],
+    queryFn: () => listUtilidadM2() as unknown as Promise<UtilidadRow[]>,
+  });
+
+  useEffect(() => {
+    const row = data.find((r) => r.periodo.slice(0, 7) === periodo);
+    setValor(row ? String(Number(row.utilidad_m2)) : "");
+    setNota(row?.nota ?? "");
+  }, [periodo, data]);
+
+  const mut = useMutation({
+    mutationFn: () => upsertUtilidadM2({ data: { periodo, utilidad_m2: parseDecimal(valor), nota: nota || null } }),
+    onSuccess: () => { toast.success("Utilidad por m² guardada"); qc.invalidateQueries({ queryKey: ["utilidad-m2"] }); },
+    onError: (e: Error) => toast.error(e.message || "No se pudo guardar"),
+  });
+
+  const actual = data.find((r) => r.periodo.slice(0, 7) === periodo);
+
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center gap-2">
+        <Coins className="h-4 w-4 text-accent" />
+        <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">Utilidad por m² de plancha (mensual)</h3>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-[10rem_10rem_1fr_auto] sm:items-end">
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Mes</Label>
+          <Input type="month" value={periodo} onChange={(e) => setPeriodo(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Utilidad / m² (neto)</Label>
+          <Input {...DECIMAL_INPUT_PROPS} value={valor} onChange={(e) => setValor(sanitizeDecimalInput(e.target.value))} placeholder="Ej: 1200" />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase text-muted-foreground">Nota (opcional)</Label>
+          <Input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="Ej: alza de bobinas" />
+        </div>
+        <Button onClick={() => mut.mutate()} disabled={mut.isPending} variant="hero">
+          {mut.isPending ? "Guardando…" : actual ? "Actualizar" : "Guardar"}
+        </Button>
+      </div>
+
+      <div className="mt-4 space-y-1 text-sm">
+        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Historial</div>
+        {data.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Aún no hay utilidades registradas.</p>
+        ) : (
+          <ul className="divide-y">
+            {data.map((r) => (
+              <li key={r.id} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="font-medium">{MESES[Number(r.periodo.slice(5, 7)) - 1]} {r.periodo.slice(0, 4)}</span>
+                <span className="flex items-center gap-2">
+                  {r.nota && <span className="text-xs text-muted-foreground">{r.nota}</span>}
+                  <span className="font-mono font-semibold">{formatCLP(r.utilidad_m2)} / m²</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Card>
   );
 }

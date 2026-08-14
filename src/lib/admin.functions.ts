@@ -1511,3 +1511,35 @@ export const updatePreciosTipo = createServerFn({ method: "POST" })
     if (rows.length) await context.supabase.from("config_audit_log").insert(rows);
     return { ok: true };
   });
+
+/** Utilidad por m² de plancha, editable mes a mes. */
+export const listUtilidadM2 = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await context.supabase
+      .from("utilidad_m2")
+      .select("id, periodo, utilidad_m2, nota, updated_at")
+      .order("periodo", { ascending: false })
+      .limit(36);
+    if (error) throw new Error(error.message);
+    return data ?? [];
+  });
+
+export const upsertUtilidadM2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({
+    periodo: z.string().regex(/^\d{4}-\d{2}$/, "Periodo inválido (YYYY-MM)"),
+    utilidad_m2: z.number().min(0).max(100_000_000),
+    nota: z.string().max(300).optional().nullable(),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const periodo = `${data.periodo}-01`;
+    const { error } = await context.supabase
+      .from("utilidad_m2")
+      .upsert(
+        { periodo, utilidad_m2: data.utilidad_m2, nota: data.nota ?? null, created_by: context.userId },
+        { onConflict: "periodo" },
+      );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
