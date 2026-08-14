@@ -17,7 +17,8 @@ import {
 
 const CreateQuoteSchema = z.object({
   cliente: z.object({
-    nombre: z.string().trim().max(120).optional().default(""),
+    nombre: z.string().trim().max(160).optional().default(""),
+    giro: z.string().trim().max(160).optional().default(""),
     rut: RutSchema,
     telefono: z.string().trim().max(40).optional().default(""),
     correo: z.string().trim().max(160).refine((v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v), "Correo inválido").optional().default(""),

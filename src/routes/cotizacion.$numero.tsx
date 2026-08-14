@@ -28,7 +28,7 @@ const getQuote = createServerFn({ method: "GET" })
     const { data: cot, error } = await supabaseAdmin
       .from("cotizaciones")
       .select(
-        "id, numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, rut, correo)",
+        "id, numero, access_token, created_at, estado, largo_m, ancho_m, cantidad_planchas, metros2, color_nombre, precio_m2, total, pago_recibido, saldo, cliente:clientes(nombre, giro, rut, correo)",
       )
       .eq("numero", data.numero)
       .maybeSingle();
@@ -44,13 +44,13 @@ const getQuote = createServerFn({ method: "GET" })
     let safeCot: unknown = null;
     let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; tipo: string | null; espesor_mm: number | null; color_nombre: string | null; precio_m2: number | null }> = [];
     if (cot && ok) {
-      const c = cot.cliente as { nombre?: string; rut?: string; correo?: string } | null;
+      const c = cot.cliente as { nombre?: string; giro?: string; rut?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
       const { id: _id, access_token: _at, ...rest } = cot;
       void _id; void _at;
       safeCot = {
         ...rest,
-        cliente: { nombre: firstName, rut: c?.rut ?? "", correo: maskCorreo(c?.correo) },
+        cliente: { nombre: firstName, giro: c?.giro ?? "", rut: c?.rut ?? "", correo: maskCorreo(c?.correo) },
       };
       const { data: its } = await supabaseAdmin
         .from("cotizacion_items")
@@ -125,7 +125,7 @@ function QuotePage() {
   }
 
   const cot = data.cot;
-  const cliente = cot.cliente as { nombre: string; rut?: string; correo: string } | null;
+  const cliente = cot.cliente as { nombre: string; giro?: string; rut?: string; correo: string } | null;
   const aceptada = cot.estado !== "cotizacion_creada" && cot.estado !== "esperando_pago" && cot.estado !== "rechazada";
 
   function buildPdf(): CotizacionPDF {
@@ -141,7 +141,7 @@ function QuotePage() {
     const pdf: CotizacionPDF = {
       numero: cot.numero,
       fecha: cot.created_at,
-      cliente: { nombre: cliente?.nombre ?? "—", rut: cliente?.rut ?? "", correo: cliente?.correo ?? "", telefono: "—", direccion: "—" },
+      cliente: { nombre: cliente?.nombre ?? "—", giro: cliente?.giro ?? "", rut: cliente?.rut ?? "", correo: cliente?.correo ?? "", telefono: "—", direccion: "—" },
       largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2),
       items,
       color_nombre: cot.color_nombre, precio_m2: Number(cot.precio_m2),
@@ -208,6 +208,7 @@ function QuotePage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Cliente</h3>
               <p className="mt-2 font-medium">{cliente?.nombre ?? "—"}</p>
               <p className="text-sm text-muted-foreground">RUT: {cliente?.rut || "No informado"}</p>
+              <p className="text-sm text-muted-foreground">Giro / actividad: {cliente?.giro || "No informado"}</p>
               <p className="text-sm text-muted-foreground">{cliente?.correo ?? "—"}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 Datos parciales por seguridad. Los datos completos están en tu confirmación por correo.
