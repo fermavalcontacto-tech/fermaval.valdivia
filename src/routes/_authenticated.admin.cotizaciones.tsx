@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, type BobinaSaldo } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -281,7 +281,7 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string; bobina_id?: string };
 type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string };
 type FormErrors = {
   nombre?: string; giro?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
@@ -375,6 +375,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
   const calc = calcItems(items, precios, precioBase);
   const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
   const { data: costos = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const { data: bobinas = [] } = useQuery<BobinaSaldo[]>({ queryKey: ["bobinas-saldos"], queryFn: () => listBobinasSaldos() });
   const costoPorTipo: Record<string, number> = {};
   for (const row of costos as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
     if (String(row.periodo).slice(0, 7) === periodoActual) costoPorTipo[row.tipo] = Number(row.costo_m2);
@@ -616,7 +617,7 @@ function EditarCotizacionDialog({
         telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, bobina_id: it.bobina_id || null })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       descuento: parseDecimal(form.descuento), pago_recibido: parseDecimal(form.pago_recibido),
       estado: form.estado,
@@ -704,7 +705,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, giro: form.giro, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, bobina_id: it.bobina_id || null })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
       responsable_nombre: form.responsable,
