@@ -434,7 +434,7 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
 
           <div className="w-full min-w-0 space-y-1">
             <Label className="text-[10px]">Color *</Label>
-            <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v } : x))}>
+            <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v, bobina_id: "" } : x))}>
               <SelectTrigger className="h-9 w-full text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
@@ -449,6 +449,44 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
             </Select>
             <FieldError msg={er.color_id} />
           </div>
+
+          {(() => {
+            const opciones = bobinasDeColor(bobinas, it.color_id);
+            const estado = evaluarStockLinea(bobinas, it.color_id, calc[i].m2, it.bobina_id || null);
+            const sug = sugerenciaFifo(bobinas, it.color_id, calc[i].m2);
+            return (
+              <div className={`w-full min-w-0 space-y-1 rounded-md border p-3 ${estado.excede ? "border-destructive bg-destructive/10" : "bg-background"}`}>
+                <Label className="text-[10px]">Bobina (proveedor · FIFO)</Label>
+                <select
+                  value={it.bobina_id ?? ""}
+                  onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, bobina_id: e.target.value } : x))}
+                  className={`h-9 w-full rounded-md border bg-background px-3 text-xs shadow-sm outline-none focus:ring-1 focus:ring-ring ${estado.excede ? "border-destructive text-destructive" : "border-input"}`}
+                >
+                  <option value="">
+                    {sug ? `Automático (FIFO): ${sug.proveedor} · ${sug.saldo_m.toFixed(2)} m` : "Automático (FIFO)"}
+                  </option>
+                  {opciones.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.proveedor} · {new Date(b.fecha_ingreso).toLocaleDateString("es-CL")} · saldo {b.saldo_m.toFixed(2)} m
+                    </option>
+                  ))}
+                </select>
+                {estado.excede ? (
+                  <p className="text-[11px] font-semibold text-destructive" role="alert">
+                    Stock insuficiente: faltan {estado.faltante.toFixed(2)} m en esta bobina
+                    (saldo {estado.saldo.toFixed(2)} m). Cambia de bobina o proveedor, o reduce los metros.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">
+                    {opciones.length === 0
+                      ? "No hay bobinas registradas para este color."
+                      : `Saldo disponible en la bobina asignada: ${estado.saldo.toFixed(2)} m`}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
+
 
           <div className="grid w-full min-w-0 grid-cols-1 gap-3 md:grid-cols-2 md:items-end">
             <div className="w-full min-w-0 space-y-1">
