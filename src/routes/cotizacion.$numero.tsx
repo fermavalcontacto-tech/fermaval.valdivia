@@ -9,7 +9,7 @@ import { formatCLP, formatDate, ESTADO_LABEL } from "@/lib/format";
 import { acceptQuoteAndPay } from "@/lib/public.functions";
 import { useState } from "react";
 import { toast } from "sonner";
-import { CheckCircle2, Clock, ArrowLeft, Download, Printer } from "lucide-react";
+import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
 import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 
 function maskCorreo(c: string | null | undefined): string {
