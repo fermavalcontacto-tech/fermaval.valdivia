@@ -179,7 +179,7 @@ function CotizacionesPage() {
                 <th className="p-3">N°</th><th className="p-3">Cliente</th>
                 <th className="p-3">Responsable</th>
                 <th className="p-3">Origen</th><th className="p-3">Fecha</th>
-                <th className="p-3">Total</th><th className="p-3">Pagado</th><th className="p-3">Saldo</th>
+                <th className="p-3">Neto / Bruto</th><th className="p-3">Pagado</th><th className="p-3">Saldo</th>
                 <th className="p-3">Estado</th><th className="p-3 text-right">Acciones</th>
               </tr>
             </thead>
@@ -195,7 +195,10 @@ function CotizacionesPage() {
                   <td className="p-3 text-xs">{c.responsable_nombre ?? "—"}</td>
                   <td className="p-3"><span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${origen === "interno" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{origen}</span></td>
                   <td className="p-3">{formatDate(c.created_at)}</td>
-                  <td className="p-3">{formatCLP(c.total)}</td>
+                  <td className="p-3">
+                    <div className="font-mono">{formatCLP(ivaBreakdown(c.total).neto)} <span className="text-[10px] text-muted-foreground">neto</span></div>
+                    <div className="font-mono text-xs text-muted-foreground">{formatCLP(ivaBreakdown(c.total).bruto)} c/IVA</div>
+                  </td>
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
                   <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
                   <td className="p-3">
