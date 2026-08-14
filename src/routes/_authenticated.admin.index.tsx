@@ -1,13 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { getDashboard, getAnalytics, listAlertas } from "@/lib/admin.functions";
+import { useSuspenseQuery, queryOptions, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getDashboard, getAnalytics, listAlertas, listUtilidadM2, upsertUtilidadM2 } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal } from "@/lib/domain/quotes.core";
 import { formatCLP } from "@/lib/format";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, LineChart, Line, Legend } from "recharts";
-import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2, Calculator, CalendarRange } from "lucide-react";
+import { TrendingUp, FileText, PackageCheck, Wallet, Receipt, AlertTriangle, CheckCircle2, Calculator, CalendarRange, Coins } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+
 
 const q = queryOptions({ queryKey: ["dashboard"], queryFn: () => getDashboard() });
 
