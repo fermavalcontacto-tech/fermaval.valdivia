@@ -1592,15 +1592,18 @@ export const upsertUtilidadM2 = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Costo neto por m² por tipo de plancha, editable mes a mes (referencia planilla APU). */
+/**
+ * Costo neto por m² por tipo de plancha y proveedor (referencia planilla APU).
+ * Pueden coexistir varios registros en un mismo mes: uno por proveedor/compra de bobina.
+ */
 export const listCostosM2 = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("costos_m2")
-      .select("id, periodo, tipo, costo_m2, nota, updated_at")
+      .select("id, periodo, tipo, proveedor, bobina_id, costo_m2, nota, updated_at")
       .order("periodo", { ascending: false })
-      .limit(400);
+      .limit(1000);
     if (error) throw new Error(error.message);
     return data ?? [];
   });
@@ -1610,23 +1613,46 @@ export const upsertCostoM2 = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({
     periodo: z.string().regex(/^\d{4}-\d{2}$/, "Periodo inválido (YYYY-MM)"),
     tipo: z.string().min(1),
+    proveedor: z.string().trim().max(120).optional().nullable(),
+    bobina_id: z.string().uuid().optional().nullable(),
     costo_m2: z.number().min(0).max(100_000_000),
     nota: z.string().max(300).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const periodo = `${data.periodo}-01`;
-    const { error } = await context.supabase
-      .from("costos_m2")
-      .upsert(
-        {
-          periodo,
-          tipo: data.tipo as never,
-          costo_m2: data.costo_m2,
-          nota: data.nota ?? null,
-          created_by: context.userId,
-        },
-        { onConflict: "periodo,tipo" },
-      );
+    const proveedor = (data.proveedor ?? "").trim();
+    let q = context.supabase
+      .from("costos_m2").select("id")
+      .eq("periodo", periodo).eq("tipo", data.tipo as never).eq("proveedor", proveedor);
+    q = data.bobina_id ? q.eq("bobina_id", data.bobina_id) : q.is("bobina_id", null);
+    const { data: existing } = await q.maybeSingle();
+
+    if (existing?.id) {
+      const { error } = await context.supabase
+        .from("costos_m2")
+        .update({ costo_m2: data.costo_m2, nota: data.nota ?? null })
+        .eq("id", existing.id);
+      if (error) throw new Error(error.message);
+      return { ok: true };
+    }
+    const { error } = await context.supabase.from("costos_m2").insert({
+      periodo,
+      tipo: data.tipo as never,
+      proveedor,
+      bobina_id: data.bobina_id ?? null,
+      costo_m2: data.costo_m2,
+      nota: data.nota ?? null,
+      created_by: context.userId,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const deleteCostoM2 = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase.from("costos_m2").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
