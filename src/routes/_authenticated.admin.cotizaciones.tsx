@@ -477,8 +477,11 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
         <div className="text-sm">
           Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span>
           <span className="mx-2 text-muted-foreground">·</span>
-          Subtotal: <span className="font-mono font-semibold">{formatCLP(totalPesos)}</span>
+          Neto: <span className="font-mono font-semibold">{formatCLP(ivaBreakdown(totalPesos).neto)}</span>
+          <span className="mx-2 text-muted-foreground">·</span>
+          Bruto: <span className="font-mono font-bold">{formatCLP(ivaBreakdown(totalPesos).bruto)}</span>
         </div>
+
       </div>
     </div>
   );
