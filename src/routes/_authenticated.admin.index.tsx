@@ -239,6 +239,17 @@ function AnalyticsSection() {
   );
 }
 
+/** Destino de navegación de cada alerta del dashboard. */
+function alertaDestino(a: Alerta): { to: string; search?: Record<string, string> } {
+  const numero = typeof a.meta?.numero === "string" ? a.meta.numero : undefined;
+  if (a.tipo === "cotizacion_vencida" || a.tipo === "saldo_pendiente") {
+    return numero ? { to: "/admin/cotizaciones", search: { cot: numero } } : { to: "/admin/cotizaciones" };
+  }
+  if (a.tipo === "stock_bajo") return { to: "/admin/bobinas" };
+  if (a.tipo === "egreso_pendiente") return { to: "/admin/egresos" };
+  return { to: "/admin/cotizaciones" };
+}
+
 type Alerta = { tipo: string; severidad: string; registro_id: string; mensaje: string; ocurrido_at: string; meta: Record<string, string | number | boolean | null> };
 
 function AlertsCard() {
@@ -264,11 +275,16 @@ function AlertsCard() {
       </div>
       <ul className="space-y-2 max-h-72 overflow-auto">
         {alertas.map((a, i) => (
-          <li key={`${a.tipo}-${a.registro_id}-${i}`} className={`rounded-md border px-3 py-2 text-sm ${color(a.severidad)}`}>
+          <li key={`${a.tipo}-${a.registro_id}-${i}`}>
+            <Link
+              {...alertaDestino(a)}
+              className={`block rounded-md border px-3 py-2 text-sm transition hover:brightness-95 hover:shadow-sm ${color(a.severidad)}`}
+            >
             <div className="flex items-center justify-between gap-2">
               <span className="font-medium">{a.mensaje}</span>
               <span className="text-[10px] uppercase tracking-wider">{a.tipo.replace(/_/g, " ")}</span>
             </div>
+            </Link>
           </li>
         ))}
       </ul>

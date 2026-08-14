@@ -116,6 +116,7 @@ export type Database = {
           fecha_ingreso: string
           id: string
           metros_comprados: number
+          metros_defectuosos: number
           metros_perdida: number
           metros_utiles: number
           nota: string | null
@@ -134,6 +135,7 @@ export type Database = {
           fecha_ingreso?: string
           id?: string
           metros_comprados: number
+          metros_defectuosos?: number
           metros_perdida?: number
           metros_utiles?: number
           nota?: string | null
@@ -152,6 +154,7 @@ export type Database = {
           fecha_ingreso?: string
           id?: string
           metros_comprados?: number
+          metros_defectuosos?: number
           metros_perdida?: number
           metros_utiles?: number
           nota?: string | null
@@ -814,6 +817,7 @@ export type Database = {
       solicitudes_egreso: {
         Row: {
           bobina_color_id: string | null
+          bobina_defectuosos: number
           bobina_metros: number | null
           boleta_subida_por: string | null
           created_at: string
@@ -833,6 +837,7 @@ export type Database = {
         }
         Insert: {
           bobina_color_id?: string | null
+          bobina_defectuosos?: number
           bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
@@ -852,6 +857,7 @@ export type Database = {
         }
         Update: {
           bobina_color_id?: string | null
+          bobina_defectuosos?: number
           bobina_metros?: number | null
           boleta_subida_por?: string | null
           created_at?: string
@@ -1090,6 +1096,10 @@ export type Database = {
       }
     }
     Functions: {
+      ajustar_defectuosos_bobina: {
+        Args: { _bobina_id: string; _defectuosos: number; _user_id?: string }
+        Returns: undefined
+      }
       consumir_stock_fifo: {
         Args: {
           _bobina_preferida?: string
@@ -1100,19 +1110,34 @@ export type Database = {
         }
         Returns: number
       }
-      crear_bobina: {
-        Args: {
-          _color_id: string
-          _created_by?: string
-          _egreso_id?: string
-          _fecha?: string
-          _metros: number
-          _nota?: string
-          _proveedor: string
-          _valor: number
-        }
-        Returns: string
-      }
+      crear_bobina:
+        | {
+            Args: {
+              _color_id: string
+              _created_by?: string
+              _egreso_id?: string
+              _fecha?: string
+              _metros: number
+              _nota?: string
+              _proveedor: string
+              _valor: number
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              _color_id: string
+              _created_by?: string
+              _defectuosos?: number
+              _egreso_id?: string
+              _fecha?: string
+              _metros: number
+              _nota?: string
+              _proveedor: string
+              _valor: number
+            }
+            Returns: string
+          }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

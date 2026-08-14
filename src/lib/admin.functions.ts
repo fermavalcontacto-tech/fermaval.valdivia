@@ -297,6 +297,7 @@ export const createEgreso = createServerFn({ method: "POST" })
     valor: z.number().min(0).max(1_000_000_000).optional().nullable(),
     bobina_color_id: z.string().uuid().optional().nullable(),
     bobina_metros: z.number().min(0).max(1_000_000).optional().nullable(),
+    bobina_defectuosos: z.number().min(0).max(1_000_000).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -309,6 +310,7 @@ export const createEgreso = createServerFn({ method: "POST" })
       valor: data.valor ?? null,
       bobina_color_id: data.bobina_color_id ?? null,
       bobina_metros: data.bobina_metros && data.bobina_metros > 0 ? data.bobina_metros : null,
+      bobina_defectuosos: data.bobina_defectuosos && data.bobina_defectuosos > 0 ? data.bobina_defectuosos : 0,
     }).select("id").single();
 
     if (error) throw new Error(error.message);
@@ -1636,7 +1638,7 @@ export const listBobinas = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from("bobinas")
-      .select("id, proveedor, color_id, color_nombre, metros_comprados, metros_utiles, metros_perdida, saldo_m, valor_total, costo_m2, fecha_ingreso, egreso_id, nota, created_at")
+      .select("id, proveedor, color_id, color_nombre, metros_comprados, metros_utiles, metros_perdida, metros_defectuosos, saldo_m, valor_total, costo_m2, fecha_ingreso, egreso_id, nota, created_at")
       .order("fecha_ingreso", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -1665,6 +1667,7 @@ export const createBobina = createServerFn({ method: "POST" })
     valor_total: z.number().min(0).max(1_000_000_000),
     fecha_ingreso: z.string().optional(),
     nota: z.string().trim().max(300).optional().nullable(),
+    metros_defectuosos: z.number().min(0).max(1_000_000).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha_ingreso);
@@ -1678,6 +1681,7 @@ export const createBobina = createServerFn({ method: "POST" })
       _egreso_id: undefined,
       _nota: data.nota ?? undefined,
       _created_by: context.userId,
+      _defectuosos: data.metros_defectuosos ?? 0,
     });
     if (error) throw new Error(error.message);
     return { ok: true, id };
@@ -1690,8 +1694,18 @@ export const updateBobina = createServerFn({ method: "POST" })
     proveedor: z.string().trim().min(2).max(160).optional(),
     valor_total: z.number().min(0).max(1_000_000_000).optional(),
     nota: z.string().trim().max(300).optional().nullable(),
+    metros_defectuosos: z.number().min(0).max(1_000_000).optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    if (data.metros_defectuosos !== undefined) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: adjErr } = await supabaseAdmin.rpc("ajustar_defectuosos_bobina", {
+        _bobina_id: data.id,
+        _defectuosos: data.metros_defectuosos,
+        _user_id: context.userId,
+      });
+      if (adjErr) throw new Error(adjErr.message);
+    }
     const { data: prev } = await context.supabase
       .from("bobinas").select("metros_utiles, valor_total, proveedor").eq("id", data.id).single();
     if (!prev) throw new Error("Bobina no encontrada");

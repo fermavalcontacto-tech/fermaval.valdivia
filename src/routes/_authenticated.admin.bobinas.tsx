@@ -2,9 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Layers, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Layers, AlertTriangle, Pencil } from "lucide-react";
 import {
-  listBobinas, createBobina, deleteBobina, listPerdidas, getColores, listPreciosTipo,
+  listBobinas, createBobina, updateBobina, deleteBobina, listPerdidas, getColores, listPreciosTipo,
 } from "@/lib/admin.functions";
 import {
   DECIMAL_INPUT_PROPS, sanitizeDecimalInput, parseDecimal,
@@ -108,7 +108,7 @@ function BobinasPage() {
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">
+              <tr><td colSpan={11} className="p-6 text-center text-muted-foreground">
                 Aún no hay bobinas registradas. Créalas aquí o aprueba un egreso con metros de bobina.
               </td></tr>
             )}
@@ -122,13 +122,29 @@ function BobinasPage() {
                   <td className="p-3">{b.color_nombre ?? "—"}</td>
                   <td className="p-3">{m(Number(b.metros_comprados))}</td>
                   <td className="p-3">{m(Number(b.metros_utiles))}</td>
+                  <td className="p-3 text-destructive">{m(Number(b.metros_defectuosos ?? 0))}</td>
                   <td className="p-3 text-destructive">{m(Number(b.metros_perdida))}</td>
                   <td className={`p-3 font-semibold ${sinSaldo ? "text-destructive" : ""}`}>{m(Number(b.saldo_m))}</td>
                   <td className="p-3">{clp(Number(b.costo_m2))} neto</td>
                   <td className="p-3">
                     {margen ? <>{clp(margen.ganancia)} <span className="text-muted-foreground">({formatPct(margen.pct)})</span></> : "—"}
                   </td>
-                  <td className="p-3 text-right">
+                  <td className="p-3 text-right whitespace-nowrap">
+                    <EditarDefectuososDialog
+                      bobina={{
+                        id: b.id,
+                        proveedor: b.proveedor,
+                        metros_comprados: Number(b.metros_comprados),
+                        metros_defectuosos: Number(b.metros_defectuosos ?? 0),
+                        valor_total: Number(b.valor_total),
+                      }}
+                      onSaved={() => {
+                        qc.invalidateQueries({ queryKey: ["bobinas"] });
+                        qc.invalidateQueries({ queryKey: ["bobinas-saldos"] });
+                        qc.invalidateQueries({ queryKey: ["perdidas-m2"] });
+                        qc.invalidateQueries({ queryKey: ["colores-admin"] });
+                      }}
+                    />
                     <Button size="icon" variant="ghost" onClick={() => {
                       if (confirm(`¿Eliminar la bobina de ${b.proveedor}?`)) del.mutate(b.id);
                     }}>
@@ -186,9 +202,11 @@ function NuevaBobinaDialog({ colores, onSaved }: { colores: Array<{ id: string; 
   const [valor, setValor] = useState("");
   const [fecha, setFecha] = useState(new Date().toISOString().slice(0, 10));
   const [nota, setNota] = useState("");
+  const [defectuosos, setDefectuosos] = useState("");
 
   const metrosNum = parseDecimal(metros, 0);
   const valorNum = parseDecimal(valor, 0);
+  const defectuososNum = Math.min(parseDecimal(defectuosos, 0), metrosNum);
 
   const save = useMutation({
     mutationFn: () => createBobina({
@@ -199,12 +217,13 @@ function NuevaBobinaDialog({ colores, onSaved }: { colores: Array<{ id: string; 
         valor_total: valorNum,
         fecha_ingreso: fecha,
         nota: nota.trim() || null,
+        metros_defectuosos: defectuososNum > 0 ? defectuososNum : 0,
       },
     }),
     onSuccess: () => {
       toast.success("Bobina registrada y sumada al stock");
       setOpen(false);
-      setProveedor(""); setColorId(""); setMetros(""); setValor(""); setNota("");
+      setProveedor(""); setColorId(""); setMetros(""); setValor(""); setNota(""); setDefectuosos("");
       onSaved();
     },
     onError: (e: Error) => toast.error(friendlyValidationMessage(e)),
@@ -265,11 +284,27 @@ function NuevaBobinaDialog({ colores, onSaved }: { colores: Array<{ id: string; 
               <Input value={nota} onChange={(e) => setNota(e.target.value)} placeholder="N° guía, observación…" />
             </div>
           </div>
+          <div>
+            <Label>Metros defectuosos a simple vista (opcional)</Label>
+            <Input
+              {...DECIMAL_INPUT_PROPS}
+              value={defectuosos}
+              onChange={(e) => setDefectuosos(sanitizeDecimalInput(e.target.value))}
+              placeholder="Ej: 12,5"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Se descuentan del stock útil. Puedes corregirlos después con el botón editar.
+            </p>
+          </div>
           {metrosNum > 0 && (
             <div className="rounded-md border bg-muted/40 p-3 text-sm">
-              <p>Metros útiles (99%): <strong>{m(metrosUtiles(metrosNum))}</strong></p>
-              <p className="text-destructive">Pérdida (1%): <strong>{perdidaBobina(metrosNum).toFixed(2)} m² </strong></p>
-              <p>Costo por m² neto: <strong>{clp(costoM2Bobina(valorNum, metrosNum))}</strong></p>
+              <p>Metros útiles: <strong>{m(metrosUtiles(metrosNum, defectuososNum))}</strong></p>
+              <p className="text-destructive">
+                Pérdida total: <strong>{perdidaBobina(metrosNum, defectuososNum).toFixed(2)} m²</strong>
+                {" "}(1% merma = {(metrosNum * MERMA_BOBINA).toFixed(2)} m
+                {defectuososNum > 0 ? ` + ${defectuososNum.toFixed(2)} m defectuosos` : ""})
+              </p>
+              <p>Costo por m² neto: <strong>{clp(costoM2Bobina(valorNum, metrosNum, defectuososNum))}</strong></p>
             </div>
           )}
         </div>
@@ -282,6 +317,67 @@ function NuevaBobinaDialog({ colores, onSaved }: { colores: Array<{ id: string; 
           >
             Guardar bobina
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditarDefectuososDialog({
+  bobina, onSaved,
+}: {
+  bobina: { id: string; proveedor: string; metros_comprados: number; metros_defectuosos: number; valor_total: number };
+  onSaved: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [valorStr, setValorStr] = useState(String(bobina.metros_defectuosos || ""));
+  const defectuososNum = Math.min(parseDecimal(valorStr, 0), bobina.metros_comprados);
+
+  const save = useMutation({
+    mutationFn: () => updateBobina({ data: { id: bobina.id, metros_defectuosos: defectuososNum } }),
+    onSuccess: () => {
+      toast.success("Metros defectuosos actualizados");
+      setOpen(false);
+      onSaved();
+    },
+    onError: (e: Error) => toast.error(friendlyValidationMessage(e)),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (o) setValorStr(String(bobina.metros_defectuosos || "")); }}>
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" title="Editar metros defectuosos">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Metros defectuosos — {bobina.proveedor}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label>Metros defectuosos a simple vista</Label>
+            <Input
+              {...DECIMAL_INPUT_PROPS}
+              value={valorStr}
+              onChange={(e) => setValorStr(sanitizeDecimalInput(e.target.value))}
+              placeholder="Ej: 12,5"
+            />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Bobina de {m(bobina.metros_comprados)} comprados. El saldo nunca baja de lo ya consumido.
+            </p>
+          </div>
+          <div className="rounded-md border bg-muted/40 p-3 text-sm">
+            <p>Metros útiles: <strong>{m(metrosUtiles(bobina.metros_comprados, defectuososNum))}</strong></p>
+            <p className="text-destructive">
+              Pérdida total: <strong>{perdidaBobina(bobina.metros_comprados, defectuososNum).toFixed(2)} m²</strong>
+            </p>
+            <p>Costo por m² neto: <strong>{clp(costoM2Bobina(bobina.valor_total, bobina.metros_comprados, defectuososNum))}</strong></p>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button variant="hero" disabled={save.isPending} onClick={() => save.mutate()}>Guardar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
