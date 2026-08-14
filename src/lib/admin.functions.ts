@@ -293,6 +293,10 @@ export const createEgreso = createServerFn({ method: "POST" })
     fecha: z.string(),
     solicitado_por: personaSchema,
     boleta_subida_por: personaSchema.nullable().optional(),
+    proveedor: z.string().trim().max(160).optional().nullable(),
+    valor: z.number().min(0).max(1_000_000_000).optional().nullable(),
+    bobina_color_id: z.string().uuid().optional().nullable(),
+    bobina_metros: z.number().min(0).max(1_000_000).optional().nullable(),
   }).parse(d))
   .handler(async ({ data, context }) => {
     const fecha = enforceFecha(context.claims?.email, data.fecha);
@@ -301,7 +305,12 @@ export const createEgreso = createServerFn({ method: "POST" })
       solicitante_id: context.userId, estado: "pendiente",
       solicitado_por: data.solicitado_por,
       boleta_subida_por: data.boleta_subida_por ?? null,
+      proveedor: data.proveedor?.trim() || null,
+      valor: data.valor ?? null,
+      bobina_color_id: data.bobina_color_id ?? null,
+      bobina_metros: data.bobina_metros && data.bobina_metros > 0 ? data.bobina_metros : null,
     }).select("id").single();
+
     if (error) throw new Error(error.message);
 
     try {
