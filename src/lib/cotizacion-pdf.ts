@@ -519,6 +519,75 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.text("Firma y Timbre FERMAVAL", W - 25 - sigW / 2, sigY + 8, { align: "center" });
 
   drawFooter(doc);
+
+  // Anexo interno (opcional): costo real por bobina, ganancia y % por m².
+  if (c.mostrar_margen) {
+    doc.addPage();
+    drawLetterhead(doc, "Anexo interno — Margen por plancha", c.numero);
+    let ay = 58;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...ALERT_TEXT);
+    doc.text("Uso interno FERMAVAL — no compartir con el cliente.", 15, ay);
+    ay += 8;
+    const icols = [
+      { x: 15, w: 62, label: "Plancha", align: "left" as const },
+      { x: 77, w: 22, label: "m²", align: "right" as const },
+      { x: 99, w: 24, label: "$/m² neto", align: "right" as const },
+      { x: 123, w: 24, label: "Costo/m²", align: "right" as const },
+      { x: 147, w: 24, label: "Gan./m²", align: "right" as const },
+      { x: 171, w: 24, label: "% gan.", align: "right" as const },
+    ];
+    doc.setFillColor(...NAVY_DARK);
+    doc.rect(15, ay, W - 30, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    icols.forEach((col) => {
+      const tx = col.align === "right" ? col.x + col.w - 2 : col.x + 2;
+      doc.text(col.label, tx, ay + 4.8, { align: col.align });
+    });
+    ay += 7;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...BLACK);
+    let ganTotal = 0;
+    items.forEach((it, i) => {
+      if (i % 2 === 1) { doc.setFillColor(...ZEBRA); doc.rect(15, ay, W - 30, 8, "F"); }
+      const precio = itemPrecio(it, c);
+      const costo = Number(it.costo_m2) > 0 ? Number(it.costo_m2) : 0;
+      const gan = costo > 0 ? precio - costo : 0;
+      const pct = costo > 0 ? (gan / costo) * 100 : null;
+      ganTotal += gan * Number(it.metros2);
+      const desc = `${it.tipo ?? "Ondulado"} · ${it.color_nombre ?? "—"}${it.bobina_proveedor ? ` · ${it.bobina_proveedor}` : ""}`;
+      doc.text(doc.splitTextToSize(desc, icols[0].w - 2)[0] ?? desc, icols[0].x + 2, ay + 5.3);
+      const cells = [
+        Number(it.metros2).toFixed(2),
+        formatCLP(Math.round(precio)),
+        costo > 0 ? formatCLP(Math.round(costo)) : "—",
+        costo > 0 ? formatCLP(Math.round(gan)) : "—",
+        pct === null ? "—" : `${pct.toFixed(1)}%`,
+      ];
+      cells.forEach((txt, k) => {
+        const col = icols[k + 1];
+        doc.text(txt, col.x + col.w - 2, ay + 5.3, { align: "right" });
+      });
+      ay += 8;
+    });
+    doc.setDrawColor(...GREY_LIGHT);
+    doc.rect(15, ay - items.length * 8 - 7, W - 30, items.length * 8 + 7, "S");
+    ay += 8;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(...NAVY_DARK);
+    doc.text(`Ganancia estimada total: ${formatCLP(Math.round(ganTotal))}`, 15, ay);
+    ay += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...GREY);
+    doc.text(
+      "Costos tomados de la bobina asignada a cada plancha (compra real del proveedor) o, en su ausencia, del costo mensual del tipo.",
+      15, ay, { maxWidth: W - 30 },
+    );
+    drawFooter(doc);
+  }
   return doc;
 }
 
