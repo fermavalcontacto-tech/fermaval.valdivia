@@ -432,7 +432,13 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     }
   });
 
-  y += 8;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(...GREY_DARK);
+  doc.text("Valores expresados en pesos, netos (sin IVA incluido).", totalsX + totalsW, y + 4, { align: "right" });
+  doc.setFont("helvetica", "normal");
+
+  y += 10;
 
   // Validez 7 días
   y = drawNewPageIfNeeded(doc, y, 18);
