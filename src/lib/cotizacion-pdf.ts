@@ -534,19 +534,6 @@ export function pdfsForCotizacion(c: CotizacionPDF) {
  */
 export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
   const blob: Blob = doc.output("blob");
-  const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
-
-  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
-  if (file && nav?.share && nav.canShare?.({ files: [file] })) {
-    try {
-      await nav.share({ files: [file], title: filename });
-      return;
-    } catch (e) {
-      // usuario canceló o falló: seguimos con la descarga clásica
-      if ((e as Error)?.name === "AbortError") return;
-    }
-  }
-
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement("a");
@@ -564,11 +551,34 @@ export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
+/** Hoja nativa de compartir/guardar (solo cuando el usuario lo pide). Devuelve false si no está disponible. */
+export async function sharePdf(doc: jsPDF, filename: string): Promise<boolean> {
+  const blob: Blob = doc.output("blob");
+  const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
+  const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
+  if (file && nav?.share && nav.canShare?.({ files: [file] })) {
+    try {
+      await nav.share({ files: [file], title: filename });
+      return true;
+    } catch (e) {
+      if ((e as Error)?.name === "AbortError") return true;
+      return false;
+    }
+  }
+  return false;
+}
+
 export function downloadCotizacionPDF(c: CotizacionPDF) {
   return deliverPdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
 }
 export function downloadPagoPDF(c: CotizacionPDF) {
   return deliverPdf(buildPagoPDF(c), `Comprobante-Pago-${c.numero}.pdf`);
+}
+export function shareCotizacionPDF(c: CotizacionPDF) {
+  return sharePdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
+}
+export function cotizacionPdfFilename(c: Pick<CotizacionPDF, "numero">) {
+  return `Cotizacion-${c.numero}.pdf`;
 }
 
 export function cotizacionPdfBlobUrl(c: CotizacionPDF): string {
