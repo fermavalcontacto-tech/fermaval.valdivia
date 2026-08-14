@@ -268,8 +268,10 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
     valor: "",
     bobina_color_id: "",
     bobina_metros: "",
+    bobina_defectuosos: "",
   });
   const metrosNum = parseDecimal(form.bobina_metros, 0);
+  const defectuososNum = Math.min(parseDecimal(form.bobina_defectuosos, 0), metrosNum);
   const valorNum = parseDecimal(form.valor, 0) || Number(form.monto) || 0;
   const mut = useMutation({
     mutationFn: () => createEgreso({ data: {
@@ -283,6 +285,7 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
       valor: parseDecimal(form.valor, 0) || null,
       bobina_color_id: form.bobina_color_id || null,
       bobina_metros: metrosNum > 0 ? metrosNum : null,
+      bobina_defectuosos: defectuososNum > 0 ? defectuososNum : null,
     } }),
     onSuccess: () => { toast.success("Solicitud creada"); onCreated(); setOpen(false); },
     onError: (e: Error) => toast.error(e.message),
@@ -331,7 +334,8 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
             <p className="text-xs font-semibold uppercase text-muted-foreground">Compra de bobina (opcional)</p>
             <p className="mt-1 text-[11px] text-muted-foreground">
               Si esta compra es una bobina, al aprobarse se creará automáticamente y el stock del color se
-              actualizará con el 99% de los metros (1% se registra como pérdida).
+              actualizará con el 99% de los metros (1% se registra como pérdida), menos los metros
+              defectuosos que indiques aquí.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-3">
               <div>
@@ -354,12 +358,29 @@ function NuevaSolicitud({ onCreated }: { onCreated: () => void }) {
                   placeholder="Ej: 1000"
                 />
               </div>
+              <div className="col-span-2">
+                <Label>Metros defectuosos a simple vista (opcional)</Label>
+                <Input
+                  {...DECIMAL_INPUT_PROPS}
+                  value={form.bobina_defectuosos}
+                  onChange={(e)=>setForm({...form, bobina_defectuosos: sanitizeDecimalInput(e.target.value)})}
+                  placeholder="Ej: 12,5"
+                />
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Metros que llegan visiblemente malos. Se descuentan del stock útil y se pueden corregir
+                  después en “Bobinas y Proveedores”.
+                </p>
+              </div>
             </div>
             {metrosNum > 0 && (
               <div className="mt-2 text-xs">
-                <p>Ingresarán al stock <strong>{metrosUtiles(metrosNum).toFixed(2)} m</strong> útiles.</p>
-                <p className="text-destructive">Pérdida 1%: <strong>{perdidaBobina(metrosNum).toFixed(2)} m²</strong></p>
-                <p>Costo estimado por m² neto: <strong>{formatCLP(costoM2Bobina(valorNum, metrosNum))}</strong></p>
+                <p>Ingresarán al stock <strong>{metrosUtiles(metrosNum, defectuososNum).toFixed(2)} m</strong> útiles.</p>
+                <p className="text-destructive">
+                  Pérdida total: <strong>{perdidaBobina(metrosNum, defectuososNum).toFixed(2)} m²</strong>
+                  {" "}(1% merma = {(metrosNum * 0.01).toFixed(2)} m
+                  {defectuososNum > 0 ? ` + ${defectuososNum.toFixed(2)} m defectuosos` : ""})
+                </p>
+                <p>Costo estimado por m² neto: <strong>{formatCLP(costoM2Bobina(valorNum, metrosNum, defectuososNum))}</strong></p>
               </div>
             )}
           </div>
