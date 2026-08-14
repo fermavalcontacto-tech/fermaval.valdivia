@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -373,6 +373,12 @@ function FieldError({ msg }: { msg?: string }) {
 
 function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0 }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number }) {
   const calc = calcItems(items, precios, precioBase);
+  const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
+  const { data: costos = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
+  const costoPorTipo: Record<string, number> = {};
+  for (const row of costos as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
+    if (String(row.periodo).slice(0, 7) === periodoActual) costoPorTipo[row.tipo] = Number(row.costo_m2);
+  }
   const total = Number(calc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   const totalPesos = calc.reduce((s, x) => s + x.subtotal, 0);
   return (
