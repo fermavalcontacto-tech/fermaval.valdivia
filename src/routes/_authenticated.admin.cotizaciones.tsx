@@ -554,7 +554,7 @@ function EditarCotizacionDialog({
           <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
           <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
-          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+          <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² neto general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Descuento (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.descuento} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.pago_recibido} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2">
@@ -685,7 +685,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
               <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
-              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
+              <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² neto general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
               <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
                 <Select value={form.responsable} onValueChange={(v) => setForm({ ...form, responsable: v })}>
@@ -760,7 +760,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
 
               <section className="rounded-md border bg-muted/30 p-3">
                 <div className="flex justify-between"><span>Total m²:</span><span className="font-mono font-semibold">{m2Total.toFixed(2)}</span></div>
-                <div className="flex justify-between"><span>Precio / m² promedio:</span><span className="font-mono">{formatCLP(precioPromedioCalc)}</span></div>
+                <div className="flex justify-between"><span>Precio / m² promedio (neto):</span><span className="font-mono">{formatCLP(precioPromedioCalc)}</span></div>
                 <div className="flex justify-between text-base"><span className="font-semibold">Total:</span><span className="font-mono font-bold">{formatCLP(totalCalc)}</span></div>
               </section>
 
