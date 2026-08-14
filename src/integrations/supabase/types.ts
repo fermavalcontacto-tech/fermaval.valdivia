@@ -105,6 +105,7 @@ export type Database = {
           correo: string
           created_at: string
           direccion: string
+          giro: string | null
           id: string
           nombre: string
           rut: string
@@ -114,8 +115,9 @@ export type Database = {
           correo: string
           created_at?: string
           direccion: string
+          giro?: string | null
           id?: string
-          nombre: string
+          nombre?: string
           rut?: string
           telefono: string
         }
@@ -123,6 +125,7 @@ export type Database = {
           correo?: string
           created_at?: string
           direccion?: string
+          giro?: string | null
           id?: string
           nombre?: string
           rut?: string
