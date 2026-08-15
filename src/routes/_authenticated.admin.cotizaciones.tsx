@@ -508,7 +508,17 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
 
           <div className="w-full min-w-0 space-y-1">
             <Label className="text-[10px]">Color *</Label>
-            <Select value={it.color_id} onValueChange={(v) => setItems(items.map((x, idx) => idx === i ? { ...x, color_id: v, bobina_id: "" } : x))}>
+            <Select value={it.color_id} onValueChange={(v) => {
+              const sugerido = precioSugeridoPorColor(bobinas, v, calc[i].m2, utilidadM2, costoPorTipo[it.tipo] ?? 0);
+              setItems(items.map((x, idx) => idx === i
+                ? { ...x, color_id: v, bobina_id: sugerido.bobina?.id ?? "", precio: sugerido.precio != null ? String(sugerido.precio) : x.precio }
+                : x));
+              if (sugerido.precio != null) {
+                onPrecioSugerido?.(sugerido.precio);
+                toast.success(`Precio automático: ${formatCLP(sugerido.precio)}/m² neto (costo ${formatCLP(sugerido.costo)} + utilidad ${formatCLP(utilidadM2)})`);
+              }
+            }}>
+
               <SelectTrigger className="h-9 w-full text-xs" aria-invalid={!!er.color_id}><SelectValue placeholder="Selecciona color" /></SelectTrigger>
               <SelectContent>
                 {colores.filter((c) => c.activo).map((c) => (
