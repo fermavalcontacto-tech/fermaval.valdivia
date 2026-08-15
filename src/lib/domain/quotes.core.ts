@@ -551,3 +551,28 @@ export function costoM2Linea(bobina: BobinaSaldo | null | undefined, costoTipo =
   const ct = Number(costoTipo);
   return Number.isFinite(ct) && ct > 0 ? ct : 0;
 }
+
+/**
+ * Precio de venta sugerido por m² (neto): costo real de la bobina del color
+ * (FIFO) más la utilidad por m² definida para el mes (planilla APU).
+ * Devuelve null cuando falta el costo, para no sobrescribir precios manuales.
+ */
+export function precioSugeridoM2(costoM2: number, utilidadM2: number): number | null {
+  const c = Number(costoM2);
+  const u = Number(utilidadM2) || 0;
+  if (!Number.isFinite(c) || c <= 0) return null;
+  return Math.round((c + u) * 100) / 100;
+}
+
+/** Precio sugerido para una línea a partir del color elegido. */
+export function precioSugeridoPorColor(
+  bobinas: BobinaSaldo[],
+  colorId: string | null | undefined,
+  metros: number,
+  utilidadM2: number,
+  costoTipoFallback = 0,
+): { precio: number | null; costo: number; bobina: BobinaSaldo | null } {
+  const bobina = sugerenciaFifo(bobinas, colorId, metros);
+  const costo = costoM2Linea(bobina, costoTipoFallback);
+  return { precio: precioSugeridoM2(costo, utilidadM2), costo, bobina };
+}
