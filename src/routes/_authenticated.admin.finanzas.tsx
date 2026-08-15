@@ -76,7 +76,7 @@ function FinanzasPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-        <Link to="/admin/cotizaciones" className={CARD_LINK}>
+        <Link to="/admin/cotizaciones" search={{ cot: undefined }} className={CARD_LINK}>
           <Card className={`p-5 border-accent/40 bg-accent/5 ${CARD_HOVER}`}>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
             <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
