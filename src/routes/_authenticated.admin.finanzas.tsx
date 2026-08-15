@@ -30,10 +30,14 @@ export const Route = createFileRoute("/_authenticated/admin/finanzas")({
   component: FinanzasPage,
 });
 
+const CARD_LINK = "block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const CARD_HOVER = "h-full cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/40";
+
 const MESES = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
+
 
 function FinanzasPage() {
   const { auth } = Route.useRouteContext();
