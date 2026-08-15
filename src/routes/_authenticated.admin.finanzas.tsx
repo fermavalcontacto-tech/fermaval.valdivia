@@ -71,25 +71,37 @@ function FinanzasPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-5 border-accent/40 bg-accent/5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
-          <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
-        </Card>
-        <Card className={`p-5 border ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
-          <div className={`mt-2 font-display text-3xl ${utilidadesSel >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{formatCLP(utilidadesSel)}</div>
-          <div className="text-xs text-muted-foreground">Ventas − Gastos</div>
-        </Card>
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">IVA (19%)</div>
-          <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ivaSel)}</div>
-        </Card>
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Gastos</div>
-          <div className="mt-2 font-display text-3xl text-destructive">{formatCLP(gastosSel)}</div>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <Link to="/admin/cotizaciones" className={CARD_LINK}>
+          <Card className={`p-5 border-accent/40 bg-accent/5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
+            <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver cotizaciones</div>
+          </Card>
+        </Link>
+        <a href="#movimientos" className={CARD_LINK}>
+          <Card className={`p-5 border ${CARD_HOVER} ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
+            <div className={`mt-2 font-display text-3xl ${utilidadesSel >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{formatCLP(utilidadesSel)}</div>
+            <div className="text-xs text-muted-foreground">Ventas − Gastos · ver movimientos</div>
+          </Card>
+        </a>
+        <a href="#movimientos" className={CARD_LINK}>
+          <Card className={`p-5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">IVA (19%)</div>
+            <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ivaSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver movimientos</div>
+          </Card>
+        </a>
+        <Link to="/admin/egresos" className={CARD_LINK}>
+          <Card className={`p-5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Gastos</div>
+            <div className="mt-2 font-display text-3xl text-destructive">{formatCLP(gastosSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver egresos</div>
+          </Card>
+        </Link>
       </div>
+
 
       <Card className="p-5">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Evolución últimos 12 meses (incluye movimientos históricos)</h3>
