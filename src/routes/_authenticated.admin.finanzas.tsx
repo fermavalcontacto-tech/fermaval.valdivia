@@ -308,7 +308,8 @@ function HistoricosPanel() {
   const anios = Array.from({ length: 7 }, (_, i) => String(anioActual - 3 + i));
 
   return (
-    <Card className="p-5">
+    <Card id="movimientos" className="scroll-mt-24 p-5">
+
       <div className="mb-4 flex items-center gap-2">
         <Lock className="h-4 w-4 text-accent" />
         <h3 className="font-display text-lg text-primary">Ingreso manual de movimientos históricos</h3>
