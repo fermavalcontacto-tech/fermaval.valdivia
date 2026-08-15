@@ -181,107 +181,136 @@ function QuotePage() {
     <div className="min-h-screen bg-background">
       <PublicHeader linktreeUrl={data.cfg?.linktree_url} />
       <div className="container mx-auto max-w-3xl px-4 py-10">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-4 space-y-2">
           <Button asChild variant="ghost" size="sm"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Volver</Link></Button>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handlePrint} variant="outline" size="sm">
-              <Printer className="mr-1 h-4 w-4" /> Imprimir
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <Button onClick={() => void handleDownload()} variant="hero" className="w-full sm:w-auto">
+              <Download className="mr-1 h-4 w-4" /> Descargar PDF
             </Button>
-            <Button onClick={() => void handleShare()} variant="outline" size="sm">
+            <Button onClick={() => void handleShare()} variant="outline" className="w-full sm:w-auto">
               <Share2 className="mr-1 h-4 w-4" /> Compartir
             </Button>
-            <Button onClick={() => void handleDownload()} variant="hero" size="sm">
-              <Download className="mr-1 h-4 w-4" /> Descargar PDF
+            <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
+              <Printer className="mr-1 h-4 w-4" /> Imprimir
             </Button>
           </div>
         </div>
 
 
+
         <Card className="overflow-hidden border-2 border-border bg-card">
-          <div className="brand-gradient p-6 text-primary-foreground">
-            <div className="flex items-start justify-between gap-4">
-              <div>
+          <div className="brand-gradient p-4 text-primary-foreground sm:p-6">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="min-w-0">
                 <div className="text-xs uppercase tracking-widest text-primary-foreground/60">Cotización</div>
-                <div className="font-display text-4xl">{cot.numero}</div>
+                <div className="font-display text-2xl sm:text-4xl">{cot.numero}</div>
               </div>
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <div className="text-xs uppercase tracking-widest text-primary-foreground/60">Fecha</div>
                 <div className="text-sm">{formatDate(cot.created_at)}</div>
               </div>
             </div>
           </div>
 
-          <div className="grid gap-6 p-6 md:grid-cols-2">
-            <div>
+          <div className="grid gap-6 p-4 sm:p-6 md:grid-cols-2">
+            <div className="min-w-0">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Cliente</h3>
-              <p className="mt-2 font-medium">{cliente?.nombre ?? "—"}</p>
+              <p className="mt-2 break-words font-medium">{cliente?.nombre ?? "—"}</p>
               <p className="text-sm text-muted-foreground">RUT: {cliente?.rut || "No informado"}</p>
               <p className="text-sm text-muted-foreground">Giro / actividad: {cliente?.giro || "No informado"}</p>
-              <p className="text-sm text-muted-foreground">{cliente?.correo ?? "—"}</p>
+              <p className="break-all text-sm text-muted-foreground">{cliente?.correo ?? "—"}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">
                 Datos parciales por seguridad. Los datos completos están en tu confirmación por correo.
               </p>
             </div>
-            <div>
+            <div className="min-w-0">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-accent">Detalle</h3>
               <dl className="mt-2 space-y-1 text-sm">
-                <div className="flex justify-between"><dt className="text-muted-foreground">Color</dt><dd>{cot.color_nombre ?? "—"}</dd></div>
-                <div className="flex justify-between"><dt className="text-muted-foreground">Precio / m² ({modoLabel})</dt><dd>{formatCLP(showP(Number(cot.precio_m2)))} {modoLabel}</dd></div>
-                <div className="flex justify-between font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Color</dt><dd className="text-right">{cot.color_nombre ?? "—"}</dd></div>
+                <div className="flex justify-between gap-2"><dt className="text-muted-foreground">Precio / m² ({modoLabel})</dt><dd className="text-right">{formatCLP(showP(Number(cot.precio_m2)))} {modoLabel}</dd></div>
+                <div className="flex justify-between gap-2 font-semibold"><dt>Total m²</dt><dd>{Number(cot.metros2).toFixed(2)} m²</dd></div>
               </dl>
             </div>
           </div>
 
-          <div className="border-t border-border px-6 pb-6">
-            <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent">Medidas</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
-                  <tr>
-                    <th className="p-2 text-left">#</th>
-                    <th className="p-2 text-right">Largo</th>
-                    <th className="p-2 text-right">Ancho</th>
-                    <th className="p-2 text-right">Cantidad</th>
-                    <th className="p-2 text-right">m²</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }]).map((it, i) => (
-                    <tr key={i} className="border-b last:border-0">
-                      <td className="p-2">{i + 1}</td>
-                      <td className="p-2 text-right">{it.largo_m.toFixed(2)} m</td>
-                      <td className="p-2 text-right">1 m</td>
-                      <td className="p-2 text-right">{it.cantidad_planchas}</td>
-                      <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                  <tr className="bg-muted/30 font-semibold">
-                    <td className="p-2" colSpan={4}>Total m²</td>
-                    <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+          <div className="border-t border-border px-4 pb-6 sm:px-6">
+            <h3 className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wider text-accent sm:mt-6">Medidas</h3>
+            {(() => {
+              const filas = data.items.length
+                ? data.items
+                : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2) }];
+              return (
+                <>
+                  {/* Móvil: tarjetas */}
+                  <div className="space-y-2 md:hidden">
+                    {filas.map((it, i) => (
+                      <div key={i} className="rounded-md border border-border p-3 text-sm">
+                        <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plancha {i + 1}</div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Largo</span><span>{it.largo_m.toFixed(2)} m</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Ancho</span><span>1 m</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">Cantidad</span><span>{it.cantidad_planchas}</span></div>
+                        <div className="flex justify-between font-semibold"><span>m²</span><span>{it.metros2.toFixed(2)}</span></div>
+                      </div>
+                    ))}
+                    <div className="flex justify-between rounded-md bg-muted/40 p-3 text-sm font-semibold">
+                      <span>Total m²</span><span>{Number(cot.metros2).toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  {/* Escritorio: tabla */}
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+                        <tr>
+                          <th className="p-2 text-left">#</th>
+                          <th className="p-2 text-right">Largo</th>
+                          <th className="p-2 text-right">Ancho</th>
+                          <th className="p-2 text-right">Cantidad</th>
+                          <th className="p-2 text-right">m²</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filas.map((it, i) => (
+                          <tr key={i} className="border-b last:border-0">
+                            <td className="p-2">{i + 1}</td>
+                            <td className="p-2 text-right">{it.largo_m.toFixed(2)} m</td>
+                            <td className="p-2 text-right">1 m</td>
+                            <td className="p-2 text-right">{it.cantidad_planchas}</td>
+                            <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-muted/30 font-semibold">
+                          <td className="p-2" colSpan={4}>Total m²</td>
+                          <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              );
+            })()}
           </div>
 
 
-          <div className="grid gap-4 border-t border-border p-6 md:grid-cols-3">
-            <div className="rounded-md bg-muted p-4">
+
+          <div className="grid gap-3 border-t border-border p-4 sm:p-6 md:grid-cols-3">
+            <div className="min-w-0 rounded-md bg-muted p-4">
               <div className="text-xs uppercase text-muted-foreground">Total ({modoLabel})</div>
-              <div className="font-display text-3xl text-primary">{formatCLP(showP(Number(cot.total)))}</div>
+              <div className="font-display text-2xl text-primary sm:text-3xl">{formatCLP(showP(Number(cot.total)))}</div>
             </div>
 
-            <div className="rounded-md bg-muted p-4">
+            <div className="min-w-0 rounded-md bg-muted p-4">
               <div className="text-xs uppercase text-muted-foreground">Pagado</div>
-              <div className="font-display text-3xl text-primary">{formatCLP(Number(cot.pago_recibido))}</div>
+              <div className="font-display text-2xl text-primary sm:text-3xl">{formatCLP(Number(cot.pago_recibido))}</div>
             </div>
-            <div className="rounded-md bg-accent/10 p-4">
+            <div className="min-w-0 rounded-md bg-accent/10 p-4">
               <div className="text-xs uppercase text-muted-foreground">Saldo</div>
-              <div className="font-display text-3xl text-accent">{formatCLP(Number(cot.saldo))}</div>
+              <div className="font-display text-2xl text-accent sm:text-3xl">{formatCLP(Number(cot.saldo))}</div>
             </div>
           </div>
 
-          <div className="border-t border-border p-6">
+          <div className="border-t border-border p-4 sm:p-6">
+
             <div className="rounded-md border-2 border-accent/40 bg-accent/5 p-4">
               <div className="text-xs font-bold uppercase tracking-wider text-accent">📌 Validez de la cotización</div>
               <p className="mt-1 text-sm font-semibold text-foreground">

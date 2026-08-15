@@ -632,34 +632,97 @@ export function pdfsForCotizacion(c: CotizacionPDF) {
   };
 }
 
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent || "";
+  const iOSClassic = /iPad|iPhone|iPod/.test(ua);
+  const iPadOS = /Macintosh/.test(ua) && typeof document !== "undefined" && "ontouchend" in document;
+  return iOSClassic || iPadOS;
+}
+
+function supportsDownloadAttr(): boolean {
+  if (typeof document === "undefined") return false;
+  const a = document.createElement("a");
+  return "download" in a && !isIOS();
+}
+
+/** Abre el PDF en una pestaña/visor para que el usuario lo guarde desde el navegador. */
+function openInNewTab(url: string): boolean {
+  try {
+    const win = window.open(url, "_blank");
+    if (win) { try { win.opener = null; } catch { /* noop */ } return true; }
+  } catch { /* noop */ }
+  return false;
+}
+
+/** Último recurso: visor a pantalla completa dentro de la misma página. */
+function openInlineViewer(url: string, filename: string): void {
+  const overlay = document.createElement("div");
+  overlay.setAttribute("data-pdf-viewer", "1");
+  overlay.style.cssText = "position:fixed;inset:0;z-index:2147483000;background:#111;display:flex;flex-direction:column";
+
+  const bar = document.createElement("div");
+  bar.style.cssText = "display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;background:#1b1b1b;color:#fff;font:600 14px system-ui,sans-serif";
+  const label = document.createElement("span");
+  label.textContent = filename;
+  label.style.cssText = "overflow:hidden;text-overflow:ellipsis;white-space:nowrap";
+  const actions = document.createElement("div");
+  actions.style.cssText = "display:flex;gap:8px;flex:0 0 auto";
+  const open = document.createElement("a");
+  open.href = url;
+  open.target = "_blank";
+  open.textContent = "Abrir / Guardar";
+  open.style.cssText = "background:#e8562f;color:#fff;padding:8px 12px;border-radius:8px;text-decoration:none";
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "Cerrar";
+  close.style.cssText = "background:#333;color:#fff;padding:8px 12px;border-radius:8px;border:0";
+  close.onclick = () => overlay.remove();
+  actions.append(open, close);
+  bar.append(label, actions);
+
+  const frame = document.createElement("iframe");
+  frame.src = url;
+  frame.style.cssText = "flex:1;width:100%;border:0;background:#fff";
+
+  overlay.append(bar, frame);
+  document.body.appendChild(overlay);
+}
+
 /**
  * Entrega el PDF de forma confiable en celular y escritorio:
- * 1) hoja nativa de compartir/guardar (iOS/Android modernos)
- * 2) descarga por enlace con atributo download
- * 3) apertura en pestaña nueva como último recurso
+ * 1) descarga directa con atributo download (escritorio / Chrome Android)
+ * 2) hoja nativa de compartir/guardar (iOS y Android modernos)
+ * 3) apertura en pestaña nueva
+ * 4) visor incrustado con botón "Abrir / Guardar"
  */
 export async function deliverPdf(doc: jsPDF, filename: string): Promise<void> {
   const blob: Blob = doc.output("blob");
   const url = URL.createObjectURL(blob);
-  try {
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.rel = "noopener";
-    a.style.display = "none";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    if (!("download" in a)) window.open(url, "_blank", "noopener");
-  } catch {
-    window.open(url, "_blank", "noopener");
+  const cleanup = () => setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+
+  if (supportsDownloadAttr()) {
+    try {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener";
+      a.style.display = "none";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      cleanup();
+      return;
+    } catch { /* sigue con los respaldos */ }
   }
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+
+  if (await shareBlob(blob, filename)) { cleanup(); return; }
+  if (openInNewTab(url)) { cleanup(); return; }
+  openInlineViewer(url, filename);
+  cleanup();
 }
 
-/** Hoja nativa de compartir/guardar (solo cuando el usuario lo pide). Devuelve false si no está disponible. */
-export async function sharePdf(doc: jsPDF, filename: string): Promise<boolean> {
-  const blob: Blob = doc.output("blob");
+async function shareBlob(blob: Blob, filename: string): Promise<boolean> {
   const file = typeof File !== "undefined" ? new File([blob], filename, { type: "application/pdf" }) : null;
   const nav = typeof navigator !== "undefined" ? (navigator as Navigator & { canShare?: (d: unknown) => boolean }) : null;
   if (file && nav?.share && nav.canShare?.({ files: [file] })) {
@@ -667,12 +730,17 @@ export async function sharePdf(doc: jsPDF, filename: string): Promise<boolean> {
       await nav.share({ files: [file], title: filename });
       return true;
     } catch (e) {
-      if ((e as Error)?.name === "AbortError") return true;
-      return false;
+      return (e as Error)?.name === "AbortError";
     }
   }
   return false;
 }
+
+/** Hoja nativa de compartir/guardar (solo cuando el usuario lo pide). Devuelve false si no está disponible. */
+export async function sharePdf(doc: jsPDF, filename: string): Promise<boolean> {
+  return shareBlob(doc.output("blob"), filename);
+}
+
 
 export function downloadCotizacionPDF(c: CotizacionPDF) {
   return deliverPdf(buildCotizacionPDF(c), `Cotizacion-${c.numero}.pdf`);
