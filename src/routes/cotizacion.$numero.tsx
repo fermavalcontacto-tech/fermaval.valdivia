@@ -293,23 +293,24 @@ function QuotePage() {
 
 
 
-          <div className="grid gap-4 border-t border-border p-6 md:grid-cols-3">
-            <div className="rounded-md bg-muted p-4">
+          <div className="grid gap-3 border-t border-border p-4 sm:p-6 md:grid-cols-3">
+            <div className="min-w-0 rounded-md bg-muted p-4">
               <div className="text-xs uppercase text-muted-foreground">Total ({modoLabel})</div>
-              <div className="font-display text-3xl text-primary">{formatCLP(showP(Number(cot.total)))}</div>
+              <div className="font-display text-2xl text-primary sm:text-3xl">{formatCLP(showP(Number(cot.total)))}</div>
             </div>
 
-            <div className="rounded-md bg-muted p-4">
+            <div className="min-w-0 rounded-md bg-muted p-4">
               <div className="text-xs uppercase text-muted-foreground">Pagado</div>
-              <div className="font-display text-3xl text-primary">{formatCLP(Number(cot.pago_recibido))}</div>
+              <div className="font-display text-2xl text-primary sm:text-3xl">{formatCLP(Number(cot.pago_recibido))}</div>
             </div>
-            <div className="rounded-md bg-accent/10 p-4">
+            <div className="min-w-0 rounded-md bg-accent/10 p-4">
               <div className="text-xs uppercase text-muted-foreground">Saldo</div>
-              <div className="font-display text-3xl text-accent">{formatCLP(Number(cot.saldo))}</div>
+              <div className="font-display text-2xl text-accent sm:text-3xl">{formatCLP(Number(cot.saldo))}</div>
             </div>
           </div>
 
-          <div className="border-t border-border p-6">
+          <div className="border-t border-border p-4 sm:p-6">
+
             <div className="rounded-md border-2 border-accent/40 bg-accent/5 p-4">
               <div className="text-xs font-bold uppercase tracking-wider text-accent">📌 Validez de la cotización</div>
               <p className="mt-1 text-sm font-semibold text-foreground">
