@@ -354,6 +354,7 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               type="checkbox"
               className="h-4 w-4 accent-primary"
               checked={esBobina}
+              disabled={mencionaBobina(descripcion)}
               onChange={(e) => setManualBobina(e.target.checked)}
             />
             Esta boleta es una compra de bobina (se suma al stock del color)
