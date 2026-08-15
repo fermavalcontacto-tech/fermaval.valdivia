@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
-  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos,
+  updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos, listUtilidadM2,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, type BobinaSaldo } from "@/lib/domain/quotes.core";
+import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, precioSugeridoPorColor, type BobinaSaldo } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -401,11 +401,20 @@ function FieldError({ msg }: { msg?: string }) {
   return <p className="mt-1 text-xs text-destructive" role="alert">{msg}</p>;
 }
 
-function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0 }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number }) {
+function ItemsEditor({ items, setItems, colores, errors, generalError, precios = {}, precioBase = 0, onPrecioSugerido }: { items: ItemForm[]; setItems: (a: ItemForm[]) => void; colores: ColorOption[]; errors?: ItemErrors[]; generalError?: string; precios?: PreciosPorTipo; precioBase?: number; onPrecioSugerido?: (p: number) => void }) {
   const calc = calcItems(items, precios, precioBase);
   const periodoActual = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`;
   const { data: costos = [] } = useQuery({ queryKey: ["costos-m2"], queryFn: () => listCostosM2() });
   const { data: bobinas = [] } = useQuery<BobinaSaldo[]>({ queryKey: ["bobinas-saldos"], queryFn: () => listBobinasSaldos() });
+  const { data: utilidades = [] } = useQuery({ queryKey: ["utilidad-m2"], queryFn: () => listUtilidadM2() });
+  const utilidadM2 = (() => {
+    const rows = (utilidades as Array<{ periodo: string; utilidad_m2: number }>)
+      .slice()
+      .sort((a, b) => String(b.periodo).localeCompare(String(a.periodo)));
+    const mes = rows.find((r) => String(r.periodo).slice(0, 7) === periodoActual) ?? rows[0];
+    const v = Number(mes?.utilidad_m2);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  })();
   const costoPorTipo: Record<string, number> = {};
   for (const row of costos as Array<{ periodo: string; tipo: string; costo_m2: number }>) {
     if (String(row.periodo).slice(0, 7) === periodoActual) costoPorTipo[row.tipo] = Number(row.costo_m2);
@@ -777,7 +786,7 @@ function EditarCotizacionDialog({
           <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
           <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+          <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} onPrecioSugerido={(p) => setForm((f) => ({ ...f, precio_m2: String(p) }))} />
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² neto general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Descuento (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.descuento} aria-invalid={!!errors.descuento} onChange={(e)=>setForm({...form, descuento: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.descuento} /></div>
           <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Pago recibido (CLP)</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.pago_recibido} aria-invalid={!!errors.pago_recibido} onChange={(e)=>setForm({...form, pago_recibido: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.pago_recibido} /></div>
@@ -910,7 +919,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
               <div className="w-full min-w-0 space-y-1"><Label>Teléfono (opcional)</Label><Input className="w-full" value={form.telefono} aria-invalid={!!errors.telefono} onChange={(e)=>setForm({...form, telefono: e.target.value})} /><FieldError msg={errors.telefono} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Correo (opcional)</Label><Input className="w-full" type="email" value={form.correo} aria-invalid={!!errors.correo} onChange={(e)=>setForm({...form, correo: e.target.value})} /><FieldError msg={errors.correo} /></div>
               <div className="w-full min-w-0 space-y-1"><Label>Dirección (opcional)</Label><Input className="w-full" value={form.direccion} aria-invalid={!!errors.direccion} onChange={(e)=>setForm({...form, direccion: e.target.value})} /><FieldError msg={errors.direccion} /></div>
-              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} />
+              <ItemsEditor items={items} setItems={setItems} colores={colores as ColorOption[]} errors={errors.items} generalError={errors.itemsGeneral} precios={precios} precioBase={parseDecimal(form.precio_m2)} onPrecioSugerido={(p) => setForm((f) => ({ ...f, precio_m2: String(p) }))} />
               <div className="w-full min-w-0 space-y-1 col-span-2 md:col-span-1"><Label>Precio / m² neto general (respaldo) *</Label><Input className="w-full" {...DECIMAL_INPUT_PROPS} value={form.precio_m2} aria-invalid={!!errors.precio_m2} onChange={(e)=>setForm({...form, precio_m2: sanitizeDecimalInput(e.target.value)})} /><FieldError msg={errors.precio_m2} /></div>
               <div className="w-full min-w-0 space-y-1 col-span-2">
                 <Label>Responsable interno (aparece en el PDF y el panel) *</Label>
