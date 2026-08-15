@@ -261,6 +261,17 @@ function EditarBoletaDialog({
             </Select>
           </div>
           <div><Label>Descripción</Label><Input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} /></div>
+          <label className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={esBobina}
+              disabled={mencionaBobina(form.descripcion)}
+              onChange={(e) => setManualBobina(e.target.checked)}
+            />
+            Esta boleta es una compra de bobina (se suma al stock del color)
+          </label>
+          {esBobina && <BobinaFields value={bob} onChange={setBob} monto={Number(form.monto) || 0} />}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} /></div>
             <div><Label>Fecha</Label><Input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></div>
