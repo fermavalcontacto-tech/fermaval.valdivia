@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery, useQuery, useMutation, useQueryClient, queryOptions } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -30,10 +30,14 @@ export const Route = createFileRoute("/_authenticated/admin/finanzas")({
   component: FinanzasPage,
 });
 
+const CARD_LINK = "block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+const CARD_HOVER = "h-full cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/40";
+
 const MESES = [
   "Enero","Febrero","Marzo","Abril","Mayo","Junio",
   "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre",
 ];
+
 
 function FinanzasPage() {
   const { auth } = Route.useRouteContext();
@@ -71,25 +75,37 @@ function FinanzasPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-5 border-accent/40 bg-accent/5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
-          <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
-        </Card>
-        <Card className={`p-5 border ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
-          <div className={`mt-2 font-display text-3xl ${utilidadesSel >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{formatCLP(utilidadesSel)}</div>
-          <div className="text-xs text-muted-foreground">Ventas − Gastos</div>
-        </Card>
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">IVA (19%)</div>
-          <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ivaSel)}</div>
-        </Card>
-        <Card className="p-5">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">Gastos</div>
-          <div className="mt-2 font-display text-3xl text-destructive">{formatCLP(gastosSel)}</div>
-        </Card>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <Link to="/admin/cotizaciones" search={{ cot: undefined }} className={CARD_LINK}>
+          <Card className={`p-5 border-accent/40 bg-accent/5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
+            <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver cotizaciones</div>
+          </Card>
+        </Link>
+        <a href="#movimientos" className={CARD_LINK}>
+          <Card className={`p-5 border ${CARD_HOVER} ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
+            <div className={`mt-2 font-display text-3xl ${utilidadesSel >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>{formatCLP(utilidadesSel)}</div>
+            <div className="text-xs text-muted-foreground">Ventas − Gastos · ver movimientos</div>
+          </Card>
+        </a>
+        <a href="#movimientos" className={CARD_LINK}>
+          <Card className={`p-5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">IVA (19%)</div>
+            <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ivaSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver movimientos</div>
+          </Card>
+        </a>
+        <Link to="/admin/egresos" className={CARD_LINK}>
+          <Card className={`p-5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Gastos</div>
+            <div className="mt-2 font-display text-3xl text-destructive">{formatCLP(gastosSel)}</div>
+            <div className="text-xs text-muted-foreground">Ver egresos</div>
+          </Card>
+        </Link>
       </div>
+
 
       <Card className="p-5">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Evolución últimos 12 meses (incluye movimientos históricos)</h3>
@@ -292,7 +308,8 @@ function HistoricosPanel() {
   const anios = Array.from({ length: 7 }, (_, i) => String(anioActual - 3 + i));
 
   return (
-    <Card className="p-5">
+    <Card id="movimientos" className="scroll-mt-24 p-5">
+
       <div className="mb-4 flex items-center gap-2">
         <Lock className="h-4 w-4 text-accent" />
         <h3 className="font-display text-lg text-primary">Ingreso manual de movimientos históricos</h3>
