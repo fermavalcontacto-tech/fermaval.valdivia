@@ -349,6 +349,22 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               Si la descripción incluye la palabra <strong>bobina</strong>, se enlaza automáticamente con el stock del color.
             </p>
           </div>
+          <label className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={esBobina}
+              onChange={(e) => setManualBobina(e.target.checked)}
+            />
+            Esta boleta es una compra de bobina (se suma al stock del color)
+          </label>
+          {esBobina && (
+            <BobinaFields
+              value={bob}
+              onChange={setBob}
+              monto={Number(monto) || 0}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
             <div>
@@ -357,13 +373,6 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
-          {esBobina && (
-            <BobinaFields
-              value={bob}
-              onChange={setBob}
-              monto={Number(monto) || 0}
-            />
-          )}
           <div>
             <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
