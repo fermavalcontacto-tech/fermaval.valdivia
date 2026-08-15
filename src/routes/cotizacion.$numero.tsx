@@ -181,20 +181,21 @@ function QuotePage() {
     <div className="min-h-screen bg-background">
       <PublicHeader linktreeUrl={data.cfg?.linktree_url} />
       <div className="container mx-auto max-w-3xl px-4 py-10">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="mb-4 space-y-2">
           <Button asChild variant="ghost" size="sm"><Link to="/"><ArrowLeft className="mr-1 h-4 w-4" /> Volver</Link></Button>
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={handlePrint} variant="outline" size="sm">
-              <Printer className="mr-1 h-4 w-4" /> Imprimir
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end">
+            <Button onClick={() => void handleDownload()} variant="hero" className="w-full sm:w-auto">
+              <Download className="mr-1 h-4 w-4" /> Descargar PDF
             </Button>
-            <Button onClick={() => void handleShare()} variant="outline" size="sm">
+            <Button onClick={() => void handleShare()} variant="outline" className="w-full sm:w-auto">
               <Share2 className="mr-1 h-4 w-4" /> Compartir
             </Button>
-            <Button onClick={() => void handleDownload()} variant="hero" size="sm">
-              <Download className="mr-1 h-4 w-4" /> Descargar PDF
+            <Button onClick={handlePrint} variant="outline" className="w-full sm:w-auto">
+              <Printer className="mr-1 h-4 w-4" /> Imprimir
             </Button>
           </div>
         </div>
+
 
 
         <Card className="overflow-hidden border-2 border-border bg-card">
