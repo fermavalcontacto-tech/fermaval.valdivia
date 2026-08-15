@@ -276,7 +276,8 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
   const [bob, setBob] = useState({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
-  const esBobina = mencionaBobina(descripcion);
+  const [manualBobina, setManualBobina] = useState(false);
+  const esBobina = manualBobina || mencionaBobina(descripcion);
 
   async function submit() {
     if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
