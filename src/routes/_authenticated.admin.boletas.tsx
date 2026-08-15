@@ -208,6 +208,8 @@ function EditarBoletaDialog({
     tipo: "materiales" as Tipo, descripcion: "", monto: "0", fecha: "",
     responsable: "" as Persona | "",
   });
+  const [bob, setBob] = useState<BobForm>({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
+  const [manualBobina, setManualBobina] = useState(false);
   useEffect(() => {
     if (!boleta) return;
     setForm({
@@ -215,7 +217,20 @@ function EditarBoletaDialog({
       monto: String(boleta.monto), fecha: boleta.fecha,
       responsable: boleta.responsable ?? "",
     });
+    const b = boleta as Boleta & {
+      proveedor?: string | null; bobina_color_id?: string | null;
+      bobina_metros?: number | null; bobina_defectuosos?: number | null;
+    };
+    setBob({
+      proveedor: b.proveedor ?? "",
+      color_id: b.bobina_color_id ?? "",
+      metros: b.bobina_metros != null ? String(b.bobina_metros) : "",
+      defectuosos: b.bobina_defectuosos != null ? String(b.bobina_defectuosos) : "",
+    });
+    setManualBobina(!!b.bobina_color_id);
   }, [boleta]);
+
+  const esBobina = manualBobina || mencionaBobina(form.descripcion);
 
   const mut = useMutation({
     mutationFn: () => updateBoleta({ data: {
@@ -223,6 +238,10 @@ function EditarBoletaDialog({
       descripcion: form.descripcion || null,
       monto: Number(form.monto), fecha: form.fecha,
       responsable: form.responsable || null,
+      proveedor: esBobina ? bob.proveedor.trim() || null : null,
+      bobina_color_id: esBobina && bob.color_id ? bob.color_id : null,
+      bobina_metros: esBobina ? parseDecimal(bob.metros) || null : null,
+      bobina_defectuosos: esBobina ? parseDecimal(bob.defectuosos) : 0,
     } }),
     onSuccess: () => { toast.success("Boleta actualizada"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
@@ -242,6 +261,17 @@ function EditarBoletaDialog({
             </Select>
           </div>
           <div><Label>Descripción</Label><Input value={form.descripcion} onChange={(e) => setForm({ ...form, descripcion: e.target.value })} /></div>
+          <label className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={esBobina}
+              disabled={mencionaBobina(form.descripcion)}
+              onChange={(e) => setManualBobina(e.target.checked)}
+            />
+            Esta boleta es una compra de bobina (se suma al stock del color)
+          </label>
+          {esBobina && <BobinaFields value={bob} onChange={setBob} monto={Number(form.monto) || 0} />}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={form.monto} onChange={(e) => setForm({ ...form, monto: e.target.value })} /></div>
             <div><Label>Fecha</Label><Input type="date" value={form.fecha} onChange={(e) => setForm({ ...form, fecha: e.target.value })} /></div>
@@ -276,7 +306,8 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
   const [uploading, setUploading] = useState(false);
   const [responsable, setResponsable] = useState<Persona | "">(detectPersona(auth.email));
   const [bob, setBob] = useState({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
-  const esBobina = mencionaBobina(descripcion);
+  const [manualBobina, setManualBobina] = useState(false);
+  const esBobina = manualBobina || mencionaBobina(descripcion);
 
   async function submit() {
     if (!file && !isSuper) { toast.error("Selecciona un archivo (obligatorio para tu perfil)"); return; }
@@ -348,6 +379,23 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               Si la descripción incluye la palabra <strong>bobina</strong>, se enlaza automáticamente con el stock del color.
             </p>
           </div>
+          <label className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+            <input
+              type="checkbox"
+              className="h-4 w-4 accent-primary"
+              checked={esBobina}
+              disabled={mencionaBobina(descripcion)}
+              onChange={(e) => setManualBobina(e.target.checked)}
+            />
+            Esta boleta es una compra de bobina (se suma al stock del color)
+          </label>
+          {esBobina && (
+            <BobinaFields
+              value={bob}
+              onChange={setBob}
+              monto={Number(monto) || 0}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Monto</Label><Input type="number" value={monto} onChange={(e) => setMonto(e.target.value)} /></div>
             <div>
@@ -356,13 +404,6 @@ function NuevaBoleta({ onCreated }: { onCreated: () => void }) {
               {!isSuper && <p className="mt-1 text-[10px] text-muted-foreground">Solo el Administrador General puede registrar fechas pasadas.</p>}
             </div>
           </div>
-          {esBobina && (
-            <BobinaFields
-              value={bob}
-              onChange={setBob}
-              monto={Number(monto) || 0}
-            />
-          )}
           <div>
             <Label>Archivo {isSuper ? <span className="text-xs text-muted-foreground">(opcional para Administrador General)</span> : <span className="text-destructive">*</span>}</Label>
             <Input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
