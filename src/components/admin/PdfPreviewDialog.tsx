@@ -49,7 +49,7 @@ export function PdfPreviewDialog({ data, onOpenChange, onShareWhatsApp }: Props)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto overflow-x-hidden p-4 sm:w-auto sm:max-w-5xl sm:p-6">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
