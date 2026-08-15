@@ -208,6 +208,8 @@ function EditarBoletaDialog({
     tipo: "materiales" as Tipo, descripcion: "", monto: "0", fecha: "",
     responsable: "" as Persona | "",
   });
+  const [bob, setBob] = useState<BobForm>({ proveedor: "", color_id: "", metros: "", defectuosos: "" });
+  const [manualBobina, setManualBobina] = useState(false);
   useEffect(() => {
     if (!boleta) return;
     setForm({
@@ -215,7 +217,20 @@ function EditarBoletaDialog({
       monto: String(boleta.monto), fecha: boleta.fecha,
       responsable: boleta.responsable ?? "",
     });
+    const b = boleta as Boleta & {
+      proveedor?: string | null; bobina_color_id?: string | null;
+      bobina_metros?: number | null; bobina_defectuosos?: number | null;
+    };
+    setBob({
+      proveedor: b.proveedor ?? "",
+      color_id: b.bobina_color_id ?? "",
+      metros: b.bobina_metros != null ? String(b.bobina_metros) : "",
+      defectuosos: b.bobina_defectuosos != null ? String(b.bobina_defectuosos) : "",
+    });
+    setManualBobina(!!b.bobina_color_id);
   }, [boleta]);
+
+  const esBobina = manualBobina || mencionaBobina(form.descripcion);
 
   const mut = useMutation({
     mutationFn: () => updateBoleta({ data: {
@@ -223,6 +238,10 @@ function EditarBoletaDialog({
       descripcion: form.descripcion || null,
       monto: Number(form.monto), fecha: form.fecha,
       responsable: form.responsable || null,
+      proveedor: esBobina ? bob.proveedor.trim() || null : null,
+      bobina_color_id: esBobina && bob.color_id ? bob.color_id : null,
+      bobina_metros: esBobina ? parseDecimal(bob.metros) || null : null,
+      bobina_defectuosos: esBobina ? parseDecimal(bob.defectuosos) : 0,
     } }),
     onSuccess: () => { toast.success("Boleta actualizada"); onSaved(); },
     onError: (e: Error) => toast.error(e.message),
