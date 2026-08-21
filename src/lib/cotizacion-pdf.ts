@@ -69,7 +69,7 @@ const EMPRESA = {
   razon: "FERMAVAL Cubiertas y Revestimientos",
   rut: "RUT: 77.339.375-3",
   direccion: "Ruta T-505, Sector Vuelta La Culebra, Parcela #8, Valdivia",
-  telefono: "+56 9 0000 0000",
+  telefono: CONTACTO_FERMAVAL,
   email: "fermaval.contacto@gmail.com",
 };
 
