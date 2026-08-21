@@ -40,7 +40,7 @@ export function CotizadorForm({ precio, preciosTipo, colores, formFields, precio
   const modo = normalizePrecioModo(precioModo);
   const modoLabel = precioModoLabel(modo);
   const showP = (neto: number) => precioParaCliente(neto, modo);
-  const notaPrecios = modo === "bruto" ? "Precios con IVA 19% incluido." : "{notaPrecios}";
+  const notaPrecios = modo === "bruto" ? "Precios con IVA 19% incluido." : "Precios netos sin IVA incluido.";
   const ff: FormFields = {
     nombre: { ...DEFAULT_FIELDS.nombre, ...(formFields?.nombre ?? {}) },
     giro: { ...DEFAULT_FIELDS.giro, ...(formFields?.giro ?? {}) },
