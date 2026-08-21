@@ -65,6 +65,9 @@ const ALERT_BG: [number, number, number] = [253, 246, 230];
 const ALERT_BORDER: [number, number, number] = [202, 138, 4];
 const ALERT_TEXT: [number, number, number] = [120, 80, 0];
 
+export const CONTACTO_FERMAVAL = "+56 9 3012 6744";
+export const WEB_FERMAVAL = "www.fermaval.com";
+
 const EMPRESA = {
   razon: "FERMAVAL Cubiertas y Revestimientos",
   rut: "RUT: 77.339.375-3",
@@ -81,9 +84,6 @@ const BANCO = {
   cuenta: "81530840",
   correo: "fermavalspa@gmail.com",
 };
-
-export const CONTACTO_FERMAVAL = "+56 9 3012 6744";
-export const WEB_FERMAVAL = "www.fermaval.com";
 
 const LEGAL_TITLE = "Nota sobre el retiro de materiales";
 const LEGAL_BODY =
