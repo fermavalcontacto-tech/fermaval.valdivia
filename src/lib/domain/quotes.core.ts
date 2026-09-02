@@ -59,6 +59,9 @@ export const ItemInputSchema = z.object({
   // Precio por m² específico de esta línea (ajuste manual del administrador).
   // Si no viene, se usa el precio del tipo y, en última instancia, el precio general.
   precio_m2: decimalFromInput.pipe(z.number().min(0).max(100_000_000)).nullable().optional(),
+  // Precio unitario por metro lineal de esta línea. Cuando viene, manda sobre
+  // el precio por m² para calcular el subtotal (ancho fijo 1 m).
+  precio_ml: decimalFromInput.pipe(z.number().min(0).max(100_000_000)).nullable().optional(),
   // Bobina (lote de proveedor) preferida para consumir el stock de esta línea.
   bobina_id: z.string().uuid().nullable().optional(),
 });
@@ -74,8 +77,10 @@ export type ItemCalc = {
   tipo: TipoProducto;
   espesor_mm: number;
   precio_m2: number;
+  precio_ml: number | null;
   bobina_id: string | null;
 };
+
 
 
 type DbClientLike = { from: (table: string) => any };
