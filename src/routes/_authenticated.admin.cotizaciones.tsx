@@ -646,6 +646,15 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
               <p className="text-[10px] text-muted-foreground">
                 Vacío usa el precio base del tipo. Ajustarlo aquí solo afecta esta cotización.
               </p>
+              <Label className="text-[10px]">Precio unitario por metro lineal (neto)</Label>
+              <Input {...DECIMAL_INPUT_PROPS} className="w-full" aria-invalid={!!er.precio_ml}
+                placeholder={`Por defecto: ${formatCLP(calc[i].precio_ml_efectivo)} / ml`}
+                value={it.precio_ml ?? ""}
+                onChange={(e) => setItems(items.map((x, idx) => idx === i ? { ...x, precio_ml: sanitizeDecimalInput(e.target.value) } : x))} />
+              <p className="text-[10px] text-muted-foreground">
+                Si lo defines, el subtotal se cobra por metro lineal ({calc[i].ml.toFixed(2)} ml) en vez de m².
+                Peso de la línea: <strong>{calc[i].kg.toFixed(0)} kg</strong> (1 m² = {PESO_KG_M2} kg).
+              </p>
             </div>
             <div className="w-full min-w-0 overflow-hidden rounded-md border bg-background text-sm">
               <div className="grid grid-cols-3 border-b bg-muted/40 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -701,6 +710,8 @@ function ItemsEditor({ items, setItems, colores, errors, generalError, precios =
         </Button>
         <div className="text-sm">
           Total m²: <span className="font-mono font-semibold">{total.toFixed(2)}</span>
+          <span className="mx-2 text-muted-foreground">·</span>
+          Peso: <span className="font-mono font-semibold">{pesoTotalKg(calc.map((x) => ({ metros2: x.m2 }))).toFixed(0)} kg</span>
           <span className="mx-2 text-muted-foreground">·</span>
           Neto: <span className="font-mono font-semibold">{formatCLP(ivaBreakdown(totalPesos).neto)}</span>
           <span className="mx-2 text-muted-foreground">·</span>
