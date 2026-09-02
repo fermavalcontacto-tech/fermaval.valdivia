@@ -654,7 +654,9 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...NAVY_DARK);
-    doc.text(`Ganancia estimada total: ${formatCLP(Math.round(ganTotal))}`, 15, ay);
+    const kgTotal = items.reduce((s, it) => s + itemKg(it), 0);
+    doc.text(`Ganancia estimada total: ${formatCLP(Math.round(ganTotal))}  ·  Peso total: ${kgTotal.toFixed(0)} kg`, 15, ay);
+
     ay += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
