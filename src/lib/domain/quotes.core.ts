@@ -155,6 +155,7 @@ export async function buildItemsCalc(
       tipo,
       espesor_mm: espesor,
       precio_m2: resolvePrecioItem({ tipo, precio_m2: it.precio_m2 ?? null }, precios, precioBase),
+      precio_ml: Number(it.precio_ml) > 0 ? Number(it.precio_ml) : null,
       bobina_id: it.bobina_id ?? null,
 
     };
@@ -165,14 +166,33 @@ export function sumMetros2(items: Pick<ItemCalc, "metros2">[]): number {
   return Number(items.reduce((s, x) => s + x.metros2, 0).toFixed(2));
 }
 
-/** Suma de subtotales (m² × precio por m² de cada línea). */
-export function sumSubtotales(items: Pick<ItemCalc, "metros2" | "precio_m2">[]): number {
-  return items.reduce((s, x) => s + x.metros2 * Number(x.precio_m2 || 0), 0);
+export type LineaPrecio = { metros2: number; precio_m2: number; precio_ml?: number | null };
+
+/**
+ * Subtotal neto de una línea. Si tiene precio por metro lineal, se cobra
+ * metros lineales × precio_ml (ancho fijo 1 m ⇒ ml = m²); si no, m² × precio_m2.
+ */
+export function subtotalLinea(it: LineaPrecio): number {
+  const ml = Number(it.precio_ml);
+  if (Number.isFinite(ml) && ml > 0) return Number(it.metros2 || 0) * ml;
+  return Number(it.metros2 || 0) * Number(it.precio_m2 || 0);
+}
+
+/** Precio unitario efectivo por metro lineal de la línea. */
+export function precioMlEfectivo(it: LineaPrecio): number {
+  const ml = Number(it.precio_ml);
+  if (Number.isFinite(ml) && ml > 0) return ml;
+  return Number(it.precio_m2 || 0) * ANCHO_FIJO_M;
+}
+
+/** Suma de subtotales de las líneas. */
+export function sumSubtotales(items: LineaPrecio[]): number {
+  return items.reduce((s, x) => s + subtotalLinea(x), 0);
 }
 
 /** Total de la cotización a partir de las líneas, con descuento aplicado. */
 export function calcTotalItems(
-  items: Pick<ItemCalc, "metros2" | "precio_m2">[],
+  items: LineaPrecio[],
   descuento = 0,
 ): number {
   return Math.max(0, Math.round(sumSubtotales(items) - descuento));
@@ -180,7 +200,7 @@ export function calcTotalItems(
 
 /** Precio por m² representativo de la cotización (para compatibilidad de la cabecera). */
 export function precioPromedio(
-  items: Pick<ItemCalc, "metros2" | "precio_m2">[],
+  items: LineaPrecio[],
   fallback = 0,
 ): number {
   const m2 = items.reduce((s, x) => s + x.metros2, 0);
@@ -191,6 +211,7 @@ export function precioPromedio(
 export function calcTotal(metros2: number, precio_m2: number, descuento = 0): number {
   return Math.max(0, Math.round(metros2 * precio_m2 - descuento));
 }
+
 
 
 export const QUOTE_FALLBACK_ERROR_MESSAGE = "No se pudo generar la cotización. Por favor intenta nuevamente.";
