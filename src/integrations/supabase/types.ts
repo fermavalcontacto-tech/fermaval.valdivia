@@ -1219,6 +1219,7 @@ export type Database = {
         | "pedido_confirmado"
         | "pedido_terminado"
         | "rechazada"
+        | "cotizacion_pagada"
       tipo_producto:
         | "Ondulado"
         | "PV8"
@@ -1382,6 +1383,7 @@ export const Constants = {
         "pedido_confirmado",
         "pedido_terminado",
         "rechazada",
+        "cotizacion_pagada",
       ],
       tipo_producto: [
         "Ondulado",

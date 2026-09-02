@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788364612523,
+      "tag": "0000_add_cotizacion_pagada_status",
+      "breakpoints": true
+    }
+  ]
+}
