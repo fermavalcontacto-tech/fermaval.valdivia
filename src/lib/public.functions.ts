@@ -12,6 +12,7 @@ import {
   publicQuoteErrorMessage,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+import { nextQuoteNumber, isDuplicateNumeroError } from "@/lib/quote-number";
 
 
 
