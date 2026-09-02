@@ -25,6 +25,7 @@ export const ESTADO_LABEL: Record<string, string> = {
   cotizacion_creada: "Cotización creada",
   esperando_pago: "Esperando pago",
   pago_parcial: "Pago parcial recibido",
+  cotizacion_pagada: "Cotización pagada",
   pedido_confirmado: "Pedido confirmado",
   pedido_terminado: "Pedido terminado",
   rechazada: "Rechazada",
