@@ -70,10 +70,8 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         .from("clientes").insert({ ...data.cliente }).select("id").single();
       if (ceErr) throw new Error("No se pudo registrar el cliente");
 
-      const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
-      const numero = seqErr || seqVal == null
-        ? "FV-" + Date.now().toString().slice(-7)
-        : "FV-" + String(seqVal as unknown as number).padStart(5, "0");
+      const numero = await nextQuoteNumber(supabaseAdmin as never);
+
 
       const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
