@@ -116,6 +116,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         tipo: it.tipo,
         espesor_mm: it.espesor_mm,
         precio_m2: it.precio_m2,
+        precio_ml: it.precio_ml,
 
       }));
 

@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
 import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
-import { normalizePrecioModo, precioModoLabel, precioParaCliente } from "@/lib/domain/quotes.core";
+import { normalizePrecioModo, precioModoLabel, precioParaCliente, pesoKg, pesoTotalKg, PESO_KG_M2 } from "@/lib/domain/quotes.core";
 
 
 function maskCorreo(c: string | null | undefined): string {
@@ -44,7 +44,7 @@ const getQuote = createServerFn({ method: "GET" })
       ok = diff === 0;
     }
     let safeCot: unknown = null;
-    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; tipo: string | null; espesor_mm: number | null; color_nombre: string | null; precio_m2: number | null }> = [];
+    let items: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; tipo: string | null; espesor_mm: number | null; color_nombre: string | null; precio_m2: number | null; precio_ml: number | null }> = [];
     if (cot && ok) {
       const c = cot.cliente as { nombre?: string; giro?: string; rut?: string; correo?: string } | null;
       const firstName = (c?.nombre ?? "").trim().split(/\s+/)[0] ?? "";
@@ -56,7 +56,7 @@ const getQuote = createServerFn({ method: "GET" })
       };
       const { data: its } = await supabaseAdmin
         .from("cotizacion_items")
-        .select("position, largo_m, ancho_m, cantidad_planchas, metros2, tipo, espesor_mm, color_nombre, precio_m2")
+        .select("position, largo_m, ancho_m, cantidad_planchas, metros2, tipo, espesor_mm, color_nombre, precio_m2, precio_ml")
         .eq("cotizacion_id", cot.id)
         .order("position", { ascending: true });
       items = (its ?? []).map((r) => ({
@@ -69,6 +69,7 @@ const getQuote = createServerFn({ method: "GET" })
         espesor_mm: r.espesor_mm == null ? null : Number(r.espesor_mm),
         color_nombre: (r.color_nombre as string | null) ?? null,
         precio_m2: r.precio_m2 == null ? null : Number(r.precio_m2),
+        precio_ml: r.precio_ml == null ? null : Number(r.precio_ml),
       }));
     }
     const { data: cfg } = await supabaseAdmin
@@ -135,7 +136,7 @@ function QuotePage() {
 
 
   function buildPdf(): CotizacionPDF {
-    const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2), tipo: null, espesor_mm: null, color_nombre: null, precio_m2: null }])
+    const items = (data.items.length ? data.items : [{ position: 0, largo_m: Number(cot.largo_m), ancho_m: 1, cantidad_planchas: cot.cantidad_planchas ?? 1, metros2: Number(cot.metros2), tipo: null, espesor_mm: null, color_nombre: null, precio_m2: null, precio_ml: null }])
       .map((it) => ({
         largo_m: Number(it.largo_m), ancho_m: 1,
         cantidad_planchas: Number(it.cantidad_planchas), metros2: Number(it.metros2),
@@ -143,6 +144,7 @@ function QuotePage() {
         espesor_mm: it.espesor_mm == null ? null : Number(it.espesor_mm),
         color_nombre: it.color_nombre ?? null,
         precio_m2: it.precio_m2 == null ? null : Number(it.precio_m2),
+        precio_ml: it.precio_ml == null ? null : Number(it.precio_ml),
       }));
     const pdf: CotizacionPDF = {
       numero: cot.numero,
@@ -249,11 +251,15 @@ function QuotePage() {
                         <div className="flex justify-between"><span className="text-muted-foreground">Largo</span><span>{it.largo_m.toFixed(2)} m</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Ancho</span><span>1 m</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Cantidad</span><span>{it.cantidad_planchas}</span></div>
-                        <div className="flex justify-between font-semibold"><span>m²</span><span>{it.metros2.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">m²</span><span>{it.metros2.toFixed(2)}</span></div>
+                        <div className="flex justify-between font-semibold"><span>Peso</span><span>{pesoKg(it.metros2).toFixed(0)} kg</span></div>
                       </div>
                     ))}
                     <div className="flex justify-between rounded-md bg-muted/40 p-3 text-sm font-semibold">
                       <span>Total m²</span><span>{Number(cot.metros2).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between rounded-md bg-muted/40 p-3 text-sm font-semibold">
+                      <span>Peso total</span><span>{pesoTotalKg(filas).toFixed(0)} kg</span>
                     </div>
                   </div>
 
@@ -267,6 +273,7 @@ function QuotePage() {
                           <th className="p-2 text-right">Ancho</th>
                           <th className="p-2 text-right">Cantidad</th>
                           <th className="p-2 text-right">m²</th>
+                          <th className="p-2 text-right">Kg</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -277,15 +284,19 @@ function QuotePage() {
                             <td className="p-2 text-right">1 m</td>
                             <td className="p-2 text-right">{it.cantidad_planchas}</td>
                             <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
+                            <td className="p-2 text-right">{pesoKg(it.metros2).toFixed(0)}</td>
                           </tr>
                         ))}
                         <tr className="bg-muted/30 font-semibold">
-                          <td className="p-2" colSpan={4}>Total m²</td>
+                          <td className="p-2" colSpan={4}>Totales</td>
                           <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
+                          <td className="p-2 text-right">{pesoTotalKg(filas).toFixed(0)} kg</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground">Peso de referencia: 1 m² de plancha pesa {PESO_KG_M2} kg.</p>
+
                 </>
               );
             })()}

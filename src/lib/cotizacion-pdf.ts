@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate } from "@/lib/format";
+import { PESO_KG_M2 } from "@/lib/domain/quotes.core";
 import logoAsset from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 const logoUrl = (logoAsset as { url: string }).url;
 
@@ -12,6 +13,8 @@ export type CotizacionItem = {
   tipo?: string | null;
   espesor_mm?: number | null;
   precio_m2?: number | null;
+  /** Precio unitario por metro lineal (manda sobre el precio por m² cuando existe). */
+  precio_ml?: number | null;
   /** Costo neto por m² (bobina asignada o costo mensual del tipo). Uso interno. */
   costo_m2?: number | null;
   /** Proveedor de la bobina asignada. Uso interno. */
@@ -23,6 +26,29 @@ function itemPrecio(it: CotizacionItem, c: { precio_m2: number }): number {
   const p = Number(it.precio_m2);
   return Number.isFinite(p) && p > 0 ? p : Number(c.precio_m2 || 0);
 }
+
+/** Precio unitario por metro lineal efectivo de la línea. */
+function itemPrecioMl(it: CotizacionItem, c: { precio_m2: number }): number {
+  const ml = Number(it.precio_ml);
+  if (Number.isFinite(ml) && ml > 0) return ml;
+  return itemPrecio(it, c);
+}
+
+/** Metros lineales totales de la línea (ancho fijo 1 m). */
+function itemMl(it: CotizacionItem): number {
+  return Number(it.largo_m || 0) * Number(it.cantidad_planchas || 0);
+}
+
+/** Kilos de la línea (1 m² = 3,66 kg). */
+function itemKg(it: CotizacionItem): number {
+  return Number(it.metros2 || 0) * PESO_KG_M2;
+}
+
+/** Subtotal neto de la línea: metros lineales × precio unitario por metro lineal. */
+function itemSubtotal(it: CotizacionItem, c: { precio_m2: number }): number {
+  return itemMl(it) * itemPrecioMl(it, c);
+}
+
 
 export type CotizacionPDF = {
   numero: string;
@@ -323,7 +349,6 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const fechaValidez = new Date(fechaEmision);
   fechaValidez.setDate(fechaValidez.getDate() + 7);
 
-  const isInterno = c.origen === "interno";
   const responsable = c.responsable_nombre ?? c.creado_por_nombre ?? c.aprobador_nombre ?? "Equipo FERMAVAL";
 
   const blockY = 58;
@@ -353,68 +378,108 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const conv = (v: number) => (modo === "bruto" ? Math.round(v * 1.19) : Math.round(v));
   const sufijo = modo === "bruto" ? "c/IVA" : "neto";
 
+  // Tabla comercial: Cant. · Descripción · Largo ml · Subtotal ml · Kg · Precio unitario metro lineal · Neto
   const cols = [
-    { x: 15, w: 10, label: "#", align: "left" as const },
-    { x: 25, w: 80, label: "Descripción", align: "left" as const },
-    { x: 105, w: 18, label: "Cant.", align: "right" as const },
-    { x: 123, w: 32, label: `$ / m² ${sufijo}`, align: "right" as const },
-    { x: 155, w: 40, label: "Total", align: "right" as const },
+    { x: 15, w: 14, label: "Cant.", align: "right" as const },
+    { x: 29, w: 57, label: "Descripción", align: "left" as const },
+    { x: 86, w: 25, label: "Largo de\nplancha ml", align: "right" as const },
+    { x: 111, w: 20, label: "Subtotal\nml", align: "right" as const },
+    { x: 131, w: 16, label: "Kg", align: "right" as const },
+    { x: 147, w: 27, label: `Precio unitario\nmetro lineal ${sufijo}`, align: "right" as const },
+    { x: 174, w: 21, label: `Neto`, align: "right" as const },
   ];
 
   const tableX = 15;
   const tableW = W - 30;
+  const headH = 10;
 
   doc.setFillColor(...NAVY_DARK);
-  doc.rect(tableX, y, tableW, 7, "F");
+  doc.rect(tableX, y, tableW, headH, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(7.2);
   doc.setTextColor(255, 255, 255);
   cols.forEach((col) => {
     const tx = col.align === "right" ? col.x + col.w - 2 : col.x + 2;
-    doc.text(col.label, tx, y + 4.8, { align: col.align });
+    const lines = col.label.split("\n");
+    const startY = lines.length > 1 ? y + 4.2 : y + 6.2;
+    lines.forEach((ln, k) => doc.text(ln, tx, startY + k * 3.4, { align: col.align }));
   });
-  y += 7;
+  const tableTop = y;
+  y += headH;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...BLACK);
   const rowH = 9;
+  let totalCant = 0;
+  let totalMl = 0;
+  let totalKg = 0;
   items.forEach((it, i) => {
     if (i % 2 === 1) {
       doc.setFillColor(...ZEBRA);
       doc.rect(tableX, y, tableW, rowH, "F");
     }
     const tipoTxt = it.tipo ?? "Ondulado";
-    const espesorTxt = `${(it.espesor_mm ?? 0.4)} mm`;
-    const desc =
-      `${tipoTxt} · ${espesorTxt}` +
-      (it.color_nombre ? ` · ${it.color_nombre}` : "") +
-      `\nPlancha ${Number(it.largo_m).toFixed(2)} m × 1.00 m  ·  ${Number(it.metros2).toFixed(2)} m²`;
-    const cant = `${it.cantidad_planchas}`;
-    const precioLinea = itemPrecio(it, c);
-    const subtotal = Number(it.metros2) * precioLinea;
-    doc.setTextColor(...GREY_DARK);
-    doc.text(String(i + 1), cols[0].x + 2, y + 5.5);
-    doc.setTextColor(...BLACK);
-    const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
-    doc.text(descLines, cols[1].x + 2, y + 4);
-    doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(`${formatCLP(conv(precioLinea))} ${sufijo}`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(conv(subtotal)), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
+    const espesorTxt = `${Number(it.espesor_mm ?? 0.4).toFixed(2)} mm`;
+    const desc = `Plancha ${tipoTxt} / ${espesorTxt}${it.color_nombre ? ` (${it.color_nombre})` : ""}`;
+    const ml = itemMl(it);
+    const kg = itemKg(it);
+    const pml = itemPrecioMl(it, c);
+    const sub = itemSubtotal(it, c);
+    totalCant += Number(it.cantidad_planchas || 0);
+    totalMl += ml;
+    totalKg += kg;
 
+    const cells: Array<[number, string]> = [
+      [0, String(it.cantidad_planchas)],
+      [2, Number(it.largo_m).toFixed(2)],
+      [3, ml.toFixed(2)],
+      [4, kg.toFixed(0)],
+      [5, formatCLP(conv(pml))],
+      [6, formatCLP(conv(sub))],
+    ];
+    doc.text(doc.splitTextToSize(desc, cols[1].w - 3)[0] ?? desc, cols[1].x + 2, y + 5.8);
+    cells.forEach(([k, txt]) => {
+      const col = cols[k];
+      doc.text(txt, col.x + col.w - 2, y + 5.8, { align: "right" });
+    });
     y += rowH;
   });
 
+  // Marco y separadores verticales de la tabla
   doc.setDrawColor(...GREY_LIGHT);
   doc.setLineWidth(0.2);
-  doc.rect(tableX, y - items.length * rowH - 7, tableW, items.length * rowH + 7, "S");
+  doc.rect(tableX, tableTop, tableW, headH + items.length * rowH, "S");
+  cols.slice(1).forEach((col) => doc.line(col.x, tableTop, col.x, tableTop + headH + items.length * rowH));
 
-  y += 4;
-
-  const subtotal = items.reduce((s, it) => s + Number(it.metros2) * itemPrecio(it, c), 0);
+  // Fila de totales de cantidades, metros lineales y peso
+  const subtotal = items.reduce((s, it) => s + itemSubtotal(it, c), 0);
   const neto = Math.max(0, subtotal - (c.descuento || 0));
   const iva = Math.round(neto * 0.19);
   const totalConIva = neto + iva;
+
+  const totRowH = 8;
+  doc.setFillColor(238, 241, 246);
+  doc.rect(tableX, y, tableW, totRowH, "F");
+  doc.setDrawColor(...GREY_LIGHT);
+  doc.rect(tableX, y, tableW, totRowH, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text(String(totalCant), cols[0].x + cols[0].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total cantidad", cols[0].x + cols[0].w - 2, y + 7, { align: "right" });
+  doc.setFontSize(8);
+  doc.text(totalMl.toFixed(2), cols[3].x + cols[3].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total ml", cols[3].x + cols[3].w - 2, y + 7, { align: "right" });
+  doc.setFontSize(8);
+  doc.text(totalKg.toFixed(0), cols[4].x + cols[4].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total peso kg", cols[4].x + cols[4].w - 2, y + 7, { align: "right" });
+  y += totRowH + 4;
+
+  // Totales monetarios
   const totalsX = W - 95;
   const totalsW = 80;
 
@@ -425,10 +490,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
         ["TOTAL (IVA incluido)", formatCLP(totalConIva), true],
       ]
     : [
-        ["Subtotal", formatCLP(subtotal), false],
+        ["Total Neto", formatCLP(subtotal), false],
         ["Descuento", `- ${formatCLP(c.descuento || 0)}`, false],
         ["Neto", formatCLP(neto), false],
-        ["IVA 19%", formatCLP(iva), false],
+        ["IVA (19%)", formatCLP(iva), false],
         ["TOTAL", formatCLP(totalConIva), true],
       ];
 
@@ -459,9 +524,14 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFontSize(8);
   doc.setTextColor(...GREY_DARK);
   doc.text(
+    `Peso total del material cotizado: ${totalKg.toFixed(0)} kg  ·  1 m² = ${PESO_KG_M2} kg`,
+    15,
+    y + 4,
+  );
+  doc.text(
     modo === "bruto"
-      ? "Valores expresados en pesos, con IVA incluido."
-      : "Valores expresados en pesos, netos (sin IVA incluido).",
+      ? "Valores en pesos, IVA incluido."
+      : "Valores en pesos, netos (sin IVA).",
     totalsX + totalsW,
     y + 4,
     { align: "right" },
@@ -469,32 +539,39 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
 
   doc.setFont("helvetica", "normal");
 
+
   y += 10;
 
-  // Validez 7 días
-  y = drawNewPageIfNeeded(doc, y, 18);
+  // Entrega y validez
+  y = drawNewPageIfNeeded(doc, y, 26);
+  doc.setFillColor(...NAVY_DARK);
+  doc.rect(15, y, W - 30, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text("ENTREGA: 24 HORAS SEGÚN ORDEN DE PEDIDOS", W / 2, y + 4.9, { align: "center" });
+  y += 7;
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.3);
   doc.setFillColor(248, 250, 253);
-  doc.roundedRect(15, y, W - 30, 14, 2, 2, "FD");
+  doc.rect(15, y, W - 30, 15, "FD");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...NAVY_DARK);
-  doc.text("VALIDEZ DE LA COTIZACIÓN", 20, y + 5.2);
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text("Aceptamos: Efectivo · Transferencia · Tarjeta débito y crédito", 20, y + 5.5);
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...GREY_DARK);
-  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
-  y += 20;
+  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 11);
+  y += 21;
+
 
   // Bloque de contacto FERMAVAL
   y = drawContactBlock(doc, y);
 
 
-  // Datos bancarios (solo si origen interno)
-  if (isInterno) {
-    y = drawBankBlock(doc, y);
-  }
+  // Datos para transferencia (siempre visibles en el nuevo modelo)
+  y = drawBankBlock(doc, y);
+
 
   // Cláusula legal obligatoria
   y = drawLegalBlock(doc, y);
@@ -577,7 +654,9 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(...NAVY_DARK);
-    doc.text(`Ganancia estimada total: ${formatCLP(Math.round(ganTotal))}`, 15, ay);
+    const kgTotal = items.reduce((s, it) => s + itemKg(it), 0);
+    doc.text(`Ganancia estimada total: ${formatCLP(Math.round(ganTotal))}  ·  Peso total: ${kgTotal.toFixed(0)} kg`, 15, ay);
+
     ay += 6;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);

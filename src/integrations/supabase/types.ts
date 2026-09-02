@@ -512,6 +512,7 @@ export type Database = {
           metros2: number
           position: number
           precio_m2: number | null
+          precio_ml: number | null
           tipo: Database["public"]["Enums"]["tipo_producto"]
         }
         Insert: {
@@ -528,6 +529,7 @@ export type Database = {
           metros2: number
           position?: number
           precio_m2?: number | null
+          precio_ml?: number | null
           tipo?: Database["public"]["Enums"]["tipo_producto"]
         }
         Update: {
@@ -544,6 +546,7 @@ export type Database = {
           metros2?: number
           position?: number
           precio_m2?: number | null
+          precio_ml?: number | null
           tipo?: Database["public"]["Enums"]["tipo_producto"]
         }
         Relationships: [
@@ -599,6 +602,7 @@ export type Database = {
           pago_recibido: number
           plazo_horas: number
           precio_m2: number
+          precio_ml: number | null
           responsable_nombre: string | null
           saldo: number
           stock_descontado_at: string | null
@@ -626,6 +630,7 @@ export type Database = {
           pago_recibido?: number
           plazo_horas?: number
           precio_m2: number
+          precio_ml?: number | null
           responsable_nombre?: string | null
           saldo?: number
           stock_descontado_at?: string | null
@@ -653,6 +658,7 @@ export type Database = {
           pago_recibido?: number
           plazo_horas?: number
           precio_m2?: number
+          precio_ml?: number | null
           responsable_nombre?: string | null
           saldo?: number
           stock_descontado_at?: string | null
