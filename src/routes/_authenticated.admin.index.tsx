@@ -90,6 +90,7 @@ function Dashboard() {
         <Stat icon={TrendingUp} label="Ventas del mes" value={formatCLP(data.ventas)} accent to="/admin/finanzas" />
         <Stat icon={FileText} label="Cotizaciones pendientes" value={String(data.cotPendientes)} to="/admin/cotizaciones" />
         <Stat icon={PackageCheck} label="Pedidos confirmados" value={String(data.pedidosConfirmados)} to="/admin/pedidos" />
+        <Stat icon={Coins} label="Cotizaciones pagadas" value={String(data.cotPagadas)} tone="pos" to="/admin/cotizaciones" />
         <Stat icon={Wallet} label="Utilidades (Ventas − Gastos)" value={formatCLP(data.utilidades)} tone={data.utilidades >= 0 ? "pos" : "neg"} to="/admin/finanzas" />
         <Stat icon={Receipt} label="Gastos del mes" value={formatCLP(data.gastos)} tone="neg" to="/admin/egresos" />
 
