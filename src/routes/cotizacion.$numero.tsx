@@ -251,11 +251,15 @@ function QuotePage() {
                         <div className="flex justify-between"><span className="text-muted-foreground">Largo</span><span>{it.largo_m.toFixed(2)} m</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Ancho</span><span>1 m</span></div>
                         <div className="flex justify-between"><span className="text-muted-foreground">Cantidad</span><span>{it.cantidad_planchas}</span></div>
-                        <div className="flex justify-between font-semibold"><span>m²</span><span>{it.metros2.toFixed(2)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">m²</span><span>{it.metros2.toFixed(2)}</span></div>
+                        <div className="flex justify-between font-semibold"><span>Peso</span><span>{pesoKg(it.metros2).toFixed(0)} kg</span></div>
                       </div>
                     ))}
                     <div className="flex justify-between rounded-md bg-muted/40 p-3 text-sm font-semibold">
                       <span>Total m²</span><span>{Number(cot.metros2).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between rounded-md bg-muted/40 p-3 text-sm font-semibold">
+                      <span>Peso total</span><span>{pesoTotalKg(filas).toFixed(0)} kg</span>
                     </div>
                   </div>
 
@@ -269,6 +273,7 @@ function QuotePage() {
                           <th className="p-2 text-right">Ancho</th>
                           <th className="p-2 text-right">Cantidad</th>
                           <th className="p-2 text-right">m²</th>
+                          <th className="p-2 text-right">Kg</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -279,15 +284,19 @@ function QuotePage() {
                             <td className="p-2 text-right">1 m</td>
                             <td className="p-2 text-right">{it.cantidad_planchas}</td>
                             <td className="p-2 text-right">{it.metros2.toFixed(2)}</td>
+                            <td className="p-2 text-right">{pesoKg(it.metros2).toFixed(0)}</td>
                           </tr>
                         ))}
                         <tr className="bg-muted/30 font-semibold">
-                          <td className="p-2" colSpan={4}>Total m²</td>
+                          <td className="p-2" colSpan={4}>Totales</td>
                           <td className="p-2 text-right">{Number(cot.metros2).toFixed(2)}</td>
+                          <td className="p-2 text-right">{pesoTotalKg(filas).toFixed(0)} kg</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
+                  <p className="mt-2 text-xs text-muted-foreground">Peso de referencia: 1 m² de plancha pesa {PESO_KG_M2} kg.</p>
+
                 </>
               );
             })()}
