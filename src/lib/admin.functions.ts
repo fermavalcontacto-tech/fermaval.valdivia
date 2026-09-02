@@ -247,23 +247,33 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
 
     const first = itemsCalc[0];
-    const numero = "FV-" + Date.now().toString().slice(-7);
+    let numero = await nextQuoteNumber(context.supabase as never);
     const fechaSolicitud = enforceFecha(context.claims?.email, data.fecha_solicitud);
     const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
     const colorNombreCot = data.color_nombre ?? first.color_nombre ?? null;
     const responsable = (data.responsable_nombre ?? context.claims?.email ?? "Equipo FERMAVAL").toString().slice(0, 80);
-    const { data: cot, error } = await context.supabase.from("cotizaciones").insert({
-      numero, cliente_id: cliente.id,
+    const baseRow = {
+      cliente_id: cliente.id,
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
       metros2, precio_m2: precioCabecera, total, saldo: total,
       color_id: first.color_id, color_nombre: colorNombreCot, created_by: context.userId,
-      estado: "cotizacion_creada", plazo_horas: 72,
+      estado: "cotizacion_creada" as const, plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
       access_token,
       origen: "interno",
       responsable_nombre: responsable,
-    }).select("id").single();
-    if (error) throw new Error(error.message);
+    };
+    let cot: { id: string } | null = null;
+    let error: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const res = await context.supabase.from("cotizaciones").insert({ ...baseRow, numero }).select("id").single();
+      if (!res.error) { cot = res.data; error = null; break; }
+      error = res.error;
+      if (!isDuplicateNumeroError(res.error)) break;
+      numero = await nextQuoteNumber(context.supabase as never);
+    }
+    if (error || !cot) throw new Error((error as { message?: string } | null)?.message ?? "No se pudo crear la cotización");
+
     const { error: itErr } = await context.supabase
       .from("cotizacion_items")
       .insert(itemsCalc.map((it, idx) => ({ ...it, cotizacion_id: cot.id, position: idx })));
