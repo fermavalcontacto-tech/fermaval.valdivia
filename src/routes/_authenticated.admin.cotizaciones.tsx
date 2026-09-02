@@ -38,7 +38,7 @@ export const Route = createFileRoute("/_authenticated/admin/cotizaciones")({
   component: CotizacionesPage,
 });
 
-const estados = ["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"] as const;
+const estados = ["cotizacion_creada","esperando_pago","pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado","rechazada"] as const;
 type Estado = typeof estados[number];
 
 const QUOTE_DIALOG_CLASS = "quote-mobile-force fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto overflow-x-hidden rounded-xl border p-4 sm:w-[min(720px,calc(100vw-2rem))] sm:max-w-2xl sm:p-6";

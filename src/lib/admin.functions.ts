@@ -196,14 +196,14 @@ async function restoreStockForCotizacion(
 
 }
 
-const ESTADOS_CON_PAGO = new Set(["pago_parcial", "pedido_confirmado", "pedido_terminado"]);
+const ESTADOS_CON_PAGO = new Set(["pago_parcial", "cotizacion_pagada", "pedido_confirmado", "pedido_terminado"]);
 
 export const updateCotizacionEstado = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) =>
     z.object({
       id: z.string().uuid(),
-      estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"]),
+      estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado","rechazada"]),
     }).parse(d),
   )
   .handler(async ({ data, context }) => {
@@ -457,10 +457,11 @@ export const getDashboard = createServerFn({ method: "GET" })
     inicioMes.setDate(1); inicioMes.setHours(0, 0, 0, 0);
     const inicioMesISO = inicioMes.toISOString();
 
-    const ESTADOS_INGRESO = ["pago_parcial","pedido_confirmado","pedido_terminado"] as const;
+    const ESTADOS_INGRESO = ["pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado"] as const;
     const { data: cotMes } = await context.supabase.from("cotizaciones").select("total, estado, pago_recibido, created_at").gte("created_at", inicioMesISO);
     const { data: cotPendientes } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).in("estado", ["cotizacion_creada","esperando_pago"]);
     const { data: pedidosConf } = await context.supabase.from("cotizaciones").select("id", { count: "exact" }).eq("estado", "pedido_confirmado");
+    const { count: cotPagadasCount } = await context.supabase.from("cotizaciones").select("id", { count: "exact", head: true }).eq("estado", "cotizacion_pagada");
     const { data: gastosMes } = await context.supabase.from("solicitudes_egreso").select("monto, estado").eq("estado", "aprobado").gte("fecha", inicioMesISO.slice(0, 10));
     const { count: egresosPendientesCount } = await context.supabase.from("solicitudes_egreso").select("id", { count: "exact", head: true }).eq("estado", "pendiente");
     // Boletas standalone (sin solicitud_id) — comprobantes que se cargan sueltos y deben sumar al balance
@@ -504,7 +505,7 @@ export const getDashboard = createServerFn({ method: "GET" })
       const d = new Date(c.created_at as string);
       const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
       const m = months.find(x => x.key === key); if (!m) continue;
-      if (["pago_parcial","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) {
+      if (["pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado"].includes(c.estado as string)) {
         m.ventas += Number(c.pago_recibido);
         m.aceptadas++;
       }
@@ -550,13 +551,14 @@ export const getDashboard = createServerFn({ method: "GET" })
       ventas: ventasTotal, totalCotizado, gastos: gastosTotal, utilidades: utilidadesTotal, iva: ivaTotal,
       cotPendientes: cotPendientes?.length ?? 0,
       pedidosConfirmados: pedidosConf?.length ?? 0,
+      cotPagadas: cotPagadasCount ?? 0,
       egresosPendientes: egresosPendientesCount ?? 0,
       months,
     };
   });
 
 // ===== ANALYTICS (Mensual / Anual) =====
-const ESTADOS_INGRESO_ANALYTICS = ["pago_parcial","pedido_confirmado","pedido_terminado"] as const;
+const ESTADOS_INGRESO_ANALYTICS = ["pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado"] as const;
 
 export const getAnalytics = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -1012,7 +1014,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     precio_m2: z.number().positive(),
     descuento: z.number().min(0).default(0),
     pago_recibido: z.number().min(0),
-    estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","pedido_confirmado","pedido_terminado","rechazada"]),
+    estado: z.enum(["cotizacion_creada","esperando_pago","pago_parcial","cotizacion_pagada","pedido_confirmado","pedido_terminado","rechazada"]),
     responsable_nombre: z.string().trim().max(80).nullable().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
