@@ -379,68 +379,108 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const conv = (v: number) => (modo === "bruto" ? Math.round(v * 1.19) : Math.round(v));
   const sufijo = modo === "bruto" ? "c/IVA" : "neto";
 
+  // Tabla comercial: Cant. · Descripción · Largo ml · Subtotal ml · Kg · Precio unitario metro lineal · Neto
   const cols = [
-    { x: 15, w: 10, label: "#", align: "left" as const },
-    { x: 25, w: 80, label: "Descripción", align: "left" as const },
-    { x: 105, w: 18, label: "Cant.", align: "right" as const },
-    { x: 123, w: 32, label: `$ / m² ${sufijo}`, align: "right" as const },
-    { x: 155, w: 40, label: "Total", align: "right" as const },
+    { x: 15, w: 14, label: "Cant.", align: "right" as const },
+    { x: 29, w: 57, label: "Descripción", align: "left" as const },
+    { x: 86, w: 25, label: "Largo de\nplancha ml", align: "right" as const },
+    { x: 111, w: 20, label: "Subtotal\nml", align: "right" as const },
+    { x: 131, w: 16, label: "Kg", align: "right" as const },
+    { x: 147, w: 27, label: `Precio unitario\nmetro lineal ${sufijo}`, align: "right" as const },
+    { x: 174, w: 21, label: `Neto`, align: "right" as const },
   ];
 
   const tableX = 15;
   const tableW = W - 30;
+  const headH = 10;
 
   doc.setFillColor(...NAVY_DARK);
-  doc.rect(tableX, y, tableW, 7, "F");
+  doc.rect(tableX, y, tableW, headH, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
+  doc.setFontSize(7.2);
   doc.setTextColor(255, 255, 255);
   cols.forEach((col) => {
     const tx = col.align === "right" ? col.x + col.w - 2 : col.x + 2;
-    doc.text(col.label, tx, y + 4.8, { align: col.align });
+    const lines = col.label.split("\n");
+    const startY = lines.length > 1 ? y + 4.2 : y + 6.2;
+    lines.forEach((ln, k) => doc.text(ln, tx, startY + k * 3.4, { align: col.align }));
   });
-  y += 7;
+  const tableTop = y;
+  y += headH;
 
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...BLACK);
   const rowH = 9;
+  let totalCant = 0;
+  let totalMl = 0;
+  let totalKg = 0;
   items.forEach((it, i) => {
     if (i % 2 === 1) {
       doc.setFillColor(...ZEBRA);
       doc.rect(tableX, y, tableW, rowH, "F");
     }
     const tipoTxt = it.tipo ?? "Ondulado";
-    const espesorTxt = `${(it.espesor_mm ?? 0.4)} mm`;
-    const desc =
-      `${tipoTxt} · ${espesorTxt}` +
-      (it.color_nombre ? ` · ${it.color_nombre}` : "") +
-      `\nPlancha ${Number(it.largo_m).toFixed(2)} m × 1.00 m  ·  ${Number(it.metros2).toFixed(2)} m²`;
-    const cant = `${it.cantidad_planchas}`;
-    const precioLinea = itemPrecio(it, c);
-    const subtotal = Number(it.metros2) * precioLinea;
-    doc.setTextColor(...GREY_DARK);
-    doc.text(String(i + 1), cols[0].x + 2, y + 5.5);
-    doc.setTextColor(...BLACK);
-    const descLines = doc.splitTextToSize(desc, cols[1].w - 2);
-    doc.text(descLines, cols[1].x + 2, y + 4);
-    doc.text(cant, cols[2].x + cols[2].w - 2, y + 5.5, { align: "right" });
-    doc.text(`${formatCLP(conv(precioLinea))} ${sufijo}`, cols[3].x + cols[3].w - 2, y + 5.5, { align: "right" });
-    doc.text(formatCLP(conv(subtotal)), cols[4].x + cols[4].w - 2, y + 5.5, { align: "right" });
+    const espesorTxt = `${(it.espesor_mm ?? 0.4).toFixed ? Number(it.espesor_mm ?? 0.4).toFixed(2) : it.espesor_mm} mm`;
+    const desc = `Plancha ${tipoTxt} / ${espesorTxt}${it.color_nombre ? ` (${it.color_nombre})` : ""}`;
+    const ml = itemMl(it);
+    const kg = itemKg(it);
+    const pml = itemPrecioMl(it, c);
+    const sub = itemSubtotal(it, c);
+    totalCant += Number(it.cantidad_planchas || 0);
+    totalMl += ml;
+    totalKg += kg;
 
+    const cells: Array<[number, string]> = [
+      [0, String(it.cantidad_planchas)],
+      [2, Number(it.largo_m).toFixed(2)],
+      [3, ml.toFixed(2)],
+      [4, kg.toFixed(0)],
+      [5, formatCLP(conv(pml))],
+      [6, formatCLP(conv(sub))],
+    ];
+    doc.text(doc.splitTextToSize(desc, cols[1].w - 3)[0] ?? desc, cols[1].x + 2, y + 5.8);
+    cells.forEach(([k, txt]) => {
+      const col = cols[k];
+      doc.text(txt, col.x + col.w - 2, y + 5.8, { align: "right" });
+    });
     y += rowH;
   });
 
+  // Marco y separadores verticales de la tabla
   doc.setDrawColor(...GREY_LIGHT);
   doc.setLineWidth(0.2);
-  doc.rect(tableX, y - items.length * rowH - 7, tableW, items.length * rowH + 7, "S");
+  doc.rect(tableX, tableTop, tableW, headH + items.length * rowH, "S");
+  cols.slice(1).forEach((col) => doc.line(col.x, tableTop, col.x, tableTop + headH + items.length * rowH));
 
-  y += 4;
-
-  const subtotal = items.reduce((s, it) => s + Number(it.metros2) * itemPrecio(it, c), 0);
+  // Fila de totales de cantidades, metros lineales y peso
+  const subtotal = items.reduce((s, it) => s + itemSubtotal(it, c), 0);
   const neto = Math.max(0, subtotal - (c.descuento || 0));
   const iva = Math.round(neto * 0.19);
   const totalConIva = neto + iva;
+
+  const totRowH = 8;
+  doc.setFillColor(238, 241, 246);
+  doc.rect(tableX, y, tableW, totRowH, "F");
+  doc.setDrawColor(...GREY_LIGHT);
+  doc.rect(tableX, y, tableW, totRowH, "S");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text(String(totalCant), cols[0].x + cols[0].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total cantidad", cols[0].x + cols[0].w - 2, y + 7, { align: "right" });
+  doc.setFontSize(8);
+  doc.text(totalMl.toFixed(2), cols[3].x + cols[3].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total ml", cols[3].x + cols[3].w - 2, y + 7, { align: "right" });
+  doc.setFontSize(8);
+  doc.text(totalKg.toFixed(0), cols[4].x + cols[4].w - 2, y + 4, { align: "right" });
+  doc.setFontSize(6.5);
+  doc.text("total peso kg", cols[4].x + cols[4].w - 2, y + 7, { align: "right" });
+  y += totRowH + 4;
+
+  // Totales monetarios
   const totalsX = W - 95;
   const totalsW = 80;
 
@@ -451,10 +491,10 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
         ["TOTAL (IVA incluido)", formatCLP(totalConIva), true],
       ]
     : [
-        ["Subtotal", formatCLP(subtotal), false],
+        ["Total Neto", formatCLP(subtotal), false],
         ["Descuento", `- ${formatCLP(c.descuento || 0)}`, false],
         ["Neto", formatCLP(neto), false],
-        ["IVA 19%", formatCLP(iva), false],
+        ["IVA (19%)", formatCLP(iva), false],
         ["TOTAL", formatCLP(totalConIva), true],
       ];
 
@@ -485,15 +525,21 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   doc.setFontSize(8);
   doc.setTextColor(...GREY_DARK);
   doc.text(
+    `Peso total del material cotizado: ${totalKg.toFixed(0)} kg  ·  1 m² = ${PESO_KG_M2} kg`,
+    15,
+    y + 4,
+  );
+  doc.text(
     modo === "bruto"
-      ? "Valores expresados en pesos, con IVA incluido."
-      : "Valores expresados en pesos, netos (sin IVA incluido).",
+      ? "Valores en pesos, IVA incluido."
+      : "Valores en pesos, netos (sin IVA).",
     totalsX + totalsW,
     y + 4,
     { align: "right" },
   );
 
   doc.setFont("helvetica", "normal");
+
 
   y += 10;
 
