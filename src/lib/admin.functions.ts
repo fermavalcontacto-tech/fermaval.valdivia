@@ -13,6 +13,7 @@ import {
   type ItemInput,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+import { nextQuoteNumber, isDuplicateNumeroError } from "@/lib/quote-number";
 
 
 export { TIPOS_PRODUCTO, ESPESOR_FIJO_MM };
