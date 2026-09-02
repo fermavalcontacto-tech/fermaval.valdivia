@@ -349,7 +349,6 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   const fechaValidez = new Date(fechaEmision);
   fechaValidez.setDate(fechaValidez.getDate() + 7);
 
-  const isInterno = c.origen === "interno";
   const responsable = c.responsable_nombre ?? c.creado_por_nombre ?? c.aprobador_nombre ?? "Equipo FERMAVAL";
 
   const blockY = 58;
