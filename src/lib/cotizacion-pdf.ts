@@ -570,10 +570,9 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
   y = drawContactBlock(doc, y);
 
 
-  // Datos bancarios (solo si origen interno)
-  if (isInterno) {
-    y = drawBankBlock(doc, y);
-  }
+  // Datos para transferencia (siempre visibles en el nuevo modelo)
+  y = drawBankBlock(doc, y);
+
 
   // Cláusula legal obligatoria
   y = drawLegalBlock(doc, y);
