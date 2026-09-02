@@ -12,6 +12,7 @@ import {
   publicQuoteErrorMessage,
   RutSchema,
 } from "@/lib/domain/quotes.core";
+import { nextQuoteNumber, isDuplicateNumeroError } from "@/lib/quote-number";
 
 
 
@@ -70,30 +71,38 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         .from("clientes").insert({ ...data.cliente }).select("id").single();
       if (ceErr) throw new Error("No se pudo registrar el cliente");
 
-      const { data: seqVal, error: seqErr } = await supabaseAdmin.rpc("nextval_quote");
-      const numero = seqErr || seqVal == null
-        ? "FV-" + Date.now().toString().slice(-7)
-        : "FV-" + String(seqVal as unknown as number).padStart(5, "0");
+      let numero = await nextQuoteNumber(supabaseAdmin as never);
 
       const access_token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
-      const { data: cot, error: cotErr } = await supabaseAdmin
-        .from("cotizaciones")
-        .insert({
-          numero, cliente_id: cliente.id,
-          largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
-          cantidad_planchas: first.cantidad_planchas,
-          metros2: metros2Total, color_id: color_id_cot, color_nombre,
-          precio_m2: precioCabecera, total, saldo: total,
-          estado: "cotizacion_creada", plazo_horas: 72,
-          access_token, origen: "cliente",
-          responsable_nombre: null,
-        })
-        .select("id, numero, access_token").single();
-      if (cotErr) {
+      const baseRow = {
+        cliente_id: cliente.id,
+        largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
+        cantidad_planchas: first.cantidad_planchas,
+        metros2: metros2Total, color_id: color_id_cot, color_nombre,
+        precio_m2: precioCabecera, total, saldo: total,
+        estado: "cotizacion_creada" as const, plazo_horas: 72,
+        access_token, origen: "cliente",
+        responsable_nombre: null,
+      };
+
+      let cot: { id: string; numero: string; access_token: string } | null = null;
+      let cotErr: unknown = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const res = await supabaseAdmin
+          .from("cotizaciones")
+          .insert({ ...baseRow, numero })
+          .select("id, numero, access_token").single();
+        if (!res.error) { cot = res.data; cotErr = null; break; }
+        cotErr = res.error;
+        if (!isDuplicateNumeroError(res.error)) break;
+        numero = await nextQuoteNumber(supabaseAdmin as never);
+      }
+      if (cotErr || !cot) {
         console.error("[createPublicQuote] cotizaciones insert failed:", cotErr);
         throw new Error("No se pudo crear la cotización. Por favor intenta de nuevo.");
       }
+
 
       const itemRows = itemsCalc.map((it, idx) => ({
         cotizacion_id: cot.id,
