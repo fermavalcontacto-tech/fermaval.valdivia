@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate } from "@/lib/format";
+import { PESO_KG_M2 } from "@/lib/domain/quotes.core";
 import logoAsset from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 const logoUrl = (logoAsset as { url: string }).url;
 
@@ -12,6 +13,8 @@ export type CotizacionItem = {
   tipo?: string | null;
   espesor_mm?: number | null;
   precio_m2?: number | null;
+  /** Precio unitario por metro lineal (manda sobre el precio por m² cuando existe). */
+  precio_ml?: number | null;
   /** Costo neto por m² (bobina asignada o costo mensual del tipo). Uso interno. */
   costo_m2?: number | null;
   /** Proveedor de la bobina asignada. Uso interno. */
@@ -23,6 +26,29 @@ function itemPrecio(it: CotizacionItem, c: { precio_m2: number }): number {
   const p = Number(it.precio_m2);
   return Number.isFinite(p) && p > 0 ? p : Number(c.precio_m2 || 0);
 }
+
+/** Precio unitario por metro lineal efectivo de la línea. */
+function itemPrecioMl(it: CotizacionItem, c: { precio_m2: number }): number {
+  const ml = Number(it.precio_ml);
+  if (Number.isFinite(ml) && ml > 0) return ml;
+  return itemPrecio(it, c);
+}
+
+/** Metros lineales totales de la línea (ancho fijo 1 m). */
+function itemMl(it: CotizacionItem): number {
+  return Number(it.largo_m || 0) * Number(it.cantidad_planchas || 0);
+}
+
+/** Kilos de la línea (1 m² = 3,66 kg). */
+function itemKg(it: CotizacionItem): number {
+  return Number(it.metros2 || 0) * PESO_KG_M2;
+}
+
+/** Subtotal neto de la línea: metros lineales × precio unitario por metro lineal. */
+function itemSubtotal(it: CotizacionItem, c: { precio_m2: number }): number {
+  return itemMl(it) * itemPrecioMl(it, c);
+}
+
 
 export type CotizacionPDF = {
   numero: string;
