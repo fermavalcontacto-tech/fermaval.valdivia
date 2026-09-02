@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos, listUtilidadM2,
 } from "@/lib/admin.functions";
-import { ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, precioSugeridoPorColor, type BobinaSaldo } from "@/lib/domain/quotes.core";
+import { pesoKg, pesoTotalKg, PESO_KG_M2, subtotalLinea, precioMlEfectivo, ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, precioSugeridoPorColor, type BobinaSaldo } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -71,7 +71,7 @@ function CotizacionesPage() {
   const [enviarCorreoAuto, setEnviarCorreoAuto] = useState(true);
 
   function toPdfData(c: Cotizacion): CotizacionPDF {
-    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null; precio_m2?: number | null; bobina?: { proveedor?: string | null; costo_m2?: number | null } | null }> }).items ?? [])
+    const its = ((c as { items?: Array<{ position: number; largo_m: number; ancho_m: number; cantidad_planchas: number; metros2: number; color_nombre?: string | null; tipo?: string | null; espesor_mm?: number | null; precio_m2?: number | null; precio_ml?: number | null; bobina?: { proveedor?: string | null; costo_m2?: number | null } | null }> }).items ?? [])
       .slice().sort((a, b) => a.position - b.position)
       .map((it) => ({
         largo_m: Number(it.largo_m), ancho_m: Number(it.ancho_m),
@@ -81,6 +81,7 @@ function CotizacionesPage() {
         tipo: it.tipo ?? "Ondulado",
         espesor_mm: Number(it.espesor_mm ?? 0.4),
         precio_m2: Number(it.precio_m2) > 0 ? Number(it.precio_m2) : null,
+        precio_ml: Number(it.precio_ml) > 0 ? Number(it.precio_ml) : null,
         // Costo real de la bobina asignada a la plancha (o el costo mensual del tipo).
         costo_m2: Number(it.bobina?.costo_m2) > 0
           ? Number(it.bobina?.costo_m2)
@@ -309,8 +310,8 @@ function CotizacionesPage() {
   );
 }
 
-type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string; bobina_id?: string };
-type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string };
+type ItemForm = { largo: string; cantidad: string; color_id: string; tipo: Tipo; precio?: string; precio_ml?: string; bobina_id?: string };
+type ItemErrors = { largo?: string; cantidad?: string; color_id?: string; precio?: string; precio_ml?: string };
 type FormErrors = {
   nombre?: string; giro?: string; rut?: string; telefono?: string; correo?: string; direccion?: string;
   precio_m2?: string; descuento?: string; pago_recibido?: string;
@@ -329,9 +330,15 @@ function calcItems(items: ItemForm[], precios: PreciosPorTipo = {}, precioBase =
     const m2 = Number((l * 1 * n).toFixed(2));
     const manual = (it.precio ?? "").trim() ? parseDecimal(it.precio) : 0;
     const precio_m2 = resolvePrecioItem({ tipo: it.tipo, precio_m2: manual || null }, precios, precioBase);
+    const mlManual = (it.precio_ml ?? "").trim() ? parseDecimal(it.precio_ml) : 0;
+    const precio_ml = mlManual > 0 ? mlManual : null;
+    const ml = Number((l * n).toFixed(2));
     return {
       largo: l, cantidad: n, color_id: it.color_id, tipo: it.tipo, m2,
-      precio_m2, subtotal: Math.round(m2 * precio_m2),
+      ml, kg: pesoKg(m2),
+      precio_m2, precio_ml,
+      precio_ml_efectivo: precioMlEfectivo({ metros2: m2, precio_m2, precio_ml }),
+      subtotal: Math.round(subtotalLinea({ metros2: m2, precio_m2, precio_ml })),
       precio_manual: manual > 0 ? manual : null,
       bobina_id: it.bobina_id ?? "",
     };
@@ -718,7 +725,7 @@ function usePreciosTipo() {
 
 function EditarCotizacionDialog({
   cot, onOpenChange, onSaved,
-}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null; bobina_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
+}: { cot: (Cotizacion & { items?: Array<{ position: number; largo_m: number; cantidad_planchas: number; color_id?: string | null; tipo?: string | null; precio_m2?: number | null; precio_ml?: number | null; bobina_id?: string | null }> }) | null; onOpenChange: (o: boolean) => void; onSaved: () => void }) {
   const { data: colores = [] } = useQuery({ queryKey: ["colores-admin"], queryFn: () => getColores() });
   const precios = usePreciosTipo();
   const [form, setForm] = useState({
@@ -744,6 +751,7 @@ function EditarCotizacionDialog({
         largo: String(it.largo_m), cantidad: String(it.cantidad_planchas),
         color_id: it.color_id ?? "", tipo: (it.tipo as Tipo) ?? "Ondulado",
         precio: it.precio_m2 == null ? "" : String(Number(it.precio_m2)),
+        precio_ml: it.precio_ml == null ? "" : String(Number(it.precio_ml)),
         bobina_id: it.bobina_id ?? "",
       })));
     } else {
@@ -765,7 +773,7 @@ function EditarCotizacionDialog({
         telefono: form.telefono,
         correo: form.correo, direccion: form.direccion,
       },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, bobina_id: it.bobina_id || null })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, precio_ml: it.precio_ml, bobina_id: it.bobina_id || null })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       descuento: parseDecimal(form.descuento), pago_recibido: parseDecimal(form.pago_recibido),
       estado: form.estado,
@@ -853,7 +861,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
   const mut = useMutation({
     mutationFn: () => createCotizacionManual({ data: {
       cliente: { nombre: form.nombre, giro: form.giro, rut: form.rut, telefono: form.telefono, correo: form.correo, direccion: form.direccion },
-      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, bobina_id: it.bobina_id || null })),
+      items: itemsCalc.map((it) => ({ largo_m: it.largo, cantidad_planchas: it.cantidad, color_id: it.color_id || null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, precio_ml: it.precio_ml, bobina_id: it.bobina_id || null })),
       color_nombre: form.color || null, precio_m2: parseDecimal(form.precio_m2),
       fecha_solicitud: isSuper ? form.fecha_solicitud : today,
       responsable_nombre: form.responsable,
@@ -862,7 +870,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
       toast.success(`Creada ${r.numero} — abriendo vista previa...`);
       const its = itemsCalc.map((it) => {
         const col = (colores as ColorOption[]).find((c) => c.id === it.color_id);
-        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2 };
+        return { largo_m: it.largo, ancho_m: 1, cantidad_planchas: it.cantidad, metros2: it.m2, color_nombre: col?.nombre ?? null, tipo: it.tipo, espesor_mm: 0.4, precio_m2: it.precio_m2, precio_ml: it.precio_ml };
       });
       const first = its[0] ?? { largo_m: 0, ancho_m: 1, cantidad_planchas: 0, metros2: 0, color_nombre: null, tipo: "Ondulado", espesor_mm: 0.4 };
       const pdfData: CotizacionPDF = {
