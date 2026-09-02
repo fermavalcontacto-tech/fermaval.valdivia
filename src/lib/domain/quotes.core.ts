@@ -7,6 +7,25 @@ import { z } from "zod";
 export const ANCHO_FIJO_M = 1;
 export const ESPESOR_FIJO_MM = 0.4;
 
+/** Peso del material: 1 m² de plancha pesa 3,66 kg. */
+export const PESO_KG_M2 = 3.66;
+
+/** Kilos de una línea a partir de sus metros cuadrados. */
+export function pesoKg(metros2: number): number {
+  return Number((Number(metros2 || 0) * PESO_KG_M2).toFixed(2));
+}
+
+/** Kilos totales de un conjunto de líneas. */
+export function pesoTotalKg(items: Array<{ metros2: number }>): number {
+  return Number(items.reduce((s, it) => s + Number(it.metros2 || 0) * PESO_KG_M2, 0).toFixed(2));
+}
+
+/** Metros lineales de una línea (ancho fijo 1 m). */
+export function metrosLineales(it: { largo_m: number; cantidad_planchas: number }): number {
+  return Number((Number(it.largo_m || 0) * Number(it.cantidad_planchas || 0)).toFixed(2));
+}
+
+
 // Tipos de fabricación oficiales ofrecidos en el cotizador público.
 // El color NO es una variante del tipo: las bobinas se administran por color
 // y se usan en cualquier máquina según el pedido. Cotizaciones antiguas con
