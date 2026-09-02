@@ -543,21 +543,28 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
 
   y += 10;
 
-  // Validez 7 días
-  y = drawNewPageIfNeeded(doc, y, 18);
+  // Entrega y validez
+  y = drawNewPageIfNeeded(doc, y, 26);
+  doc.setFillColor(...NAVY_DARK);
+  doc.rect(15, y, W - 30, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(255, 255, 255);
+  doc.text("ENTREGA: 24 HORAS SEGÚN ORDEN DE PEDIDOS", W / 2, y + 4.9, { align: "center" });
+  y += 7;
   doc.setDrawColor(...NAVY);
   doc.setLineWidth(0.3);
   doc.setFillColor(248, 250, 253);
-  doc.roundedRect(15, y, W - 30, 14, 2, 2, "FD");
+  doc.rect(15, y, W - 30, 15, "FD");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  doc.setTextColor(...NAVY_DARK);
-  doc.text("VALIDEZ DE LA COTIZACIÓN", 20, y + 5.2);
-  doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
+  doc.setTextColor(...NAVY_DARK);
+  doc.text("Aceptamos: Efectivo · Transferencia · Tarjeta débito y crédito", 20, y + 5.5);
+  doc.setFont("helvetica", "normal");
   doc.setTextColor(...GREY_DARK);
-  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 10);
-  y += 20;
+  doc.text("Esta cotización tiene una validez de 7 días corridos desde la fecha de emisión.", 20, y + 11);
+  y += 21;
+
 
   // Bloque de contacto FERMAVAL
   y = drawContactBlock(doc, y);
