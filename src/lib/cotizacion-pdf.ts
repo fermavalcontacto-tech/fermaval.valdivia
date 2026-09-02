@@ -420,7 +420,7 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
       doc.rect(tableX, y, tableW, rowH, "F");
     }
     const tipoTxt = it.tipo ?? "Ondulado";
-    const espesorTxt = `${(it.espesor_mm ?? 0.4).toFixed ? Number(it.espesor_mm ?? 0.4).toFixed(2) : it.espesor_mm} mm`;
+    const espesorTxt = `${Number(it.espesor_mm ?? 0.4).toFixed(2)} mm`;
     const desc = `Plancha ${tipoTxt} / ${espesorTxt}${it.color_nombre ? ` (${it.color_nombre})` : ""}`;
     const ml = itemMl(it);
     const kg = itemKg(it);
