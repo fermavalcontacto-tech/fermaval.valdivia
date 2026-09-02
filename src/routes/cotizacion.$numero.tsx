@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
 import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
-import { normalizePrecioModo, precioModoLabel, precioParaCliente } from "@/lib/domain/quotes.core";
+import { normalizePrecioModo, precioModoLabel, precioParaCliente, pesoKg, pesoTotalKg, PESO_KG_M2 } from "@/lib/domain/quotes.core";
 
 
 function maskCorreo(c: string | null | undefined): string {
