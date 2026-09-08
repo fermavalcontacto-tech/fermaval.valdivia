@@ -421,7 +421,8 @@ export function buildCotizacionPDF(c: CotizacionPDF): jsPDF {
     }
     const tipoTxt = it.tipo ?? "Ondulado";
     const espesorTxt = `${Number(it.espesor_mm ?? 0.4).toFixed(2)} mm`;
-    const desc = `Plancha ${tipoTxt} / ${espesorTxt}${it.color_nombre ? ` (${it.color_nombre})` : ""}`;
+    const colorTxt = (it.color_nombre ?? c.color_nombre ?? "").trim();
+    const desc = `Plancha ${tipoTxt} / ${espesorTxt}${colorTxt ? ` / Color ${colorTxt}` : ""}`;
     const ml = itemMl(it);
     const kg = itemKg(it);
     const pml = itemPrecioMl(it, c);
