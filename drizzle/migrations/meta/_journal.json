@@ -29,6 +29,13 @@
       "when": 1791479312243,
       "tag": "0003_create_apu_m2",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791479685722,
+      "tag": "0004_apu_sync_bobinas",
+      "breakpoints": true
     }
   ]
 }

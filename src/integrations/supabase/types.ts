@@ -22,6 +22,7 @@ export type Database = {
           created_by: string | null
           id: string
           mano_obra: number
+          material_desde_bobina: boolean
           nota: string | null
           otros_costos: number
           periodo: string
@@ -35,6 +36,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           mano_obra?: number
+          material_desde_bobina?: boolean
           nota?: string | null
           otros_costos?: number
           periodo: string
@@ -48,6 +50,7 @@ export type Database = {
           created_by?: string | null
           id?: string
           mano_obra?: number
+          material_desde_bobina?: boolean
           nota?: string | null
           otros_costos?: number
           periodo?: string
@@ -1260,6 +1263,10 @@ export type Database = {
       }
       is_staff: { Args: { _user_id: string }; Returns: boolean }
       nextval_quote: { Args: never; Returns: number }
+      sync_apu_desde_bobinas: {
+        Args: { _color_id: string; _periodo: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "operator"

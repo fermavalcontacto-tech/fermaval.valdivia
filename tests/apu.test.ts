@@ -12,3 +12,13 @@ describe("APU", () => {
     expect(ventaNetaLinea({ metros2: 9, largo_m: 3, cantidad_planchas: 2, precio_m2: 1000, precio_ml: 5000 })).toBe(30000);
   });
 });
+
+import { saldoConIva } from "../src/lib/domain/quotes.core";
+describe("saldo con IVA", () => {
+  it("saldo = total neto con 19% IVA − pagado", () => {
+    expect(saldoConIva(100000, 50000)).toBe(69000);
+  });
+  it("saldo nunca es negativo", () => {
+    expect(saldoConIva(100000, 200000)).toBe(0);
+  });
+});

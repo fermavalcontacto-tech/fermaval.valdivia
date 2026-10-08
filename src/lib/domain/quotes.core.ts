@@ -621,3 +621,8 @@ export function precioSugeridoPorColor(
   const costo = costoM2Linea(bobina, costoTipoFallback);
   return { precio: precioSugeridoM2(costo, utilidadM2), costo, bobina };
 }
+
+/** Saldo pendiente con IVA: total neto × 1,19 (redondeado) − pagado, nunca negativo. */
+export function saldoConIva(totalNeto: number, pagado: number): number {
+  return Math.max(0, Math.round(Number(totalNeto || 0) * 1.19) - Number(pagado || 0));
+}
