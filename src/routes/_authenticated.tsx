@@ -40,6 +40,7 @@ const navAll: Array<{ to: string; label: string; icon: typeof LayoutDashboard; e
   { to: "/admin/egresos", label: "Egresos", icon: Receipt },
   { to: "/admin/boletas", label: "Boletas", icon: FileImage },
   { to: "/admin/finanzas", label: "Finanzas", icon: TrendingUp },
+  { to: "/admin/apu", label: "APU (costos)", icon: Layers },
   
   { to: "/admin/reportes", label: "Reportes", icon: FileDown },
 ];
