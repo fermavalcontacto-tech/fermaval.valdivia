@@ -11,7 +11,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { CheckCircle2, Clock, ArrowLeft, Download, Printer, Share2 } from "lucide-react";
 import { downloadCotizacionPDF, printCotizacionPDF, shareCotizacionPDF, cotizacionPdfFilename, type CotizacionPDF } from "@/lib/cotizacion-pdf";
-import { normalizePrecioModo, precioModoLabel, precioParaCliente, pesoKg, pesoTotalKg, PESO_KG_M2 } from "@/lib/domain/quotes.core";
+import { normalizePrecioModo, precioModoLabel, precioParaCliente, pesoKg, pesoTotalKg, PESO_KG_M2, saldoConIva } from "@/lib/domain/quotes.core";
 
 
 function maskCorreo(c: string | null | undefined): string {
@@ -315,8 +315,8 @@ function QuotePage() {
               <div className="font-display text-2xl text-primary sm:text-3xl">{formatCLP(Number(cot.pago_recibido))}</div>
             </div>
             <div className="min-w-0 rounded-md bg-accent/10 p-4">
-              <div className="text-xs uppercase text-muted-foreground">Saldo</div>
-              <div className="font-display text-2xl text-accent sm:text-3xl">{formatCLP(Number(cot.saldo))}</div>
+              <div className="text-xs uppercase text-muted-foreground">Saldo (IVA incluido)</div>
+              <div className="font-display text-2xl text-accent sm:text-3xl">{formatCLP(saldoConIva(Number(cot.total), Number(cot.pago_recibido)))}</div>
             </div>
           </div>
 

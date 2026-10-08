@@ -11,6 +11,7 @@ import {
   precioPromedio,
   publicQuoteErrorMessage,
   RutSchema,
+  saldoConIva,
 } from "@/lib/domain/quotes.core";
 import { nextQuoteNumber, isDuplicateNumeroError } from "@/lib/quote-number";
 
@@ -80,7 +81,7 @@ export const createPublicQuote = createServerFn({ method: "POST" })
         largo_m: first.largo_m, ancho_m: ANCHO_FIJO_M,
         cantidad_planchas: first.cantidad_planchas,
         metros2: metros2Total, color_id: color_id_cot, color_nombre,
-        precio_m2: precioCabecera, total, saldo: total,
+        precio_m2: precioCabecera, total, saldo: saldoConIva(total, 0),
         estado: "cotizacion_creada" as const, plazo_horas: 72,
         access_token, origen: "cliente",
         responsable_nombre: null,
@@ -166,7 +167,7 @@ export const acceptQuoteAndPay = createServerFn({ method: "POST" })
     const total = Number(cot.total);
     const monto = Math.round((total * data.porcentaje) / 100);
     const nuevoPagado = Number(cot.pago_recibido) + monto;
-    const saldo = Math.max(0, total - nuevoPagado);
+    const saldo = saldoConIva(total, nuevoPagado);
 
     await supabaseAdmin.from("pagos").insert({
       cotizacion_id: cot.id, porcentaje: data.porcentaje, monto,

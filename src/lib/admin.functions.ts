@@ -12,6 +12,7 @@ import {
   precioPromedio,
   type ItemInput,
   RutSchema,
+  saldoConIva,
 } from "@/lib/domain/quotes.core";
 import { nextQuoteNumber, isDuplicateNumeroError } from "@/lib/quote-number";
 
@@ -256,7 +257,7 @@ export const createCotizacionManual = createServerFn({ method: "POST" })
     const baseRow = {
       cliente_id: cliente.id,
       largo_m: first.largo_m, ancho_m: 1, cantidad_planchas: first.cantidad_planchas,
-      metros2, precio_m2: precioCabecera, total, saldo: total,
+      metros2, precio_m2: precioCabecera, total, saldo: saldoConIva(total, 0),
       color_id: first.color_id, color_nombre: colorNombreCot, created_by: context.userId,
       estado: "cotizacion_creada" as const, plazo_horas: 72,
       fecha_solicitud: fechaSolicitud,
@@ -1035,7 +1036,7 @@ export const updateCotizacionFull = createServerFn({ method: "POST" })
     const metros2 = sumMetros2(itemsCalc);
     const total = calcTotalItems(itemsCalc, data.descuento);
     const precioCabecera = precioPromedio(itemsCalc, data.precio_m2);
-    const saldo = Math.max(0, total - data.pago_recibido);
+    const saldo = saldoConIva(total, data.pago_recibido);
 
     const first = itemsCalc[0];
     const { data: prev } = await context.supabase.from("cotizaciones").select("numero, total, estado").eq("id", data.id).single();
@@ -1262,7 +1263,7 @@ export const setPagoCotizacion = createServerFn({ method: "POST" })
       : data.tier === "pago_20" ? 0.20
       : data.tier === "pago_50" ? 0.50 : 1;
     const pago = Math.round(total * factor);
-    const saldo = Math.max(0, total - pago);
+    const saldo = saldoConIva(total, pago);
     const nuevoEstado =
       pago === 0 ? "esperando_pago" :
       pago >= total ? "pedido_confirmado" : "pago_parcial";

@@ -4,7 +4,7 @@ import {
   listCotizaciones, updateCotizacionEstado, createCotizacionManual,
   updateCotizacionFull, deleteCotizacion, getColores, PERSONAS_INTERNAS, TIPOS_PRODUCTO, listPreciosTipo, listCostosM2, listBobinasSaldos, listUtilidadM2,
 } from "@/lib/admin.functions";
-import { pesoKg, pesoTotalKg, PESO_KG_M2, subtotalLinea, precioMlEfectivo, ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, precioSugeridoPorColor, type BobinaSaldo } from "@/lib/domain/quotes.core";
+import { pesoKg, pesoTotalKg, PESO_KG_M2, subtotalLinea, precioMlEfectivo, ivaBreakdown, brutoFromNeto, margenM2, formatPct, friendlyValidationMessage, resolvePrecioItem, type PreciosPorTipo, DECIMAL_INPUT_PROPS, INTEGER_INPUT_PROPS, sanitizeDecimalInput, sanitizeIntegerInput, parseDecimal, sanitizeRutInput, isValidRut, RUT_INVALID_MESSAGE, bobinasDeColor, sugerenciaFifo, evaluarStockLinea, alternativasFifo, siguienteBobinaFifo, costoM2Linea, saldoConIva, precioSugeridoPorColor, type BobinaSaldo } from "@/lib/domain/quotes.core";
 import { sendCotizacionEmail } from "@/lib/email-cotizacion.functions";
 import { pdfsForCotizacion, downloadCotizacionPDF, downloadPagoPDF, type CotizacionPDF } from "@/lib/cotizacion-pdf";
 import { PdfPreviewDialog } from "@/components/admin/PdfPreviewDialog";
@@ -230,7 +230,7 @@ function CotizacionesPage() {
                     <div className="font-mono text-xs text-muted-foreground">{formatCLP(ivaBreakdown(c.total).bruto)} c/IVA</div>
                   </td>
                   <td className="p-3">{formatCLP(c.pago_recibido)}</td>
-                  <td className="p-3 font-semibold">{formatCLP(c.saldo)}</td>
+                  <td className="p-3 font-semibold">{formatCLP(saldoConIva(c.total, c.pago_recibido))}</td>
                   <td className="p-3">
                     <Select value={c.estado} onValueChange={(v) => mut.mutate({ id: c.id, estado: v as Estado, cot: c })}>
                       <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
@@ -773,7 +773,7 @@ function EditarCotizacionDialog({
   const itemsCalc = calcItems(items, precios, parseDecimal(form.precio_m2));
   const m2 = Number(itemsCalc.reduce((s, x) => s + x.m2, 0).toFixed(2));
   const total = Math.max(0, Math.round(itemsCalc.reduce((s, x) => s + x.subtotal, 0) - parseDecimal(form.descuento)));
-  const saldo = Math.max(0, total - parseDecimal(form.pago_recibido));
+  const saldo = saldoConIva(total, parseDecimal(form.pago_recibido));
 
   const mut = useMutation({
     mutationFn: () => updateCotizacionFull({ data: {
@@ -828,7 +828,7 @@ function EditarCotizacionDialog({
             <div className="flex justify-between"><span>Neto:</span><span className="font-mono font-semibold">{formatCLP(ivaBreakdown(total).neto)}</span></div>
             <div className="flex justify-between text-muted-foreground"><span>IVA 19%:</span><span className="font-mono">{formatCLP(ivaBreakdown(total).iva)}</span></div>
             <div className="flex justify-between"><span>Bruto (con IVA):</span><span className="font-mono font-bold">{formatCLP(ivaBreakdown(total).bruto)}</span></div>
-            <div className="flex justify-between"><span>Saldo (neto):</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
+            <div className="flex justify-between"><span>Saldo (IVA incluido):</span><span className="font-mono font-semibold">{formatCLP(saldo)}</span></div>
           </div>
         </div>
         <DialogFooter className="w-full gap-2">
@@ -892,7 +892,7 @@ function NuevaCotizacionDialog({ onCreated, onPreview }: { onCreated: () => void
         items: its,
         color_nombre: form.color || null,
         precio_m2: precioPromedioCalc,
-        descuento: 0, total: totalCalc, pago_recibido: 0, saldo: totalCalc,
+        descuento: 0, total: totalCalc, pago_recibido: 0, saldo: saldoConIva(totalCalc, 0),
         estado: "Cotización creada",
         aprobador_nombre: form.responsable,
         aprobador_email: auth.email ?? "",

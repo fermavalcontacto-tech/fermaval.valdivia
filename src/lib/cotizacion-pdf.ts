@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { formatCLP, formatDate } from "@/lib/format";
-import { PESO_KG_M2 } from "@/lib/domain/quotes.core";
+import { PESO_KG_M2, saldoConIva } from "@/lib/domain/quotes.core";
 import logoAsset from "@/assets/fermaval-logo-horizontal.jpg.asset.json";
 const logoUrl = (logoAsset as { url: string }).url;
 
@@ -689,7 +689,7 @@ export function buildPagoPDF(c: CotizacionPDF): jsPDF {
   y = infoBlock(doc, 15, y, blockW, "Detalle del pago", [
     ["Total cotización:", formatCLP(c.total)],
     ["Pago recibido:", `${formatCLP(c.pago_recibido)}  (${pct}%)`],
-    ["Saldo pendiente:", formatCLP(c.saldo)],
+    ["Saldo pendiente (IVA incluido):", formatCLP(saldoConIva(c.total, c.pago_recibido))],
     ["Estado:", c.estado.toUpperCase()],
     ["Responsable:", c.responsable_nombre ?? c.aprobador_nombre],
     ["Aprobado por:", `${c.aprobador_nombre} ${c.aprobador_email ? `(${c.aprobador_email})` : ""}`],
