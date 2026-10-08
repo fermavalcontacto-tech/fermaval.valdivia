@@ -81,7 +81,12 @@ function ApuPage() {
                 const total = v ? costoApuTotal({ costo_material: parseDecimal(v.costo_material), mano_obra: parseDecimal(v.mano_obra), otros_costos: parseDecimal(v.otros_costos) }) : null;
                 return (
                   <tr key={c.id} className="border-b last:border-0">
-                    <td className="py-2 pr-3 font-medium">{c.nombre}</td>
+                    <td className="py-2 pr-3 font-medium">
+                      {c.nombre}
+                      {apu.find((a) => a.tipo === tipo && a.color_id === c.id)?.material_desde_bobina && (
+                        <span className="ml-2 rounded bg-accent/15 px-1.5 text-xs text-accent">material desde bobina</span>
+                      )}
+                    </td>
                     {(["costo_material", "mano_obra", "otros_costos"] as const).map((k) => (
                       <td key={k} className="py-2 pr-3"><Input inputMode="decimal" className="w-28" value={v?.[k] ?? ""} placeholder="0" onChange={(e) => set(c.id, k, e.target.value)} /></td>
                     ))}
