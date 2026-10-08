@@ -9,37 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as MisCotizacionesRouteImport } from './routes/mis-cotizaciones'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as MisCotizacionesRouteImport } from './routes/mis-cotizaciones'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as CotizacionNumeroRouteImport } from './routes/cotizacion.$numero'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated.admin.index'
-import { Route as ApiPublicWebhookGetnetRouteImport } from './routes/api/public/webhook-getnet'
-import { Route as ApiPublicQueryGetnetPaymentRouteImport } from './routes/api/public/query-getnet-payment'
-import { Route as ApiPublicCreateGetnetPaymentRouteImport } from './routes/api/public/create-getnet-payment'
-import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
-import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
-import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
-import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
-import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
-import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
-import { Route as AuthenticatedAdminConfiguracionRouteImport } from './routes/_authenticated.admin.configuracion'
-import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authenticated.admin.colores'
-import { Route as AuthenticatedAdminBuscarRouteImport } from './routes/_authenticated.admin.buscar'
-import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
-import { Route as AuthenticatedAdminBobinasRouteImport } from './routes/_authenticated.admin.bobinas'
 import { Route as AuthenticatedAdminApuRouteImport } from './routes/_authenticated.admin.apu'
+import { Route as AuthenticatedAdminBobinasRouteImport } from './routes/_authenticated.admin.bobinas'
+import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
+import { Route as AuthenticatedAdminBuscarRouteImport } from './routes/_authenticated.admin.buscar'
+import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authenticated.admin.colores'
+import { Route as AuthenticatedAdminConfiguracionRouteImport } from './routes/_authenticated.admin.configuracion'
+import { Route as AuthenticatedAdminCotizacionesRouteImport } from './routes/_authenticated.admin.cotizaciones'
+import { Route as AuthenticatedAdminEgresosRouteImport } from './routes/_authenticated.admin.egresos'
+import { Route as AuthenticatedAdminFinanzasRouteImport } from './routes/_authenticated.admin.finanzas'
+import { Route as AuthenticatedAdminPedidosRouteImport } from './routes/_authenticated.admin.pedidos'
+import { Route as AuthenticatedAdminReportesRouteImport } from './routes/_authenticated.admin.reportes'
+import { Route as AuthenticatedAdminUsuariosRouteImport } from './routes/_authenticated.admin.usuarios'
+import { Route as ApiPublicCreateGetnetPaymentRouteImport } from './routes/api/public/create-getnet-payment'
+import { Route as ApiPublicQueryGetnetPaymentRouteImport } from './routes/api/public/query-getnet-payment'
+import { Route as ApiPublicWebhookGetnetRouteImport } from './routes/api/public/webhook-getnet'
 
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MisCotizacionesRoute = MisCotizacionesRouteImport.update({
-  id: '/mis-cotizaciones',
-  path: '/mis-cotizaciones',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -47,13 +46,14 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
+const MisCotizacionesRoute = MisCotizacionesRouteImport.update({
+  id: '/mis-cotizaciones',
+  path: '/mis-cotizaciones',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CotizacionNumeroRoute = CotizacionNumeroRouteImport.update({
@@ -66,75 +66,15 @@ const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
   path: '/admin/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ApiPublicWebhookGetnetRoute = ApiPublicWebhookGetnetRouteImport.update({
-  id: '/api/public/webhook-getnet',
-  path: '/api/public/webhook-getnet',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedAdminApuRoute = AuthenticatedAdminApuRouteImport.update({
+  id: '/admin/apu',
+  path: '/admin/apu',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
-const ApiPublicQueryGetnetPaymentRoute =
-  ApiPublicQueryGetnetPaymentRouteImport.update({
-    id: '/api/public/query-getnet-payment',
-    path: '/api/public/query-getnet-payment',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiPublicCreateGetnetPaymentRoute =
-  ApiPublicCreateGetnetPaymentRouteImport.update({
-    id: '/api/public/create-getnet-payment',
-    path: '/api/public/create-getnet-payment',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedAdminUsuariosRoute =
-  AuthenticatedAdminUsuariosRouteImport.update({
-    id: '/admin/usuarios',
-    path: '/admin/usuarios',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminReportesRoute =
-  AuthenticatedAdminReportesRouteImport.update({
-    id: '/admin/reportes',
-    path: '/admin/reportes',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminPedidosRoute =
-  AuthenticatedAdminPedidosRouteImport.update({
-    id: '/admin/pedidos',
-    path: '/admin/pedidos',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminFinanzasRoute =
-  AuthenticatedAdminFinanzasRouteImport.update({
-    id: '/admin/finanzas',
-    path: '/admin/finanzas',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminEgresosRoute =
-  AuthenticatedAdminEgresosRouteImport.update({
-    id: '/admin/egresos',
-    path: '/admin/egresos',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminCotizacionesRoute =
-  AuthenticatedAdminCotizacionesRouteImport.update({
-    id: '/admin/cotizaciones',
-    path: '/admin/cotizaciones',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminConfiguracionRoute =
-  AuthenticatedAdminConfiguracionRouteImport.update({
-    id: '/admin/configuracion',
-    path: '/admin/configuracion',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminColoresRoute =
-  AuthenticatedAdminColoresRouteImport.update({
-    id: '/admin/colores',
-    path: '/admin/colores',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedAdminBuscarRoute =
-  AuthenticatedAdminBuscarRouteImport.update({
-    id: '/admin/buscar',
-    path: '/admin/buscar',
+const AuthenticatedAdminBobinasRoute =
+  AuthenticatedAdminBobinasRouteImport.update({
+    id: '/admin/bobinas',
+    path: '/admin/bobinas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedAdminBoletasRoute =
@@ -143,16 +83,76 @@ const AuthenticatedAdminBoletasRoute =
     path: '/admin/boletas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAdminBobinasRoute =
-  AuthenticatedAdminBobinasRouteImport.update({
-    id: '/admin/bobinas',
-    path: '/admin/bobinas',
+const AuthenticatedAdminBuscarRoute =
+  AuthenticatedAdminBuscarRouteImport.update({
+    id: '/admin/buscar',
+    path: '/admin/buscar',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAdminApuRoute = AuthenticatedAdminApuRouteImport.update({
-  id: '/admin/apu',
-  path: '/admin/apu',
-  getParentRoute: () => AuthenticatedRoute,
+const AuthenticatedAdminColoresRoute =
+  AuthenticatedAdminColoresRouteImport.update({
+    id: '/admin/colores',
+    path: '/admin/colores',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminConfiguracionRoute =
+  AuthenticatedAdminConfiguracionRouteImport.update({
+    id: '/admin/configuracion',
+    path: '/admin/configuracion',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminCotizacionesRoute =
+  AuthenticatedAdminCotizacionesRouteImport.update({
+    id: '/admin/cotizaciones',
+    path: '/admin/cotizaciones',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminEgresosRoute =
+  AuthenticatedAdminEgresosRouteImport.update({
+    id: '/admin/egresos',
+    path: '/admin/egresos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminFinanzasRoute =
+  AuthenticatedAdminFinanzasRouteImport.update({
+    id: '/admin/finanzas',
+    path: '/admin/finanzas',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminPedidosRoute =
+  AuthenticatedAdminPedidosRouteImport.update({
+    id: '/admin/pedidos',
+    path: '/admin/pedidos',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminReportesRoute =
+  AuthenticatedAdminReportesRouteImport.update({
+    id: '/admin/reportes',
+    path: '/admin/reportes',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminUsuariosRoute =
+  AuthenticatedAdminUsuariosRouteImport.update({
+    id: '/admin/usuarios',
+    path: '/admin/usuarios',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const ApiPublicCreateGetnetPaymentRoute =
+  ApiPublicCreateGetnetPaymentRouteImport.update({
+    id: '/api/public/create-getnet-payment',
+    path: '/api/public/create-getnet-payment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicQueryGetnetPaymentRoute =
+  ApiPublicQueryGetnetPaymentRouteImport.update({
+    id: '/api/public/query-getnet-payment',
+    path: '/api/public/query-getnet-payment',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicWebhookGetnetRoute = ApiPublicWebhookGetnetRouteImport.update({
+  id: '/api/public/webhook-getnet',
+  path: '/api/public/webhook-getnet',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -313,25 +313,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mis-cotizaciones': {
-      id: '/mis-cotizaciones'
-      path: '/mis-cotizaciones'
-      fullPath: '/mis-cotizaciones'
-      preLoaderRoute: typeof MisCotizacionesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -341,11 +327,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-cotizaciones': {
+      id: '/mis-cotizaciones'
+      path: '/mis-cotizaciones'
+      fullPath: '/mis-cotizaciones'
+      preLoaderRoute: typeof MisCotizacionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cotizacion/$numero': {
@@ -362,95 +362,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/api/public/webhook-getnet': {
-      id: '/api/public/webhook-getnet'
-      path: '/api/public/webhook-getnet'
-      fullPath: '/api/public/webhook-getnet'
-      preLoaderRoute: typeof ApiPublicWebhookGetnetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/query-getnet-payment': {
-      id: '/api/public/query-getnet-payment'
-      path: '/api/public/query-getnet-payment'
-      fullPath: '/api/public/query-getnet-payment'
-      preLoaderRoute: typeof ApiPublicQueryGetnetPaymentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/create-getnet-payment': {
-      id: '/api/public/create-getnet-payment'
-      path: '/api/public/create-getnet-payment'
-      fullPath: '/api/public/create-getnet-payment'
-      preLoaderRoute: typeof ApiPublicCreateGetnetPaymentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/admin/usuarios': {
-      id: '/_authenticated/admin/usuarios'
-      path: '/admin/usuarios'
-      fullPath: '/admin/usuarios'
-      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/reportes': {
-      id: '/_authenticated/admin/reportes'
-      path: '/admin/reportes'
-      fullPath: '/admin/reportes'
-      preLoaderRoute: typeof AuthenticatedAdminReportesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/pedidos': {
-      id: '/_authenticated/admin/pedidos'
-      path: '/admin/pedidos'
-      fullPath: '/admin/pedidos'
-      preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/finanzas': {
-      id: '/_authenticated/admin/finanzas'
-      path: '/admin/finanzas'
-      fullPath: '/admin/finanzas'
-      preLoaderRoute: typeof AuthenticatedAdminFinanzasRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/egresos': {
-      id: '/_authenticated/admin/egresos'
-      path: '/admin/egresos'
-      fullPath: '/admin/egresos'
-      preLoaderRoute: typeof AuthenticatedAdminEgresosRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/cotizaciones': {
-      id: '/_authenticated/admin/cotizaciones'
-      path: '/admin/cotizaciones'
-      fullPath: '/admin/cotizaciones'
-      preLoaderRoute: typeof AuthenticatedAdminCotizacionesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/configuracion': {
-      id: '/_authenticated/admin/configuracion'
-      path: '/admin/configuracion'
-      fullPath: '/admin/configuracion'
-      preLoaderRoute: typeof AuthenticatedAdminConfiguracionRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/colores': {
-      id: '/_authenticated/admin/colores'
-      path: '/admin/colores'
-      fullPath: '/admin/colores'
-      preLoaderRoute: typeof AuthenticatedAdminColoresRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/buscar': {
-      id: '/_authenticated/admin/buscar'
-      path: '/admin/buscar'
-      fullPath: '/admin/buscar'
-      preLoaderRoute: typeof AuthenticatedAdminBuscarRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/admin/boletas': {
-      id: '/_authenticated/admin/boletas'
-      path: '/admin/boletas'
-      fullPath: '/admin/boletas'
-      preLoaderRoute: typeof AuthenticatedAdminBoletasRouteImport
+    '/_authenticated/admin/apu': {
+      id: '/_authenticated/admin/apu'
+      path: '/admin/apu'
+      fullPath: '/admin/apu'
+      preLoaderRoute: typeof AuthenticatedAdminApuRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/admin/bobinas': {
@@ -460,12 +376,96 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBobinasRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/admin/apu': {
-      id: '/_authenticated/admin/apu'
-      path: '/admin/apu'
-      fullPath: '/admin/apu'
-      preLoaderRoute: typeof AuthenticatedAdminApuRouteImport
+    '/_authenticated/admin/boletas': {
+      id: '/_authenticated/admin/boletas'
+      path: '/admin/boletas'
+      fullPath: '/admin/boletas'
+      preLoaderRoute: typeof AuthenticatedAdminBoletasRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/buscar': {
+      id: '/_authenticated/admin/buscar'
+      path: '/admin/buscar'
+      fullPath: '/admin/buscar'
+      preLoaderRoute: typeof AuthenticatedAdminBuscarRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/colores': {
+      id: '/_authenticated/admin/colores'
+      path: '/admin/colores'
+      fullPath: '/admin/colores'
+      preLoaderRoute: typeof AuthenticatedAdminColoresRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/configuracion': {
+      id: '/_authenticated/admin/configuracion'
+      path: '/admin/configuracion'
+      fullPath: '/admin/configuracion'
+      preLoaderRoute: typeof AuthenticatedAdminConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/cotizaciones': {
+      id: '/_authenticated/admin/cotizaciones'
+      path: '/admin/cotizaciones'
+      fullPath: '/admin/cotizaciones'
+      preLoaderRoute: typeof AuthenticatedAdminCotizacionesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/egresos': {
+      id: '/_authenticated/admin/egresos'
+      path: '/admin/egresos'
+      fullPath: '/admin/egresos'
+      preLoaderRoute: typeof AuthenticatedAdminEgresosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/finanzas': {
+      id: '/_authenticated/admin/finanzas'
+      path: '/admin/finanzas'
+      fullPath: '/admin/finanzas'
+      preLoaderRoute: typeof AuthenticatedAdminFinanzasRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/pedidos': {
+      id: '/_authenticated/admin/pedidos'
+      path: '/admin/pedidos'
+      fullPath: '/admin/pedidos'
+      preLoaderRoute: typeof AuthenticatedAdminPedidosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/reportes': {
+      id: '/_authenticated/admin/reportes'
+      path: '/admin/reportes'
+      fullPath: '/admin/reportes'
+      preLoaderRoute: typeof AuthenticatedAdminReportesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin/usuarios': {
+      id: '/_authenticated/admin/usuarios'
+      path: '/admin/usuarios'
+      fullPath: '/admin/usuarios'
+      preLoaderRoute: typeof AuthenticatedAdminUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/api/public/create-getnet-payment': {
+      id: '/api/public/create-getnet-payment'
+      path: '/api/public/create-getnet-payment'
+      fullPath: '/api/public/create-getnet-payment'
+      preLoaderRoute: typeof ApiPublicCreateGetnetPaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/query-getnet-payment': {
+      id: '/api/public/query-getnet-payment'
+      path: '/api/public/query-getnet-payment'
+      fullPath: '/api/public/query-getnet-payment'
+      preLoaderRoute: typeof ApiPublicQueryGetnetPaymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/webhook-getnet': {
+      id: '/api/public/webhook-getnet'
+      path: '/api/public/webhook-getnet'
+      fullPath: '/api/public/webhook-getnet'
+      preLoaderRoute: typeof ApiPublicWebhookGetnetRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

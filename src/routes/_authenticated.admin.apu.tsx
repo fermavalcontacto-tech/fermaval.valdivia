@@ -53,7 +53,7 @@ function ApuPage() {
   });
 
   const set = (id: string, k: keyof Vals, v: string) =>
-    setVals((p) => ({ ...p, [id]: { costo_material: "", mano_obra: "", otros_costos: "", ...p[id], [k]: v } }));
+    setVals((p) => ({ ...p, [id]: { ...(p[id] ?? { costo_material: "", mano_obra: "", otros_costos: "" }), [k]: v } }));
 
   return (
     <div className="space-y-6">
