@@ -1695,7 +1695,7 @@ export const listApu = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: rows, error } = await context.supabase
       .from("apu_m2")
-      .select("id, periodo, tipo, color_id, costo_material, mano_obra, otros_costos, nota")
+      .select("id, periodo, tipo, color_id, costo_material, mano_obra, otros_costos, nota, material_desde_bobina")
       .eq("periodo", `${data.periodo}-01`);
     if (error) throw new Error(error.message);
     return rows ?? [];
@@ -1712,9 +1712,16 @@ export const upsertApu = createServerFn({ method: "POST" })
     otros_costos: z.number().min(0).max(100_000_000),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    const periodo = `${data.periodo}-01`;
+    const { data: prev } = await context.supabase.from("apu_m2")
+      .select("costo_material, material_desde_bobina")
+      .eq("periodo", periodo).eq("tipo", data.tipo as never).eq("color_id", data.color_id).maybeSingle();
+    // Mantiene la marca "desde bobina" si el costo material no se cambió a mano.
+    const desdeBobina = !!prev?.material_desde_bobina && Number(prev.costo_material) === data.costo_material;
     const { error } = await context.supabase.from("apu_m2").upsert({
-      periodo: `${data.periodo}-01`, tipo: data.tipo as never, color_id: data.color_id,
+      periodo, tipo: data.tipo as never, color_id: data.color_id,
       costo_material: data.costo_material, mano_obra: data.mano_obra, otros_costos: data.otros_costos,
+      material_desde_bobina: desdeBobina,
       created_by: context.userId,
     }, { onConflict: "periodo,tipo,color_id" });
     if (error) throw new Error(error.message);
