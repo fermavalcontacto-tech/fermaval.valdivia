@@ -122,10 +122,11 @@ function FinanzasPage() {
 
 
       <Card className="p-5">
-        <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Evolución últimos 12 meses (incluye movimientos históricos)</h3>
+        <h3 className="mb-1 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Evolución últimos 12 meses: utilidad real</h3>
+        <p className="mb-4 text-xs text-muted-foreground">Utilidad real = Ventas netas − Costo de venta (bobinas/APU) − Gastos operacionales. Las compras de bobina entran como costo de venta, no como gasto.</p>
         <div className="h-72">
           <ResponsiveContainer>
-            <AreaChart data={data.months}>
+            <AreaChart data={apuData?.serie ?? []}>
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.6}/>
@@ -136,8 +137,11 @@ function FinanzasPage() {
               <XAxis dataKey="label" stroke="var(--muted-foreground)" />
               <YAxis stroke="var(--muted-foreground)" tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
               <Tooltip formatter={(v: number) => formatCLP(v)} contentStyle={{ background: "var(--card)", border: "1px solid var(--border)" }} />
-              <Area type="monotone" dataKey="ventas" stroke="var(--accent)" strokeWidth={2} fill="url(#g1)" />
-              <Area type="monotone" dataKey="gastos" stroke="var(--destructive)" strokeWidth={2} fill="transparent" />
+              <Legend />
+              <Area type="monotone" name="Ventas (neto)" dataKey="ventaNeta" stroke="var(--accent)" strokeWidth={2} fill="url(#g1)" />
+              <Area type="monotone" name="Costo de venta" dataKey="costoVenta" stroke="var(--muted-foreground)" strokeWidth={2} fill="transparent" />
+              <Area type="monotone" name="Gastos operacionales" dataKey="gastosOp" stroke="var(--destructive)" strokeWidth={2} fill="transparent" />
+              <Area type="monotone" name="Utilidad real" dataKey="utilidadReal" stroke="var(--primary)" strokeWidth={3} fill="transparent" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
