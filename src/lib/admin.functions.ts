@@ -1739,49 +1739,86 @@ export const copiarApuMesAnterior = createServerFn({ method: "POST" })
     return { copiados: rows.length };
   });
 
-/** Utilidad real del mes basada en APU: por línea vendida (venta neta − costo APU × m²). */
+/**
+ * Utilidad real basada en APU/bobinas para el mes elegido + serie de 12 meses.
+ * Utilidad real = venta neta − costo de venta (bobina asignada → APU → costo genérico) − gastos operacionales.
+ * Las compras de bobina no son gasto operacional (su costo entra como costo de venta).
+ */
 export const getUtilidadApu = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ periodo: PeriodoSchema }).parse(d))
   .handler(async ({ data, context }) => {
     const { costoApuTotal, ventaNetaLinea, utilidadLineaApu } = await import("@/lib/domain/apu");
     const [y, m] = data.periodo.split("-").map(Number);
-    const start = new Date(y, m - 1, 1).toISOString();
-    const end = new Date(y, m, 1).toISOString();
-    const periodo = `${data.periodo}-01`;
-    const [{ data: cots }, { data: apu }, { data: costos }] = await Promise.all([
+    const start = new Date(y, m - 12, 1);
+    const end = new Date(y, m, 1);
+    const sISO = start.toISOString(), eISO = end.toISOString();
+    const sD = sISO.slice(0, 10), eD = eISO.slice(0, 10);
+    const keyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const keyOfDate = (s: string) => s.slice(0, 7);
+
+    const [{ data: cots }, { data: apu }, { data: costos }, { data: egr }, { data: bol }, { data: hist }, { data: chat }] = await Promise.all([
       context.supabase.from("cotizaciones")
-        .select("id, precio_m2, color_id, color_nombre, cotizacion_items(tipo, color_id, color_nombre, metros2, largo_m, cantidad_planchas, precio_m2, precio_ml)")
+        .select("id, created_at, precio_m2, color_id, color_nombre, cotizacion_items(tipo, color_id, color_nombre, metros2, largo_m, cantidad_planchas, precio_m2, precio_ml, bobina:bobinas(costo_m2))")
         .in("estado", ["pago_parcial", "cotizacion_pagada", "pedido_confirmado", "pedido_terminado"])
-        .gte("created_at", start).lt("created_at", end),
-      context.supabase.from("apu_m2").select("tipo, color_id, costo_material, mano_obra, otros_costos").eq("periodo", periodo),
-      context.supabase.from("costos_m2").select("tipo, costo_m2").eq("periodo", periodo),
+        .gte("created_at", sISO).lt("created_at", eISO),
+      context.supabase.from("apu_m2").select("periodo, tipo, color_id, costo_material, mano_obra, otros_costos").gte("periodo", sD).lt("periodo", eD),
+      context.supabase.from("costos_m2").select("periodo, tipo, costo_m2").gte("periodo", sD).lt("periodo", eD),
+      context.supabase.from("solicitudes_egreso").select("monto, fecha, bobina_metros").eq("estado", "aprobado").gte("fecha", sD).lt("fecha", eD),
+      context.supabase.from("boletas").select("monto, fecha, bobina_metros, bobina_id").is("solicitud_id", null).gte("fecha", sD).lt("fecha", eD),
+      context.supabase.from("movimientos_historicos").select("periodo, gastos").gte("periodo", sD).lt("periodo", eD),
+      context.supabase.from("ventas_chatarra").select("fecha, monto").gte("fecha", sD).lt("fecha", eD),
     ]);
-    const apuMap = new Map((apu ?? []).map((a) => [`${a.tipo}|${a.color_id}`, costoApuTotal(a)]));
+    const apuMap = new Map((apu ?? []).map((a) => [`${keyOfDate(a.periodo)}|${a.tipo}|${a.color_id}`, costoApuTotal(a)]));
     const genMap = new Map<string, number>();
-    for (const c of costos ?? []) if (!genMap.has(c.tipo)) genMap.set(c.tipo, Number(c.costo_m2));
+    for (const c of costos ?? []) { const k = `${keyOfDate(c.periodo)}|${c.tipo}`; if (!genMap.has(k)) genMap.set(k, Number(c.costo_m2)); }
+
+    const serie: Array<{ key: string; label: string; ventaNeta: number; costoVenta: number; gastosOp: number; utilidadReal: number }> = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(start); d.setMonth(d.getMonth() + i);
+      serie.push({ key: keyOf(d), label: d.toLocaleDateString("es-CL", { month: "short", year: "2-digit" }), ventaNeta: 0, costoVenta: 0, gastosOp: 0, utilidadReal: 0 });
+    }
+    const bucket = (k: string) => serie.find((s) => s.key === k);
 
     type Row = { tipo: string; color: string; m2: number; venta: number; costo: number; utilidad: number; sinApu: boolean };
     const det = new Map<string, Row>();
     for (const c of cots ?? []) {
+      const mk = keyOf(new Date(c.created_at as string));
+      const b = bucket(mk); if (!b) continue;
       for (const it of (c.cotizacion_items ?? []) as Array<Record<string, any>>) {
         const colorId = it.color_id ?? c.color_id;
         const color = it.color_nombre ?? c.color_nombre ?? "Sin color";
-        const key = `${it.tipo}|${colorId}`;
-        const apuCost = apuMap.get(key);
-        const costoM2 = apuCost ?? genMap.get(it.tipo) ?? 0;
+        const apuCost = apuMap.get(`${mk}|${it.tipo}|${colorId}`);
+        const bobCost = it.bobina?.costo_m2 != null && Number(it.bobina.costo_m2) > 0 ? Number(it.bobina.costo_m2) : null;
+        const costoM2 = bobCost ?? apuCost ?? genMap.get(`${mk}|${it.tipo}`) ?? 0;
         const venta = ventaNetaLinea({ ...it, precio_m2_cot: c.precio_m2 } as never);
         const m2 = Number(it.metros2);
-        const r = det.get(key) ?? { tipo: it.tipo, color, m2: 0, venta: 0, costo: 0, utilidad: 0, sinApu: apuCost == null };
-        r.m2 += m2; r.venta += venta; r.costo += m2 * costoM2; r.utilidad += utilidadLineaApu(venta, m2, costoM2);
-        det.set(key, r);
+        b.ventaNeta += venta; b.costoVenta += m2 * costoM2;
+        if (mk === data.periodo) {
+          const key = `${it.tipo}|${colorId}`;
+          const r = det.get(key) ?? { tipo: it.tipo, color, m2: 0, venta: 0, costo: 0, utilidad: 0, sinApu: bobCost == null && apuCost == null };
+          r.m2 += m2; r.venta += venta; r.costo += m2 * costoM2; r.utilidad += utilidadLineaApu(venta, m2, costoM2);
+          det.set(key, r);
+        }
       }
     }
+    for (const g of egr ?? []) if (!(Number(g.bobina_metros) > 0)) { const b = bucket(keyOfDate(g.fecha)); if (b) b.gastosOp += Number(g.monto); }
+    for (const g of bol ?? []) if (!(Number(g.bobina_metros) > 0) && !g.bobina_id) { const b = bucket(keyOfDate(g.fecha)); if (b) b.gastosOp += Number(g.monto); }
+    for (const h of hist ?? []) { const b = bucket(keyOfDate(h.periodo)); if (b) b.gastosOp += Number(h.gastos); }
+    for (const ch of chat ?? []) { const b = bucket(keyOfDate(ch.fecha)); if (b) b.ventaNeta += Number(ch.monto) / 1.19; }
+    for (const s of serie) {
+      s.ventaNeta = Math.round(s.ventaNeta); s.costoVenta = Math.round(s.costoVenta); s.gastosOp = Math.round(s.gastosOp);
+      s.utilidadReal = s.ventaNeta - s.costoVenta - s.gastosOp;
+    }
+
     const detalle = [...det.values()].map((r) => ({ ...r, venta: Math.round(r.venta), costo: Math.round(r.costo) }))
       .sort((a, b) => b.utilidad - a.utilidad);
-    const ventaNeta = detalle.reduce((s, r) => s + r.venta, 0);
-    const utilidad = detalle.reduce((s, r) => s + r.utilidad, 0);
-    return { ventaNeta, utilidad, margen: ventaNeta > 0 ? utilidad / ventaNeta : 0, detalle };
+    const mes = bucket(data.periodo)!;
+    return {
+      ventaNeta: mes.ventaNeta, costoVenta: mes.costoVenta, gastosOp: mes.gastosOp,
+      utilidad: mes.utilidadReal, margen: mes.ventaNeta > 0 ? mes.utilidadReal / mes.ventaNeta : 0,
+      detalle, serie,
+    };
   });
 
 
