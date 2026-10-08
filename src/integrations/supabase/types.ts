@@ -14,6 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
+      apu_m2: {
+        Row: {
+          color_id: string
+          costo_material: number
+          created_at: string
+          created_by: string | null
+          id: string
+          mano_obra: number
+          nota: string | null
+          otros_costos: number
+          periodo: string
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at: string
+        }
+        Insert: {
+          color_id: string
+          costo_material?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mano_obra?: number
+          nota?: string | null
+          otros_costos?: number
+          periodo: string
+          tipo: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Update: {
+          color_id?: string
+          costo_material?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          mano_obra?: number
+          nota?: string | null
+          otros_costos?: number
+          periodo?: string
+          tipo?: Database["public"]["Enums"]["tipo_producto"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "apu_m2_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "apu_m2_color_id_fkey"
+            columns: ["color_id"]
+            isOneToOne: false
+            referencedRelation: "colores_publicos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           accion: string

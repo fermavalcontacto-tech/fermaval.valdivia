@@ -30,6 +30,7 @@ import { Route as AuthenticatedAdminColoresRouteImport } from './routes/_authent
 import { Route as AuthenticatedAdminBuscarRouteImport } from './routes/_authenticated.admin.buscar'
 import { Route as AuthenticatedAdminBoletasRouteImport } from './routes/_authenticated.admin.boletas'
 import { Route as AuthenticatedAdminBobinasRouteImport } from './routes/_authenticated.admin.bobinas'
+import { Route as AuthenticatedAdminApuRouteImport } from './routes/_authenticated.admin.apu'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -148,6 +149,11 @@ const AuthenticatedAdminBobinasRoute =
     path: '/admin/bobinas',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAdminApuRoute = AuthenticatedAdminApuRouteImport.update({
+  id: '/admin/apu',
+  path: '/admin/apu',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -155,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/apu': typeof AuthenticatedAdminApuRoute
   '/admin/bobinas': typeof AuthenticatedAdminBobinasRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/buscar': typeof AuthenticatedAdminBuscarRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/admin/apu': typeof AuthenticatedAdminApuRoute
   '/admin/bobinas': typeof AuthenticatedAdminBobinasRoute
   '/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/admin/buscar': typeof AuthenticatedAdminBuscarRoute
@@ -201,6 +209,7 @@ export interface FileRoutesById {
   '/mis-cotizaciones': typeof MisCotizacionesRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/cotizacion/$numero': typeof CotizacionNumeroRoute
+  '/_authenticated/admin/apu': typeof AuthenticatedAdminApuRoute
   '/_authenticated/admin/bobinas': typeof AuthenticatedAdminBobinasRoute
   '/_authenticated/admin/boletas': typeof AuthenticatedAdminBoletasRoute
   '/_authenticated/admin/buscar': typeof AuthenticatedAdminBuscarRoute
@@ -225,6 +234,7 @@ export interface FileRouteTypes {
     | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
+    | '/admin/apu'
     | '/admin/bobinas'
     | '/admin/boletas'
     | '/admin/buscar'
@@ -247,6 +257,7 @@ export interface FileRouteTypes {
     | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
+    | '/admin/apu'
     | '/admin/bobinas'
     | '/admin/boletas'
     | '/admin/buscar'
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/mis-cotizaciones'
     | '/sitemap.xml'
     | '/cotizacion/$numero'
+    | '/_authenticated/admin/apu'
     | '/_authenticated/admin/bobinas'
     | '/_authenticated/admin/boletas'
     | '/_authenticated/admin/buscar'
@@ -448,10 +460,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBobinasRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/admin/apu': {
+      id: '/_authenticated/admin/apu'
+      path: '/admin/apu'
+      fullPath: '/admin/apu'
+      preLoaderRoute: typeof AuthenticatedAdminApuRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAdminApuRoute: typeof AuthenticatedAdminApuRoute
   AuthenticatedAdminBobinasRoute: typeof AuthenticatedAdminBobinasRoute
   AuthenticatedAdminBoletasRoute: typeof AuthenticatedAdminBoletasRoute
   AuthenticatedAdminBuscarRoute: typeof AuthenticatedAdminBuscarRoute
@@ -467,6 +487,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminApuRoute: AuthenticatedAdminApuRoute,
   AuthenticatedAdminBobinasRoute: AuthenticatedAdminBobinasRoute,
   AuthenticatedAdminBoletasRoute: AuthenticatedAdminBoletasRoute,
   AuthenticatedAdminBuscarRoute: AuthenticatedAdminBuscarRoute,

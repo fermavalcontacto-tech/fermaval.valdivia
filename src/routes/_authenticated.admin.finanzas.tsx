@@ -10,6 +10,7 @@ import {
   listVentasChatarra,
   upsertVentaChatarra,
   deleteVentaChatarra,
+  getUtilidadApu,
 } from "@/lib/admin.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,12 @@ function FinanzasPage() {
   const gastosSel = selectedMonth?.gastos ?? 0;
   const utilidadesSel = ventasSel - gastosSel;
   const ivaSel = Math.round((ventasSel * 0.19) / 1.19);
+  const periodoSel = selectedMonth?.key ?? "";
+  const { data: apuData } = useQuery({
+    queryKey: ["utilidad-apu", periodoSel],
+    queryFn: () => getUtilidadApu({ data: { periodo: periodoSel } }),
+    enabled: !!periodoSel,
+  });
 
   return (
     <div className="space-y-6">
@@ -75,14 +82,21 @@ function FinanzasPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Link to="/admin/cotizaciones" search={{ cot: undefined }} className={CARD_LINK}>
           <Card className={`p-5 border-accent/40 bg-accent/5 ${CARD_HOVER}`}>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Ganancias del mes</div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Ventas del mes</div>
             <div className="mt-2 font-display text-3xl text-primary">{formatCLP(ventasSel)}</div>
             <div className="text-xs text-muted-foreground">Ver cotizaciones</div>
           </Card>
         </Link>
+        <a href="#apu" className={CARD_LINK}>
+          <Card className={`p-5 ${CARD_HOVER}`}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Utilidad real (APU)</div>
+            <div className={`mt-2 font-display text-3xl ${(apuData?.utilidad ?? 0) >= 0 ? "text-primary" : "text-destructive"}`}>{formatCLP(apuData?.utilidad ?? 0)}</div>
+            <div className="text-xs text-muted-foreground">Margen {((apuData?.margen ?? 0) * 100).toFixed(1)}% sobre venta neta</div>
+          </Card>
+        </a>
         <a href="#movimientos" className={CARD_LINK}>
           <Card className={`p-5 border ${CARD_HOVER} ${utilidadesSel >= 0 ? "border-green-400/40 bg-green-50/40 dark:bg-green-950/20" : "border-destructive/40 bg-destructive/5"}`}>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Balance neto</div>
@@ -127,6 +141,37 @@ function FinanzasPage() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
+      </Card>
+
+      <Card id="apu" className="scroll-mt-24 p-5">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <h3 className="font-display text-lg text-primary">Detalle utilidad por producto y color</h3>
+          <Link to="/admin/apu" className="ml-auto text-xs text-accent underline">Editar APU</Link>
+        </div>
+        {!apuData?.detalle.length ? (
+          <div className="rounded border border-dashed p-4 text-sm text-muted-foreground">Sin ventas registradas este mes.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <tr><th className="py-2 pr-3">Producto</th><th className="py-2 pr-3">Color</th><th className="py-2 pr-3 text-right">m²</th><th className="py-2 pr-3 text-right">Venta neta</th><th className="py-2 pr-3 text-right">Costo APU</th><th className="py-2 pr-3 text-right">Utilidad</th><th className="py-2 text-right">%</th></tr>
+              </thead>
+              <tbody>
+                {apuData.detalle.map((r) => (
+                  <tr key={`${r.tipo}-${r.color}`} className="border-b last:border-0">
+                    <td className="py-2 pr-3 font-medium">{r.tipo}</td>
+                    <td className="py-2 pr-3">{r.color}{r.sinApu && <span className="ml-2 rounded bg-destructive/10 px-1.5 text-xs text-destructive">sin APU</span>}</td>
+                    <td className="py-2 pr-3 text-right">{r.m2.toFixed(2)}</td>
+                    <td className="py-2 pr-3 text-right">{formatCLP(r.venta)}</td>
+                    <td className="py-2 pr-3 text-right">{formatCLP(r.costo)}</td>
+                    <td className={`py-2 pr-3 text-right ${r.utilidad < 0 ? "text-destructive" : ""}`}>{formatCLP(r.utilidad)}</td>
+                    <td className="py-2 text-right">{r.venta > 0 ? ((r.utilidad / r.venta) * 100).toFixed(1) : "0"}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
 
       <ChatarraPanel />
